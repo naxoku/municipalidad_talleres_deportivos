@@ -1,76 +1,87 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
-import { AdminDrawerParamList } from "../types/navigation";
+import { ProfesorDrawerParamList } from "../types/navigation";
 
-interface AdminSidebarProps {
+interface ProfesorSidebarProps {
   currentScreen: string;
-  onNavigate: (screenName: keyof AdminDrawerParamList) => void;
+  onNavigate: (screenName: keyof ProfesorDrawerParamList) => void;
   onLogout: () => void;
 }
 
-export default function AdminSidebar({ currentScreen, onNavigate, onLogout }: AdminSidebarProps) {
+export default function ProfesorSidebar({ currentScreen, onNavigate, onLogout }: ProfesorSidebarProps) {
   const { width } = Dimensions.get("window");
   const isLargeScreen = width > 768;
 
   return (
     <View style={[styles.sidebar, isLargeScreen ? styles.sidebarWeb : styles.sidebarMobile]}>
       {/* <Text style={[styles.sidebarTitle, isLargeScreen && styles.sidebarTitleWeb]}>
-        Administración
+        Panel del Profesor
       </Text> */}
 
       <TouchableOpacity
         style={[
           styles.navItem,
           isLargeScreen && styles.navItemWeb,
-          currentScreen === "GestionCursos" && styles.navItemActive
+          currentScreen === "ProfesorDrawerDashboard" && styles.navItemActive
         ]}
-        onPress={() => onNavigate("GestionCursos")}
+        onPress={() => onNavigate("ProfesorDrawerDashboard")}
       >
-        <Text style={styles.navItemText}>Gestión de Cursos</Text>
+        <Text style={styles.navItemText}>Dashboard</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[
           styles.navItem,
           isLargeScreen && styles.navItemWeb,
-          currentScreen === "GestionUsuarios" && styles.navItemActive
+          currentScreen === "Asistencia" && styles.navItemActive
         ]}
-        onPress={() => onNavigate("GestionUsuarios")}
+        onPress={() => onNavigate("Asistencia")}
       >
-        <Text style={styles.navItemText}>Gestión de Usuarios</Text>
+        <Text style={styles.navItemText}>Asistencia</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[
           styles.navItem,
           isLargeScreen && styles.navItemWeb,
-          currentScreen === "GestionIndumentaria" && styles.navItemActive
+          currentScreen === "Planificacion" && styles.navItemActive
         ]}
-        onPress={() => onNavigate("GestionIndumentaria")}
+        onPress={() => onNavigate("Planificacion")}
       >
-        <Text style={styles.navItemText}>Gestión de Indumentaria</Text>
+        <Text style={styles.navItemText}>Planificación</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[
           styles.navItem,
           isLargeScreen && styles.navItemWeb,
-          currentScreen === "ListadoGeneral" && styles.navItemActive
+          currentScreen === "ListadoClases" && styles.navItemActive
         ]}
-        onPress={() => onNavigate("ListadoGeneral")}
+        onPress={() => onNavigate("ListadoClases")}
       >
-        <Text style={styles.navItemText}>Listado General</Text>
+        <Text style={styles.navItemText}>Listado de Clases</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[
           styles.navItem,
           isLargeScreen && styles.navItemWeb,
-          currentScreen === "Reportes" && styles.navItemActive
+          currentScreen === "ListadoAlumnos" && styles.navItemActive
         ]}
-        onPress={() => onNavigate("Reportes")}
+        onPress={() => onNavigate("ListadoAlumnos")}
       >
-        <Text style={styles.navItemText}>Generar Reportes</Text>
+        <Text style={styles.navItemText}>Listado de Alumnos</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.navItem,
+          isLargeScreen && styles.navItemWeb,
+          currentScreen === "AsignarIndumentaria" && styles.navItemActive
+        ]}
+        onPress={() => onNavigate("AsignarIndumentaria")}
+      >
+        <Text style={styles.navItemText}>Asignar Indumentaria</Text>
       </TouchableOpacity>
 
       {isLargeScreen && <View style={styles.spacer} />}

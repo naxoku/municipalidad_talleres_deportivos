@@ -15,6 +15,8 @@ import { AppStackParamList } from "../types/navigation";
 import { useNavigation } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { FontAwesome } from "@expo/vector-icons";
+import { login as apiLogin } from "../api/auth";
+import { useAuth } from "../contexts/AuthContext";
 
 type NavigationProp = NativeStackNavigationProp<AppStackParamList, "Login">;
 
@@ -25,6 +27,7 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
   const navigation = useNavigation<NavigationProp>();
+  const { login } = useAuth();
 
   const handleLogin = async (): Promise<void> => {
     setErrorMessage("");
@@ -41,24 +44,31 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     
-    // Simular delay de autenticación
-    setTimeout(() => {
+    try {
+      // Llamar a la API de login
+      const response = await apiLogin(email, password);
+      
+      // Verificar si el login fue exitoso y obtener el rol
+      if (response && response.usuario) {
+        const { rol } = response.usuario;
+        
+        // Llamar al login del contexto con el rol correcto
+        login(rol);
+      } else {
+        throw new Error("Respuesta inválida del servidor");
+      }
+    } catch (error: any) {
       setIsLoading(false);
       
-      // Simulación simple de roles
-      if (email === "admin@municipio.cl" && password === "1234") {
-        navigation.replace("AdminDashboard");
-      } else if (email === "profesor@municipio.cl" && password === "1234") {
-        navigation.replace("DashboardProfesor");
+      // Manejar errores de la API
+      const errorMessage = error.message || "Error de conexión. Inténtalo nuevamente.";
+      
+      if (Platform.OS === "web") {
+        setErrorMessage(errorMessage);
       } else {
-        const message = "Credenciales incorrectas";
-        if (Platform.OS === "web") {
-          setErrorMessage(message);
-        } else {
-          Alert.alert("Error", message);
-        }
+        Alert.alert("Error", errorMessage);
       }
-    }, 800);
+    }
   };
 
   return (
@@ -88,7 +98,7 @@ export default function LoginScreen() {
             <Text style={styles.label}>Correo electrónico</Text>
             <TextInput
               style={styles.input}
-              placeholder="correo@municipio.cl"
+              placeholder="admin@correo.cl"
               placeholderTextColor="#999"
               value={email}
               onChangeText={setEmail}
@@ -103,12 +113,14 @@ export default function LoginScreen() {
             <Text style={styles.label}>Contraseña</Text>
             <TextInput
               style={styles.input}
-              placeholder="••••••••"
+              placeholder="Ingresa tu contraseña"
               placeholderTextColor="#999"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               editable={!isLoading}
+              onSubmitEditing={handleLogin}
+              returnKeyType="go"
             />
           </View>
 
@@ -189,10 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
   },
   cardContent: {
     gap: 20,

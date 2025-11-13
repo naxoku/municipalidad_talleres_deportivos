@@ -1,125 +1,89 @@
 import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
-import {
-  DrawerContentScrollView,
-  DrawerItemList,
   DrawerContentComponentProps,
-  DrawerItem,
+  DrawerNavigationProp,
 } from "@react-navigation/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AdminSidebar from "./AdminSidebar";
+import ProfesorSidebar from "./ProfesorSidebar";
 
-export default function CustomDrawerContent(props: DrawerContentComponentProps) {
-  const navigation = useNavigation();
+type UserRole = "admin" | "profesor";
 
+interface CustomDrawerContentProps extends DrawerContentComponentProps {
+  userRole: UserRole;
+}
+
+export default function CustomDrawerContent({
+  state,
+  navigation,
+  descriptors,
+  userRole,
+}: CustomDrawerContentProps) {
   const handleLogout = () => {
-    // Navegar al login
     navigation.reset({
       index: 0,
       routes: [{ name: "Login" as never }],
     });
   };
 
+  const currentRoute = state.routes[state.index];
+  const currentScreen = currentRoute.name;
+
+  const handleNavigate = (screenName: string) => {
+    navigation.navigate(screenName as never);
+    navigation.closeDrawer();
+  };
+
+  const renderSidebar = () => {
+    if (userRole === "admin") {
+      return (
+        <AdminSidebar
+          currentScreen={currentScreen}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+        />
+      );
+    } else {
+      return (
+        <ProfesorSidebar
+          currentScreen={currentScreen}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+        />
+      );
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      {/* Header del Drawer */}
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Administración</Text>
+        <Text style={styles.headerTitle}>
+          {userRole === "admin" ? "Administración" : "Panel del Profesor"}
+        </Text>
       </View>
-
-      {/* Lista de items del drawer */}
-      <DrawerContentScrollView {...props} style={styles.drawerContent}>
-        {props.state.routes.map((route, index) => {
-          const { options } = props.descriptors[route.key];
-          const label =
-            options.drawerLabel !== undefined
-              ? options.drawerLabel
-              : options.title !== undefined
-              ? options.title
-              : route.name;
-
-          const isFocused = props.state.index === index;
-
-          return (
-            <DrawerItem
-              key={route.key}
-              label={label as string}
-              icon={options.drawerIcon ? ({ color, size }) => options.drawerIcon({ color, size }) : undefined}
-              focused={isFocused}
-              activeTintColor={props.drawerActiveTintColor}
-              inactiveTintColor={props.drawerInactiveTintColor}
-              activeBackgroundColor={props.drawerActiveBackgroundColor}
-              inactiveBackgroundColor={props.drawerInactiveBackgroundColor}
-              labelStyle={props.drawerLabelStyle}
-              onPress={() => {
-                props.navigation.navigate(route.name);
-                props.navigation.closeDrawer();
-              }}
-            />
-          );
-        })}
-      </DrawerContentScrollView>
-
-      {/* Footer con botón de cerrar sesión */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.logoutButton} onPress={() => {
-          handleLogout();
-          props.navigation.closeDrawer();
-        }}>
-          <Ionicons name="log-out" size={20} color="#fff" style={styles.logoutIcon} />
-          <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      {renderSidebar()}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#333",
+    backgroundColor: "#004d00",
   },
   header: {
-    backgroundColor: "#222",
+    backgroundColor: "#006400",
     paddingVertical: 20,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#444",
+    borderBottomColor: "#003d00",
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#fff",
-  },
-  drawerContent: {
-    flex: 1,
-    paddingTop: 10,
-  },
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: "#444",
-    padding: 15,
-  },
-  logoutButton: {
-    backgroundColor: "#ff4d4d",
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoutIcon: {
-    marginRight: 8,
-  },
-  logoutButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: "#e8f5e8",
   },
 });

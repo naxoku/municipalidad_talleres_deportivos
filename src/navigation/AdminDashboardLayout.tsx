@@ -1,8 +1,10 @@
 import React from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
-import { Platform, TouchableOpacity } from "react-native";
+import { Platform, TouchableOpacity, View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AdminDrawerParamList } from "../types/navigation";
+import { useAuth } from "../contexts/AuthContext";
 
 import ManageUsersScreen from "../screens/ManageUsersScreen";
 import CourseListScreen from "../screens/CourseListScreen";
@@ -12,10 +14,17 @@ import CustomDrawerContent from "../components/CustomDrawerContent";
 
 const Drawer = createDrawerNavigator<AdminDrawerParamList>();
 
-export default function AdminDashboardLayout() {
+interface AdminDashboardLayoutProps {
+  userRole: "admin" | "profesor";
+}
+
+export default function AdminDashboardLayout({ userRole }: AdminDashboardLayoutProps) {
+  const { user, logout } = useAuth();
+
   return (
-    <Drawer.Navigator id={undefined}
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
+    <SafeAreaProvider>
+      <Drawer.Navigator id={undefined}
+      drawerContent={(props) => <CustomDrawerContent {...props} userRole={userRole} />}
       screenOptions={({ navigation }) => ({
         headerShown: true,
         headerStyle: {
@@ -37,22 +46,33 @@ export default function AdminDashboardLayout() {
           fontWeight: "500",
         },
         drawerType: Platform.select({
-          web: "slide", // Cambiado a "slide" para permitir el cierre en web
+          web: "slide",
           default: "front",
         }),
-        headerLeft: () =>
-          Platform.OS === "web" ? (
-            <TouchableOpacity
-              onPress={() => navigation.toggleDrawer()}
-              style={{ marginLeft: 15 }}
-            >
-              <Ionicons name="menu" size={30} color="#fff" />
-            </TouchableOpacity>
-          ) : undefined,
+        overlayColor: Platform.select({
+          web: "transparent", // Fondo transparente en web
+          default: "rgba(0, 0, 0, 0.5)" // Fondo semitransparente en móvil
+        }),
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => navigation.toggleDrawer()}
+            style={{ marginLeft: 15 }}
+          >
+            <Ionicons name="menu" size={30} color="#fff" />
+          </TouchableOpacity>
+        ),
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={logout}
+            style={{ marginRight: 15 }}
+          >
+            <Ionicons name="log-out" size={24} color="#fff" />
+          </TouchableOpacity>
+        ),
       })}
     >
       <Drawer.Screen
-        name="ManageUsers"
+        name="GestionUsuarios"
         component={ManageUsersScreen}
         options={{
           drawerLabel: "Gestión de Usuarios",
@@ -63,18 +83,18 @@ export default function AdminDashboardLayout() {
         }}
       />
       <Drawer.Screen
-        name="CourseList"
+        name="GestionCursos"
         component={CourseListScreen}
         options={{
-          drawerLabel: "Listado de Cursos",
-          title: "Listado de Cursos",
+          drawerLabel: "Gestión de Cursos",
+          title: "Gestión de Cursos",
           drawerIcon: ({ color, size }) => (
             <Ionicons name="list" size={size} color={color} />
           ),
         }}
       />
       <Drawer.Screen
-        name="Reports"
+        name="Reportes"
         component={ReportsScreen}
         options={{
           drawerLabel: "Generar Reportes",
@@ -85,16 +105,17 @@ export default function AdminDashboardLayout() {
         }}
       />
       <Drawer.Screen
-        name="ModifyCourses"
+        name="GestionIndumentaria"
         component={CourseListScreen}
         options={{
-          drawerLabel: "Modificar Cursos",
-          title: "Modificar Cursos",
+          drawerLabel: "Gestión de Indumentaria",
+          title: "Gestión de Indumentaria",
           drawerIcon: ({ color, size }) => (
             <Ionicons name="create" size={size} color={color} />
           ),
         }}
       />
-    </Drawer.Navigator>
+      </Drawer.Navigator>
+    </SafeAreaProvider>
   );
 }

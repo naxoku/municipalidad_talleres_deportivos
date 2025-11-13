@@ -1,13 +1,24 @@
 export type AppStackParamList = {
-  Login: undefined;
-  AdminDashboard: undefined;
-  DashboardProfesor: undefined;
+  Login: { onLogin: (role: string) => void };
+  AdminDashboard: { onLogout: () => void };
+  ProfesorDashboard: { onLogout: () => void };
 };
 
 export type AdminDrawerParamList = {
-  ManageUsers: undefined;
-  CourseList: undefined;
-  Reports: undefined;
-  ModifyCourses: undefined;
+  GestionCursos: undefined;
+  GestionUsuarios: undefined;
+  GestionIndumentaria: undefined;
+  ListadoGeneral: undefined;
+  Reportes: undefined;
+};
+
+export type ProfesorDrawerParamList = {
+  ProfesorDrawerDashboard: undefined;
+  ModificarTaller: undefined;
+  ListadoAlumnos: undefined;
+  ListadoClases: undefined;
+  Asistencia: undefined;
+  Planificacion: undefined;
+  AsignarIndumentaria: undefined;
 };
 
