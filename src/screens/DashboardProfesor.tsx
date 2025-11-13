@@ -3,13 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AppStackParamList } from "../types/navigation";
+import { useAuth } from "../contexts/AuthContext";
 
-type NavigationProp = NativeStackNavigationProp<AppStackParamList, "DashboardProfesor">;
+type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
 export default function DashboardProfesor() {
   const navigation = useNavigation<NavigationProp>();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
+    logout();
     navigation.navigate("Login");
   };
 

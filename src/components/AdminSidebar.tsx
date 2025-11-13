@@ -1,160 +1,119 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
-import { AdminDrawerParamList } from "../types/navigation";
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AdminSidebarProps {
-  currentScreen: string;
-  onNavigate: (screenName: keyof AdminDrawerParamList) => void;
-  onLogout: () => void;
+  currentScreen?: string;
+  onNavigate?: (screenName: string) => void;
 }
 
-export default function AdminSidebar({ currentScreen, onNavigate, onLogout }: AdminSidebarProps) {
-  const { width } = Dimensions.get("window");
-  const isLargeScreen = width > 768;
+const AdminSidebar = ({ currentScreen, onNavigate }: AdminSidebarProps) => {
+  const navigation = useNavigation<any>();
+  const route = useRoute();
+  const { logout } = useAuth();
+
+  const menuItems = [
+    { name: 'Gestión Usuarios', screen: 'GestionUsuarios' },
+    { name: 'Gestión Cursos', screen: 'GestionCursos' },
+    { name: 'Gestión Indumentaria', screen: 'GestionIndumentaria' },
+    { name: 'Asignar Indumentaria', screen: 'AsignarIndumentaria' },
+    { name: 'Reportes', screen: 'Reportes' },
+  ];
+
+  const handleLogout = () => {
+    logout();
+    navigation.navigate('Login');
+  };
 
   return (
-    <View style={[styles.sidebar, isLargeScreen ? styles.sidebarWeb : styles.sidebarMobile]}>
-      {/* <Text style={[styles.sidebarTitle, isLargeScreen && styles.sidebarTitleWeb]}>
-        Administración
-      </Text> */}
-
+    <View style={styles.container}>
+      <Text style={styles.title}>Admin</Text>
+      {menuItems.map((item, index) => (
+        <TouchableOpacity
+          key={index}
+          style={[
+            styles.menuItem,
+            (currentScreen === item.screen || route.name === item.screen) && styles.activeMenuItem,
+          ]}
+          onPress={() => {
+            if (onNavigate) {
+              onNavigate(item.screen);
+            } else {
+              navigation.navigate(item.screen);
+            }
+          }}
+        >
+          <Text
+            style={[
+              styles.menuText,
+              route.name === item.screen && styles.activeMenuText,
+            ]}
+          >
+            {item.name}
+          </Text>
+        </TouchableOpacity>
+      ))}
+      
+      {/* Botón de Cerrar Sesión */}
       <TouchableOpacity
-        style={[
-          styles.navItem,
-          isLargeScreen && styles.navItemWeb,
-          currentScreen === "GestionCursos" && styles.navItemActive
-        ]}
-        onPress={() => onNavigate("GestionCursos")}
+        style={styles.logoutButton}
+        onPress={handleLogout}
       >
-        <Text style={styles.navItemText}>Gestión de Cursos</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.navItem,
-          isLargeScreen && styles.navItemWeb,
-          currentScreen === "GestionUsuarios" && styles.navItemActive
-        ]}
-        onPress={() => onNavigate("GestionUsuarios")}
-      >
-        <Text style={styles.navItemText}>Gestión de Usuarios</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.navItem,
-          isLargeScreen && styles.navItemWeb,
-          currentScreen === "GestionIndumentaria" && styles.navItemActive
-        ]}
-        onPress={() => onNavigate("GestionIndumentaria")}
-      >
-        <Text style={styles.navItemText}>Gestión de Indumentaria</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.navItem,
-          isLargeScreen && styles.navItemWeb,
-          currentScreen === "ListadoGeneral" && styles.navItemActive
-        ]}
-        onPress={() => onNavigate("ListadoGeneral")}
-      >
-        <Text style={styles.navItemText}>Listado General</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.navItem,
-          isLargeScreen && styles.navItemWeb,
-          currentScreen === "Reportes" && styles.navItemActive
-        ]}
-        onPress={() => onNavigate("Reportes")}
-      >
-        <Text style={styles.navItemText}>Generar Reportes</Text>
-      </TouchableOpacity>
-
-      {isLargeScreen && <View style={styles.spacer} />}
-
-      <TouchableOpacity
-        style={[styles.logoutButton, isLargeScreen && styles.logoutButtonWeb]}
-        onPress={onLogout}
-      >
-        <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
+        <Text style={styles.logoutText}>Cerrar Sesión</Text>
       </TouchableOpacity>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  sidebar: {
-    backgroundColor: "#004d00",
-    paddingVertical: 20,
+  container: {
+    flex: 1,
+    paddingTop: 15,
     paddingHorizontal: 10,
   },
-  sidebarWeb: {
-    width: 250,
-    height: "100%",
-    justifyContent: "flex-start",
-    alignItems: "stretch",
-  },
-  sidebarMobile: {
-    width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingBottom: 10,
-  },
-  sidebarTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#fff",
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#444',
     marginBottom: 20,
-    textAlign: "center",
-    width: "100%",
+    paddingHorizontal: 10,
   },
-  sidebarTitleWeb: {
-    textAlign: "left",
-  },
-  navItem: {
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 15,
     borderRadius: 8,
-    marginBottom: 10,
-    width: "45%",
-    alignItems: "center",
+    marginBottom: 8,
   },
-  navItemWeb: {
-    width: "100%",
-    alignItems: "flex-start",
+  activeMenuItem: {
+    backgroundColor: '#e6f3e6', // Un verde claro para el fondo activo
   },
-  navItemActive: {
-    backgroundColor: "#007F00",
-  },
-  navItemText: {
-    color: "#fff",
+  menuText: {
     fontSize: 16,
-    fontWeight: "500",
+    color: '#333', // Color de texto oscuro
+    marginLeft: 10,
   },
-  spacer: {
-    flex: 1,
+  activeMenuText: {
+    color: '#007F00', // Verde oscuro para el texto activo
+    fontWeight: 'bold',
   },
   logoutButton: {
-    backgroundColor: "#cc0000",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 15,
     borderRadius: 8,
-    marginTop: 10,
-    width: "45%",
-    alignItems: "center",
+    marginTop: 20,
+    backgroundColor: '#cc0000', // Rojo para el botón de logout
   },
-  logoutButtonWeb: {
-    width: "100%",
-    marginTop: 0,
-  },
-  logoutButtonText: {
-    color: "#fff",
+  logoutText: {
     fontSize: 16,
-    fontWeight: "bold",
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
+
+export default AdminSidebar;

@@ -4,7 +4,6 @@ import { Platform, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ProfesorDrawerParamList } from "../types/navigation";
-import { useAuth } from "../contexts/AuthContext";
 
 import ProfesorDashboardScreen from "../screens/DashboardProfesor";
 import AsistenciaScreen from "../screens/AsistenciaScreen";
@@ -21,8 +20,6 @@ interface ProfesorDashboardLayoutProps {
 }
 
 export default function ProfesorDashboardLayout({ userRole }: ProfesorDashboardLayoutProps) {
-  const { user, logout } = useAuth();
-
   return (
     <SafeAreaProvider>
       <Drawer.Navigator
@@ -64,14 +61,7 @@ export default function ProfesorDashboardLayout({ userRole }: ProfesorDashboardL
               <Ionicons name="menu" size={30} color="#fff" />
             </TouchableOpacity>
           ),
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={logout}
-              style={{ marginRight: 15 }}
-            >
-              <Ionicons name="log-out" size={24} color="#fff" />
-            </TouchableOpacity>
-          ),
+          // Removemos el headerRight con el botón de logout
         })}
       >
         <Drawer.Screen

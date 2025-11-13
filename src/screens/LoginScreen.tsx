@@ -8,7 +8,7 @@ import {
   Platform,
   Alert,
   StatusBar,
-  Linking, // Importar Linking
+  Linking,
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AppStackParamList } from "../types/navigation";
@@ -50,10 +50,22 @@ export default function LoginScreen() {
       
       // Verificar si el login fue exitoso y obtener el rol
       if (response && response.usuario) {
-        const { rol } = response.usuario;
+        const userData = {
+          id: response.usuario.id,
+          nombre: response.usuario.nombre,
+          email: response.usuario.email,
+          rol: response.usuario.rol
+        };
         
-        // Llamar al login del contexto con el rol correcto
-        login(rol);
+        // Guardar el usuario en el contexto
+        await login(userData);
+        
+        // Navegar según el rol
+        if (userData.rol === 'administrador') {
+          navigation.replace('AdminDashboard');
+        } else if (userData.rol === 'profesor') {
+          navigation.replace('ProfesorDashboard');
+        }
       } else {
         throw new Error("Respuesta inválida del servidor");
       }
