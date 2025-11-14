@@ -3,9 +3,10 @@
 export interface Profesor {
     id: number;
     nombre: string;
-    especialidad: string;
-    email: string;
+    telefono?: string;
+    email?: string;
     usuario_id?: number;
+    rol?: string;
 }
 
 export interface Estudiante {
@@ -19,17 +20,22 @@ export interface Taller {
     id: number;
     nombre: string;
     descripcion?: string;
-    profesor_id?: number;
-    profesor_nombre?: string;
+    profesores?: { id: number; nombre: string }[];
 }
 
 export interface Horario {
     id: number;
     taller_id: number;
     taller_nombre?: string;
+    profesor_id?: number;
+    profesor_nombre?: string;
+    ubicacion_id?: number;
+    ubicacion_nombre?: string;
     dia_semana: string;
     hora_inicio: string;
     hora_fin: string;
+    cupos_max?: number;
+    descripcion?: string;
 }
 
 export interface Clase {
@@ -62,7 +68,9 @@ export interface Indumentaria {
     id: number;
     nombre: string;
     descripcion?: string;
-    cantidad: number;
+    tipo?: string;
+    cantidad_total: number;
+    cantidad_disponible: number;
 }
 
 export interface IndumentariaTaller {

@@ -33,7 +33,6 @@ const TalleresScreen = () => {
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
-    profesor_id: '',
   });
 
   const { isWeb, isDesktop } = useResponsive();
@@ -68,7 +67,7 @@ const TalleresScreen = () => {
   const abrirModalCrear = () => {
     setIsEditing(false);
     setCurrentTaller(null);
-    setFormData({ nombre: '', descripcion: '', profesor_id: '' });
+    setFormData({ nombre: '', descripcion: '' });
     setModalVisible(true);
   };
 
@@ -78,7 +77,6 @@ const TalleresScreen = () => {
     setFormData({
       nombre: taller.nombre,
       descripcion: taller.descripcion || '',
-      profesor_id: taller.profesor_id?.toString() || '',
     });
     setModalVisible(true);
   };
@@ -94,7 +92,6 @@ const TalleresScreen = () => {
       const data = {
         nombre: formData.nombre,
         descripcion: formData.descripcion || undefined,
-        profesor_id: formData.profesor_id ? parseInt(formData.profesor_id) : undefined,
       };
 
       if (isEditing && currentTaller) {
@@ -141,7 +138,7 @@ const TalleresScreen = () => {
       <View style={sharedStyles.cardContent}>
         <Text style={sharedStyles.cardTitle}>{item.nombre}</Text>
         {item.descripcion && <Text style={sharedStyles.cardDetail}>Descripción: {item.descripcion}</Text>}
-        {item.profesor_nombre && <Text style={sharedStyles.cardDetail}>Profesor: {item.profesor_nombre}</Text>}
+        {item.profesores && item.profesores.length > 0 && <Text style={sharedStyles.cardDetail}>Profesores: {item.profesores.map((p: any) => p.nombre).join(', ')}</Text>}
       </View>
       <View style={sharedStyles.cardActions}>
         <TouchableOpacity
@@ -163,7 +160,7 @@ const TalleresScreen = () => {
   const tableColumns: TableColumn<Taller>[] = [
     { key: 'nombre', header: 'Nombre', render: (item) => item.nombre },
     { key: 'descripcion', header: 'Descripción', render: (item) => item.descripcion || '-' },
-    { key: 'profesor', header: 'Profesor', render: (item) => item.profesor_nombre || '-' },
+    { key: 'profesores', header: 'Profesores', render: (item) => item.profesores?.map((p: any) => p.nombre).join(', ') || '-' },
   ];
 
   const tableActions: TableAction<Taller>[] = [
@@ -242,34 +239,6 @@ const TalleresScreen = () => {
                   multiline
                   numberOfLines={3}
                 />
-
-                <View style={sharedStyles.inputContainer}>
-                  <Text style={sharedStyles.label}>Profesor</Text>
-                  <View style={sharedStyles.pickerWrapper}>
-                    <ScrollView style={sharedStyles.pickerScroll} nestedScrollEnabled>
-                      <TouchableOpacity
-                        style={[sharedStyles.pickerItem, !formData.profesor_id && sharedStyles.pickerItemSelected]}
-                        onPress={() => setFormData({ ...formData, profesor_id: '' })}
-                      >
-                        <Text style={sharedStyles.pickerItemText}>Sin asignar</Text>
-                      </TouchableOpacity>
-                      {profesores.map((profesor) => (
-                        <TouchableOpacity
-                          key={profesor.id}
-                          style={[
-                            sharedStyles.pickerItem,
-                            formData.profesor_id === profesor.id.toString() && sharedStyles.pickerItemSelected,
-                          ]}
-                          onPress={() => setFormData({ ...formData, profesor_id: profesor.id.toString() })}
-                        >
-                          <Text style={sharedStyles.pickerItemText}>
-                            {profesor.nombre} - {profesor.especialidad}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                </View>
               </ScrollView>
 
               <View style={sharedStyles.modalFooter}>
