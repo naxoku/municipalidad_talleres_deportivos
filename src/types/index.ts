@@ -7,6 +7,7 @@ export interface Profesor {
     email?: string;
     usuario_id?: number;
     rol?: string;
+    especialidad?: string;
 }
 
 export interface Estudiante {
@@ -21,6 +22,9 @@ export interface Taller {
     nombre: string;
     descripcion?: string;
     profesores?: { id: number; nombre: string }[];
+    // Optional fields populated client-side: ubicacion name and a readable horario string
+    ubicacion?: string;
+    horario?: string;
 }
 
 export interface Horario {
@@ -69,8 +73,11 @@ export interface Indumentaria {
     nombre: string;
     descripcion?: string;
     tipo?: string;
-    cantidad_total: number;
-    cantidad_disponible: number;
+    // Some backends return a single `cantidad` field, others separate total/available.
+    // Make all optional to allow flexible mapping in screens.
+    cantidad?: number;
+    cantidad_total?: number;
+    cantidad_disponible?: number;
 }
 
 export interface IndumentariaTaller {

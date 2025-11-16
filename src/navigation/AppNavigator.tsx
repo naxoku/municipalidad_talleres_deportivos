@@ -4,6 +4,7 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useResponsive } from '../hooks/useResponsive';
+import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../theme/colors';
 
 // Screens
@@ -20,7 +21,11 @@ const Drawer = createDrawerNavigator();
 
 function DrawerNavigatorContent() {
   const { isDesktop, isWeb } = useResponsive();
+  const { userRole } = useAuth();
   const shouldShowPermanent = isWeb && isDesktop;
+
+  const isAdmin = userRole === 'administrador';
+  const isProfesor = userRole === 'profesor';
 
   return (
     /* @ts-ignore - Version mismatch con tipos de navigation */
@@ -54,87 +59,145 @@ function DrawerNavigatorContent() {
         headerShown: !shouldShowPermanent,
       }}
     >
-        <Drawer.Screen
-          name="Profesores"
-          component={ProfesoresScreen}
-          options={{
-            drawerIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
-            ),
-            title: 'Profesores',
-          }}
-        />
-        <Drawer.Screen
-          name="Estudiantes"
-          component={EstudiantesScreen}
-          options={{
-            drawerIcon: ({ color, size }) => (
-              <Ionicons name="school" size={size} color={color} />
-            ),
-            title: 'Estudiantes',
-          }}
-        />
-        <Drawer.Screen
-          name="Talleres"
-          component={TalleresScreen}
-          options={{
-            drawerIcon: ({ color, size }) => (
-              <Ionicons name="book" size={size} color={color} />
-            ),
-            title: 'Talleres',
-          }}
-        />
-        <Drawer.Screen
-          name="Horarios"
-          component={HorariosScreen}
-          options={{
-            drawerIcon: ({ color, size }) => (
-              <Ionicons name="time" size={size} color={color} />
-            ),
-            title: 'Horarios',
-          }}
-        />
-        <Drawer.Screen
-          name="Inscripciones"
-          component={InscripcionesScreen}
-          options={{
-            drawerIcon: ({ color, size }) => (
-              <Ionicons name="checkmark-circle" size={size} color={color} />
-            ),
-            title: 'Inscripciones',
-          }}
-        />
-        <Drawer.Screen
-          name="Clases"
-          component={ClasesScreen}
-          options={{
-            drawerIcon: ({ color, size }) => (
-              <Ionicons name="calendar" size={size} color={color} />
-            ),
-            title: 'Clases',
-          }}
-        />
-        <Drawer.Screen
-          name="Asistencia"
-          component={AsistenciaScreen}
-          options={{
-            drawerIcon: ({ color, size }) => (
-              <Ionicons name="location" size={size} color={color} />
-            ),
-            title: 'Asistencia',
-          }}
-        />
-        <Drawer.Screen
-          name="Indumentaria"
-          component={IndumentariaScreen}
-          options={{
-            drawerIcon: ({ color, size }) => (
-              <Ionicons name="shirt" size={size} color={color} />
-            ),
-            title: 'Indumentaria',
-          }}
-        />
-      </Drawer.Navigator>
+      {isAdmin && (
+        <>
+          <Drawer.Screen
+            name="Profesores"
+            component={ProfesoresScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="person" size={size} color={color} />
+              ),
+              title: 'Profesores',
+            }}
+          />
+          <Drawer.Screen
+            name="Estudiantes"
+            component={EstudiantesScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="school" size={size} color={color} />
+              ),
+              title: 'Estudiantes',
+            }}
+          />
+          <Drawer.Screen
+            name="Talleres"
+            component={TalleresScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="book" size={size} color={color} />
+              ),
+              title: 'Talleres',
+            }}
+          />
+          <Drawer.Screen
+            name="Horarios"
+            component={HorariosScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="time" size={size} color={color} />
+              ),
+              title: 'Horarios',
+            }}
+          />
+          <Drawer.Screen
+            name="Inscripciones"
+            component={InscripcionesScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="checkmark-circle" size={size} color={color} />
+              ),
+              title: 'Inscripciones',
+            }}
+          />
+          <Drawer.Screen
+            name="Clases"
+            component={ClasesScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="calendar" size={size} color={color} />
+              ),
+              title: 'Clases',
+            }}
+          />
+          <Drawer.Screen
+            name="Asistencia"
+            component={AsistenciaScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="location" size={size} color={color} />
+              ),
+              title: 'Asistencia',
+            }}
+          />
+          <Drawer.Screen
+            name="Indumentaria"
+            component={IndumentariaScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="shirt" size={size} color={color} />
+              ),
+              title: 'Indumentaria',
+            }}
+          />
+        </>
+      )}
+      {isProfesor && (
+        <>
+          <Drawer.Screen
+            name="Mis Talleres"
+            component={TalleresScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="book" size={size} color={color} />
+              ),
+              title: 'Mis Talleres',
+            }}
+          />
+          <Drawer.Screen
+            name="Horarios"
+            component={HorariosScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="time" size={size} color={color} />
+              ),
+              title: 'Horarios',
+            }}
+          />
+          <Drawer.Screen
+            name="Estudiantes"
+            component={EstudiantesScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="school" size={size} color={color} />
+              ),
+              title: 'Estudiantes',
+            }}
+          />
+          <Drawer.Screen
+            name="Asistencia"
+            component={AsistenciaScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="location" size={size} color={color} />
+              ),
+              title: 'Asistencia',
+            }}
+          />
+          <Drawer.Screen
+            name="Clases"
+            component={ClasesScreen}
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="calendar" size={size} color={color} />
+              ),
+              title: 'Clases',
+            }}
+          />
+        </>
+      )}
+    </Drawer.Navigator>
   );
 }
 

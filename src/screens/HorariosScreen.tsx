@@ -20,6 +20,10 @@ import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { Table, TableColumn, TableAction } from '../components/Table';
 import { useResponsive } from '../hooks/useResponsive';
+import { useAuth } from '../contexts/AuthContext';
+import SearchBar from '../components/SearchBar';
+import { sharedStyles } from '../theme/sharedStyles';
+import { formatTimeHHMM } from '../utils/time';
 
 const DIAS_SEMANA = [
   { label: 'Lunes', value: 'Lunes' },
@@ -45,6 +49,9 @@ const HorariosScreen = () => {
 
   const { isWeb, isDesktop } = useResponsive();
   const shouldShowTable = isWeb && isDesktop;
+  const [searchTerm, setSearchTerm] = useState('');
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'administrador';
 
   useEffect(() => {
     cargarHorarios();
@@ -129,22 +136,24 @@ const HorariosScreen = () => {
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{item.taller_nombre || `Taller ID: ${item.taller_id}`}</Text>
         <Text style={styles.cardDetail}>Día: {item.dia_semana}</Text>
-        <Text style={styles.cardDetail}>Horario: {item.hora_inicio} - {item.hora_fin}</Text>
+        <Text style={styles.cardDetail}>Horario: {formatTimeHHMM(item.hora_inicio)} - {formatTimeHHMM(item.hora_fin)}</Text>
       </View>
-      <TouchableOpacity
-        style={[styles.actionButton, styles.deleteButton]}
-        onPress={() => eliminarHorario(item)}
-      >
-        <Text style={styles.actionButtonText}>Eliminar</Text>
-      </TouchableOpacity>
+      {isAdmin && (
+        <TouchableOpacity
+          style={[styles.actionButton, styles.deleteButton]}
+          onPress={() => eliminarHorario(item)}
+        >
+          <Text style={styles.actionButtonText}>Eliminar</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
   const tableColumns: TableColumn<Horario>[] = [
     { key: 'taller', header: 'Taller', render: (item) => item.taller_nombre || `ID: ${item.taller_id}` },
     { key: 'dia', header: 'Día', render: (item) => item.dia_semana, width: 120 },
-    { key: 'hora_inicio', header: 'Hora Inicio', render: (item) => item.hora_inicio, width: 100 },
-    { key: 'hora_fin', header: 'Hora Fin', render: (item) => item.hora_fin, width: 100 },
+    { key: 'hora_inicio', header: 'Hora Inicio', render: (item) => formatTimeHHMM(item.hora_inicio), width: 100 },
+    { key: 'hora_fin', header: 'Hora Fin', render: (item) => formatTimeHHMM(item.hora_fin), width: 100 },
   ];
 
   const tableActions: TableAction<Horario>[] = [
@@ -155,40 +164,102 @@ const HorariosScreen = () => {
 
   return (
     <Container style={styles.container} edges={isWeb ? undefined : ['bottom']}>
-      <View style={[styles.contentWrapper, isWeb && styles.webContentWrapper]}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Horarios</Text>
-          <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
-            <Text style={styles.addButtonText}>+ Nuevo</Text>
-          </TouchableOpacity>
+      {isWeb ? (
+        <View style={[styles.contentWrapper, styles.webContentWrapper]}>
+            <View style={styles.header}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <Text style={styles.headerTitle}>{isAdmin ? 'Horarios' : 'Mis Horarios'}</Text>
+                {isAdmin && (
+                  <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
+                    <Text style={styles.addButtonText}>+ Nuevo</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {isWeb && shouldShowTable && (
+                <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar horarios..." onClear={() => setSearchTerm('')} />
+              )}
+            </View>
+          <ScrollView style={styles.scrollView}>
+            {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
+
+            {!loading && horarios.length === 0 && (
+              <EmptyState message="No hay horarios registrados" />
+            )}
+
+            {!loading && horarios.length > 0 && shouldShowTable && (
+              <View style={styles.tableContainer}>
+                <Table
+                  columns={tableColumns}
+                  data={horarios}
+                  keyExtractor={(item) => item.id.toString()}
+                  actions={isAdmin ? tableActions : undefined}
+                  searchable={true}
+                  searchPlaceholder="Buscar horarios..."
+                  externalSearchTerm={isWeb ? searchTerm : undefined}
+                  onExternalSearchTerm={isWeb ? setSearchTerm : undefined}
+                />
+              </View>
+            )}
+
+            {!loading && horarios.length > 0 && !shouldShowTable && (
+              <FlatList
+                data={horarios}
+                renderItem={renderHorario}
+                keyExtractor={(item) => item.id.toString()}
+                contentContainerStyle={styles.listContent}
+              />
+            )}
+          </ScrollView>
         </View>
-
-        {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
-
-        {!loading && horarios.length === 0 && (
-          <EmptyState message="No hay horarios registrados" />
-        )}
-
-        {!loading && horarios.length > 0 && shouldShowTable && (
-          <View style={styles.tableContainer}>
-            <Table
-              columns={tableColumns}
-              data={horarios}
-              keyExtractor={(item) => item.id.toString()}
-              actions={tableActions}
-            />
+      ) : (
+        <View style={styles.contentWrapper}>
+          <View style={[styles.header, { flexDirection: 'column' }] }>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <Text style={styles.headerTitle}>{isAdmin ? 'Horarios' : 'Mis Horarios'}</Text>
+              {isAdmin && (
+                <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
+                  <Text style={styles.addButtonText}>+ Nuevo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {isWeb && shouldShowTable && (
+              <View style={{ marginTop: 12, width: '100%' }}>
+                <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar horarios..." onClear={() => setSearchTerm('')} />
+              </View>
+            )}
           </View>
-        )}
 
-        {!loading && horarios.length > 0 && !shouldShowTable && (
-          <FlatList
-            data={horarios}
-            renderItem={renderHorario}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.listContent}
-          />
-        )}
-      </View>
+          {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
+
+          {!loading && horarios.length === 0 && (
+            <EmptyState message="No hay horarios registrados" />
+          )}
+
+          {!loading && horarios.length > 0 && shouldShowTable && (
+            <View style={styles.tableContainer}>
+              <Table
+                columns={tableColumns}
+                data={horarios}
+                keyExtractor={(item) => item.id.toString()}
+                actions={isAdmin ? tableActions : undefined}
+                searchable={true}
+                searchPlaceholder="Buscar horarios..."
+                externalSearchTerm={isWeb ? searchTerm : undefined}
+                onExternalSearchTerm={isWeb ? setSearchTerm : undefined}
+              />
+            </View>
+          )}
+
+          {!loading && horarios.length > 0 && !shouldShowTable && (
+            <FlatList
+              data={horarios}
+              renderItem={renderHorario}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={styles.listContent}
+            />
+          )}
+        </View>
+      )}
 
       <Modal
         visible={modalVisible}
@@ -297,6 +368,9 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     backgroundColor: '#fff',
+  },
+  scrollView: {
+    flex: 1,
   },
   tableContainer: {
     flex: 1,

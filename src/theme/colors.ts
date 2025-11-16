@@ -3,6 +3,8 @@
  * Diseño minimalista con verde principal y azules del logo de Deportes
  */
 
+import { Platform } from 'react-native';
+
 export const colors = {
     // Color principal de la Municipalidad de Angol
     primary: '#00862d',
@@ -94,25 +96,34 @@ export const typography = {
 };
 
 export const shadows = {
-    sm: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    md: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    lg: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-    },
+    sm: Platform.select({
+        web: { boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' },
+        default: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
+            elevation: 1,
+        },
+    }),
+    md: Platform.select({
+        web: { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' },
+        default: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 2,
+        },
+    }),
+    lg: Platform.select({
+        web: { boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)' },
+        default: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
+        },
+    }),
 };

@@ -18,6 +18,7 @@ import { Clase, Taller } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { useAuth } from '../contexts/AuthContext';
 
 const ClasesScreen = () => {
   const [clases, setClases] = useState<Clase[]>([]);
@@ -30,6 +31,9 @@ const ClasesScreen = () => {
     hora_inicio: '',
     hora_fin: '',
   });
+
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'administrador';
 
   useEffect(() => {
     cargarClases();
@@ -117,22 +121,26 @@ const ClasesScreen = () => {
         <Text style={styles.cardDetail}>Fecha: {item.fecha}</Text>
         <Text style={styles.cardDetail}>Horario: {item.hora_inicio} - {item.hora_fin}</Text>
       </View>
-      <TouchableOpacity
-        style={[styles.actionButton, styles.deleteButton]}
-        onPress={() => eliminarClase(item)}
-      >
-        <Text style={styles.actionButtonText}>Eliminar</Text>
-      </TouchableOpacity>
+      {isAdmin && (
+        <TouchableOpacity
+          style={[styles.actionButton, styles.deleteButton]}
+          onPress={() => eliminarClase(item)}
+        >
+          <Text style={styles.actionButtonText}>Eliminar</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Clases</Text>
-        <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
-          <Text style={styles.addButtonText}>+ Nueva</Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{isAdmin ? 'Clases' : 'Mis Clases'}</Text>
+        {isAdmin && (
+          <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
+            <Text style={styles.addButtonText}>+ Nueva</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}

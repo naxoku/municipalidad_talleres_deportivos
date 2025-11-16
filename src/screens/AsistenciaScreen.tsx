@@ -15,6 +15,7 @@ import { asistenciaApi } from '../api/asistencia';
 import { clasesApi } from '../api/clases';
 import { Asistencia, Clase } from '../types';
 import { EmptyState } from '../components/EmptyState';
+import { useAuth } from '../contexts/AuthContext';
 
 const AsistenciaScreen = () => {
   const [clases, setClases] = useState<Clase[]>([]);
@@ -22,6 +23,9 @@ const AsistenciaScreen = () => {
   const [claseSeleccionada, setClaseSeleccionada] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [mostrarClases, setMostrarClases] = useState(true);
+
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'administrador';
 
   useEffect(() => {
     cargarClases();
@@ -101,20 +105,22 @@ const AsistenciaScreen = () => {
           </Text>
         </View>
       </View>
-      <View style={styles.asistenciaButtons}>
-        <TouchableOpacity
-          style={[styles.asistenciaButton, styles.presenteButton, item.presente && styles.buttonActive]}
-          onPress={() => marcarAsistencia(item.id, true)}
-        >
-          <Text style={styles.asistenciaButtonText}>Presente</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.asistenciaButton, styles.ausenteButton, !item.presente && styles.buttonActive]}
-          onPress={() => marcarAsistencia(item.id, false)}
-        >
-          <Text style={styles.asistenciaButtonText}>Ausente</Text>
-        </TouchableOpacity>
-      </View>
+      {isAdmin && (
+        <View style={styles.asistenciaButtons}>
+          <TouchableOpacity
+            style={[styles.asistenciaButton, styles.presenteButton, item.presente && styles.buttonActive]}
+            onPress={() => marcarAsistencia(item.id, true)}
+          >
+            <Text style={styles.asistenciaButtonText}>Presente</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.asistenciaButton, styles.ausenteButton, !item.presente && styles.buttonActive]}
+            onPress={() => marcarAsistencia(item.id, false)}
+          >
+            <Text style={styles.asistenciaButtonText}>Ausente</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
@@ -128,7 +134,7 @@ const AsistenciaScreen = () => {
           </TouchableOpacity>
         )}
         <Text style={styles.headerTitle}>
-          {mostrarClases ? 'Seleccionar Clase' : 'Registro de Asistencia'}
+          {mostrarClases ? (isAdmin ? 'Seleccionar Clase' : 'Seleccionar Mis Clases') : (isAdmin ? 'Registro de Asistencia' : 'Asistencia de Mis Clases')}
         </Text>
       </View>
 

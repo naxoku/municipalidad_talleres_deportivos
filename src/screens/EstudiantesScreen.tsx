@@ -18,7 +18,18 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { Table, TableColumn, TableAction } from '../components/Table';
+import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
+import { useAuth } from '../contexts/AuthContext';
+import { sharedStyles } from '../theme/sharedStyles';
+
+const colors = {
+  primary: '#0066cc',
+};
+
+const spacing = {
+  xl: 20,
+};
 
 const EstudiantesScreen = () => {
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
@@ -34,6 +45,9 @@ const EstudiantesScreen = () => {
 
   const { isWeb, isDesktop } = useResponsive();
   const shouldShowTable = isWeb && isDesktop;
+  const [searchTerm, setSearchTerm] = useState('');
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'administrador';
 
   useEffect(() => {
     cargarEstudiantes();
@@ -123,26 +137,28 @@ const EstudiantesScreen = () => {
   };
 
   const renderEstudiante = ({ item }: { item: Estudiante }) => (
-    <View style={styles.card}>
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.nombre}</Text>
-        {item.edad && <Text style={styles.cardDetail}>Edad: {item.edad} años</Text>}
-        {item.contacto && <Text style={styles.cardDetail}>Contacto: {item.contacto}</Text>}
+    <View style={sharedStyles.card}>
+      <View style={sharedStyles.cardContent}>
+        <Text style={sharedStyles.cardTitle}>{item.nombre}</Text>
+        {item.edad && <Text style={sharedStyles.cardDetail}>Edad: {item.edad} años</Text>}
+        {item.contacto && <Text style={sharedStyles.cardDetail}>Contacto: {item.contacto}</Text>}
       </View>
-      <View style={styles.cardActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => abrirModalEditar(item)}
-        >
-          <Text style={styles.actionButtonText}>Editar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => eliminarEstudiante(item)}
-        >
-          <Text style={styles.actionButtonText}>Eliminar</Text>
-        </TouchableOpacity>
-      </View>
+      {isAdmin && (
+        <View style={sharedStyles.cardActions}>
+          <TouchableOpacity
+            style={[sharedStyles.actionButton, sharedStyles.editButton]}
+            onPress={() => abrirModalEditar(item)}
+          >
+            <Text style={sharedStyles.actionButtonText}>Editar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[sharedStyles.actionButton, sharedStyles.deleteButton]}
+            onPress={() => eliminarEstudiante(item)}
+          >
+            <Text style={sharedStyles.actionButtonText}>Eliminar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
@@ -160,39 +176,89 @@ const EstudiantesScreen = () => {
   const Container = isWeb ? View : SafeAreaView;
 
   return (
-    <Container style={styles.container} edges={isWeb ? undefined : ['bottom']}>
-      <View style={[styles.contentWrapper, isWeb && styles.webContentWrapper]}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Estudiantes</Text>
-          <TouchableOpacity style={styles.addButton} onPress={abrirModalCrear}>
-            <Text style={styles.addButtonText}>+ Nuevo</Text>
-          </TouchableOpacity>
+    <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
+      <View style={[sharedStyles.contentWrapper, isWeb && sharedStyles.webContentWrapper]}>
+        <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <Text style={sharedStyles.headerTitle}>{isAdmin ? 'Estudiantes' : 'Mis Estudiantes'}</Text>
+            {isAdmin && (
+              <TouchableOpacity style={sharedStyles.addButton} onPress={abrirModalCrear}>
+                <Text style={sharedStyles.addButtonText}>+ Nuevo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {isWeb && shouldShowTable && (
+            <View style={{ marginTop: 12, width: '100%' }}>
+              <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar estudiantes..." onClear={() => setSearchTerm('')} />
+            </View>
+          )}
         </View>
 
-        {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
+        {isWeb ? (
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            <View style={{ paddingBottom: spacing.xl }}>
+              {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
-        {!loading && estudiantes.length === 0 && (
-          <EmptyState message="No hay estudiantes registrados" />
-        )}
+              {!loading && estudiantes.length === 0 && (
+                <EmptyState message="No hay estudiantes registrados" />
+              )}
 
-        {!loading && estudiantes.length > 0 && shouldShowTable && (
-          <View style={styles.tableContainer}>
-            <Table
-              columns={tableColumns}
-              data={estudiantes}
-              keyExtractor={(item) => item.id.toString()}
-              actions={tableActions}
-            />
-          </View>
-        )}
+              {!loading && estudiantes.length > 0 && shouldShowTable && (
+                <View style={sharedStyles.tableContainer}>
+                  <Table
+                    columns={tableColumns}
+                    data={estudiantes}
+                    keyExtractor={(item) => item.id.toString()}
+                    actions={isAdmin ? tableActions : undefined}
+                    searchable={true}
+                    searchPlaceholder="Buscar estudiantes..."
+                    externalSearchTerm={isWeb ? searchTerm : undefined}
+                    onExternalSearchTerm={isWeb ? setSearchTerm : undefined}
+                  />
+                </View>
+              )}
 
-        {!loading && estudiantes.length > 0 && !shouldShowTable && (
-          <FlatList
-            data={estudiantes}
-            renderItem={renderEstudiante}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.listContent}
-          />
+              {!loading && estudiantes.length > 0 && !shouldShowTable && (
+                <FlatList
+                  data={estudiantes}
+                  renderItem={renderEstudiante}
+                  keyExtractor={(item) => item.id.toString()}
+                  contentContainerStyle={sharedStyles.listContent}
+                  scrollEnabled={false}
+                />
+              )}
+            </View>
+          </ScrollView>
+        ) : (
+          <>
+            {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
+
+            {!loading && estudiantes.length === 0 && (
+              <EmptyState message="No hay estudiantes registrados" />
+            )}
+
+            {!loading && estudiantes.length > 0 && shouldShowTable && (
+              <View style={sharedStyles.tableContainer}>
+                <Table
+                  columns={tableColumns}
+                  data={estudiantes}
+                  keyExtractor={(item) => item.id.toString()}
+                  actions={isAdmin ? tableActions : undefined}
+                  searchable={true}
+                  searchPlaceholder="Buscar estudiantes..."
+                />
+              </View>
+            )}
+
+            {!loading && estudiantes.length > 0 && !shouldShowTable && (
+              <FlatList
+                data={estudiantes}
+                renderItem={renderEstudiante}
+                keyExtractor={(item) => item.id.toString()}
+                contentContainerStyle={sharedStyles.listContent}
+              />
+            )}
+          </>
         )}
       </View>
 
@@ -202,16 +268,16 @@ const EstudiantesScreen = () => {
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={[styles.modalOverlay, isWeb && styles.webModalOverlay]}>
-          <SafeAreaView style={[styles.modalSafeArea, isWeb && styles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
-            <View style={[styles.modalContent, isWeb && styles.webModalContent]}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
+        <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
+          <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
+            <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
+              <View style={sharedStyles.modalHeader}>
+                <Text style={sharedStyles.modalTitle}>
                   {isEditing ? 'Editar Estudiante' : 'Nuevo Estudiante'}
                 </Text>
               </View>
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
                 <Input
                   label="Nombre"
                   required
@@ -236,19 +302,19 @@ const EstudiantesScreen = () => {
                 />
               </ScrollView>
 
-              <View style={styles.modalFooter}>
+              <View style={sharedStyles.modalFooter}>
                 <Button
                   title="Cancelar"
                   variant="secondary"
                   onPress={() => setModalVisible(false)}
-                  style={styles.modalButton}
+                  style={sharedStyles.modalButton}
                 />
                 <Button
                   title={isEditing ? 'Actualizar' : 'Crear'}
                   variant="success"
                   onPress={guardarEstudiante}
                   loading={loading}
-                  style={styles.modalButton}
+                  style={sharedStyles.modalButton}
                 />
               </View>
             </View>
@@ -259,165 +325,7 @@ const EstudiantesScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  contentWrapper: {
-    flex: 1,
-  },
-  webContentWrapper: {
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    backgroundColor: '#fff',
-  },
-  tableContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  addButton: {
-    backgroundColor: '#28a745',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  loader: {
-    marginTop: 20,
-  },
-  listContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#28a745',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-    }),
-  },
-  cardContent: {
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  cardDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  editButton: {
-    backgroundColor: '#007bff',
-  },
-  deleteButton: {
-    backgroundColor: '#dc3545',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  webModalOverlay: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalSafeArea: {
-    maxHeight: '90%',
-  },
-  webModalSafeArea: {
-    maxHeight: undefined,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '100%',
-  },
-  webModalContent: {
-    borderRadius: 12,
-    width: 600,
-    maxWidth: '90%',
-    maxHeight: '90%',
-  },
-  modalHeader: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: Platform.OS === 'web' ? 400 : undefined,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  modalButton: {
-    flex: 1,
-  },
-});
+// Estilos locales ya no son necesarios, se usan sharedStyles
+const styles = StyleSheet.create({});
 
 export default EstudiantesScreen;

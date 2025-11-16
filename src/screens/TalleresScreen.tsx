@@ -13,17 +13,34 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { talleresApi } from '../api/talleres';
+import { horariosApi } from '../api/horarios';
 import { profesoresApi } from '../api/profesores';
-import { Taller, Profesor } from '../types';
+import { Taller, Profesor, Horario } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { Table, TableColumn, TableAction } from '../components/Table';
+import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
+import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../theme/colors';
 import { sharedStyles } from '../theme/sharedStyles';
+import { formatTimeHHMM } from '../utils/time';
+import { Select } from '../components/Select';
+
+const spacing = {
+  xl: 20,
+  sm: 8,
+};
+
+const typography = {
+  sizes: {
+    xs: 12,
+  },
+};
 
 const TalleresScreen = () => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [talleres, setTalleres] = useState<Taller[]>([]);
   const [profesores, setProfesores] = useState<Profesor[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,10 +50,16 @@ const TalleresScreen = () => {
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
+    profesorIds: [] as number[],
   });
+  const [horarioModalVisible, setHorarioModalVisible] = useState(false);
+  const [horarioModalContent, setHorarioModalContent] = useState('');
+  const [horarioModalTitle, setHorarioModalTitle] = useState('');
 
   const { isWeb, isDesktop } = useResponsive();
+  const { userRole } = useAuth();
   const shouldShowTable = isWeb && isDesktop;
+  const isAdmin = userRole === 'administrador';
 
   useEffect(() => {
     cargarTalleres();
@@ -46,8 +69,32 @@ const TalleresScreen = () => {
   const cargarTalleres = async () => {
     setLoading(true);
     try {
-      const data = await talleresApi.listar();
-      setTalleres(data);
+      // Fetch talleres and horarios in parallel so we can compute schedule per taller
+      const [talleresData, horariosData] = await Promise.all([talleresApi.listar(), horariosApi.listar()]);
+
+      // Build map tallerId -> horarios array
+      const horarioMap: Record<number, Horario[]> = {};
+      horariosData.forEach((h) => {
+        if (!h.taller_id) return;
+        const tid = Number(h.taller_id);
+        if (!horarioMap[tid]) horarioMap[tid] = [];
+        horarioMap[tid].push(h);
+      });
+
+      // For each taller, attach horarios (as readable strings) and keep ubicacion/profesores
+      const merged = talleresData.map((t) => {
+        const hs = horarioMap[t.id] || [];
+        // create readable schedule: e.g. 'Lunes 18:00-20:00, Mié 16:00-17:00'
+        const horarioStr = hs.length
+          ? hs.map(h => `${h.dia_semana} ${formatTimeHHMM(h.hora_inicio)}-${formatTimeHHMM(h.hora_fin)}`).join(', ')
+          : '';
+        return {
+          ...t,
+          horario: horarioStr,
+        };
+      });
+
+      setTalleres(merged as any);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -67,7 +114,7 @@ const TalleresScreen = () => {
   const abrirModalCrear = () => {
     setIsEditing(false);
     setCurrentTaller(null);
-    setFormData({ nombre: '', descripcion: '' });
+    setFormData({ nombre: '', descripcion: '', profesorIds: [] });
     setModalVisible(true);
   };
 
@@ -77,6 +124,7 @@ const TalleresScreen = () => {
     setFormData({
       nombre: taller.nombre,
       descripcion: taller.descripcion || '',
+      profesorIds: taller.profesores?.map(p => p.id) || [],
     });
     setModalVisible(true);
   };
@@ -139,21 +187,25 @@ const TalleresScreen = () => {
         <Text style={sharedStyles.cardTitle}>{item.nombre}</Text>
         {item.descripcion && <Text style={sharedStyles.cardDetail}>Descripción: {item.descripcion}</Text>}
         {item.profesores && item.profesores.length > 0 && <Text style={sharedStyles.cardDetail}>Profesores: {item.profesores.map((p: any) => p.nombre).join(', ')}</Text>}
+        {item.horario && item.horario.length > 0 && <Text style={sharedStyles.cardDetail}>Horario: {item.horario}</Text>}
+        {item.ubicacion && <Text style={sharedStyles.cardDetail}>Ubicación: {item.ubicacion}</Text>}
       </View>
-      <View style={sharedStyles.cardActions}>
-        <TouchableOpacity
-          style={[sharedStyles.actionButton, sharedStyles.editButton]}
-          onPress={() => abrirModalEditar(item)}
-        >
-          <Text style={sharedStyles.actionButtonText}>Editar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[sharedStyles.actionButton, sharedStyles.deleteButton]}
-          onPress={() => eliminarTaller(item)}
-        >
-          <Text style={sharedStyles.actionButtonText}>Eliminar</Text>
-        </TouchableOpacity>
-      </View>
+      {isAdmin && (
+        <View style={sharedStyles.cardActions}>
+          <TouchableOpacity
+            style={[sharedStyles.actionButton, sharedStyles.editButton]}
+            onPress={() => abrirModalEditar(item)}
+          >
+            <Text style={sharedStyles.actionButtonText}>Editar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[sharedStyles.actionButton, sharedStyles.deleteButton]}
+            onPress={() => eliminarTaller(item)}
+          >
+            <Text style={sharedStyles.actionButtonText}>Eliminar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
@@ -161,6 +213,30 @@ const TalleresScreen = () => {
     { key: 'nombre', header: 'Nombre', render: (item) => item.nombre },
     { key: 'descripcion', header: 'Descripción', render: (item) => item.descripcion || '-' },
     { key: 'profesores', header: 'Profesores', render: (item) => item.profesores?.map((p: any) => p.nombre).join(', ') || '-' },
+    { key: 'horario', header: 'Horario', render: (item) => {
+        const s = (item as any).horario || '';
+        if (!s) return '-';
+        const parts = s.split(',').map(p => p.trim()).filter(Boolean);
+        const maxLines = 3;
+        const visible = parts.slice(0, maxLines);
+        const more = parts.length - visible.length;
+        return (
+          <View>
+            {visible.map((line, i) => (
+              <Text key={i} style={{ lineHeight: 18 }}>{line}</Text>
+            ))}
+            {more > 0 && (
+              <Text style={{ color: colors.blue.main }} onPress={() => {
+                setHorarioModalTitle(item.nombre);
+                setHorarioModalContent(s);
+                setHorarioModalVisible(true);
+              }}>Ver ({more} más)</Text>
+            )}
+          </View>
+        );
+      }
+    },
+    { key: 'ubicacion', header: 'Ubicación', render: (item) => (item as any).ubicacion || '-' },
   ];
 
   const tableActions: TableAction<Taller>[] = [
@@ -173,11 +249,20 @@ const TalleresScreen = () => {
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={[sharedStyles.contentWrapper, isWeb && sharedStyles.webContentWrapper]}>
-        <View style={sharedStyles.header}>
-          <Text style={sharedStyles.headerTitle}>Talleres</Text>
-          <TouchableOpacity style={sharedStyles.addButton} onPress={abrirModalCrear}>
-            <Text style={sharedStyles.addButtonText}>+ Nuevo</Text>
-          </TouchableOpacity>
+        <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <Text style={sharedStyles.headerTitle}>{isAdmin ? 'Talleres' : 'Mis Talleres'}</Text>
+            {isAdmin && (
+              <TouchableOpacity style={sharedStyles.addButton} onPress={abrirModalCrear}>
+                <Text style={sharedStyles.addButtonText}>+ Nuevo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {isWeb && shouldShowTable && (
+            <View style={{ marginTop: 12, width: '100%' }}>
+              <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar talleres..." onClear={() => setSearchTerm('')} />
+            </View>
+          )}
         </View>
 
         {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
@@ -192,18 +277,48 @@ const TalleresScreen = () => {
               columns={tableColumns}
               data={talleres}
               keyExtractor={(item) => item.id.toString()}
-              actions={tableActions}
+              actions={isAdmin ? tableActions : undefined}
+              searchable={true}
+              searchPlaceholder="Buscar talleres..."
+              externalSearchTerm={searchTerm}
+              onExternalSearchTerm={setSearchTerm}
+              searchableFields={['nombre', 'descripcion', 'profesores', 'horario', 'ubicacion']}
             />
           </View>
         )}
 
         {!loading && talleres.length > 0 && !shouldShowTable && (
-          <FlatList
-            data={talleres}
-            renderItem={renderTaller}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={sharedStyles.listContent}
-          />
+          <>
+            {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
+
+            {!loading && talleres.length === 0 && (
+              <EmptyState message="No hay talleres registrados" />
+            )}
+
+            {!loading && talleres.length > 0 && shouldShowTable && (
+              <View style={sharedStyles.tableContainer}>
+                <Table
+                  columns={tableColumns}
+                  data={talleres}
+                  keyExtractor={(item) => item.id.toString()}
+                  actions={isAdmin ? tableActions : undefined}
+                  pinScrollHintToWindow={true}
+                  searchable={true}
+                  searchPlaceholder="Buscar talleres..."
+                  searchableFields={[ 'horario', 'ubicacion' ]}
+                />
+              </View>
+            )}
+
+            {!loading && talleres.length > 0 && !shouldShowTable && (
+              <FlatList
+                data={talleres}
+                renderItem={renderTaller}
+                keyExtractor={(item) => item.id.toString()}
+                contentContainerStyle={sharedStyles.listContent}
+              />
+            )}
+          </>
         )}
       </View>
 
@@ -239,6 +354,37 @@ const TalleresScreen = () => {
                   multiline
                   numberOfLines={3}
                 />
+
+                <View style={sharedStyles.inputContainer}>
+                  <Text style={sharedStyles.label}>Profesores Asignados</Text>
+                  <ScrollView style={sharedStyles.pickerScroll} showsVerticalScrollIndicator={false}>
+                    {profesores.map((profesor) => (
+                      <TouchableOpacity
+                        key={profesor.id}
+                        style={[
+                          sharedStyles.pickerItem,
+                          formData.profesorIds.includes(profesor.id) && sharedStyles.pickerItemSelected,
+                        ]}
+                        onPress={() => {
+                          const newIds = formData.profesorIds.includes(profesor.id)
+                            ? formData.profesorIds.filter(id => id !== profesor.id)
+                            : [...formData.profesorIds, profesor.id];
+                          setFormData({ ...formData, profesorIds: newIds });
+                        }}
+                      >
+                        <Text style={sharedStyles.pickerItemText}>
+                          {formData.profesorIds.includes(profesor.id) ? '✓ ' : '○ '}
+                          {profesor.nombre}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  {formData.profesorIds.length > 0 && (
+                    <Text style={[sharedStyles.label, { marginTop: spacing.sm, fontSize: typography.sizes.xs }]}>
+                      {formData.profesorIds.length} profesor(es) seleccionado(s)
+                    </Text>
+                  )}
+                </View>
               </ScrollView>
 
               <View style={sharedStyles.modalFooter}>
@@ -255,6 +401,30 @@ const TalleresScreen = () => {
                   loading={loading}
                   style={sharedStyles.modalButton}
                 />
+              </View>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* Horario modal (view full schedule) */}
+      <Modal
+        visible={horarioModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setHorarioModalVisible(false)}
+      >
+        <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
+          <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
+            <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
+              <View style={sharedStyles.modalHeader}>
+                <Text style={sharedStyles.modalTitle}>Horario: {horarioModalTitle}</Text>
+              </View>
+              <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={true}>
+                <Text style={[sharedStyles.cardDetail, { marginBottom: 12 }]}>{horarioModalContent}</Text>
+              </ScrollView>
+              <View style={sharedStyles.modalFooter}>
+                <Button title="Cerrar" variant="secondary" onPress={() => setHorarioModalVisible(false)} />
               </View>
             </View>
           </SafeAreaView>

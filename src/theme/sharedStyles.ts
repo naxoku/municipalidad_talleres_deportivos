@@ -15,10 +15,13 @@ export const sharedStyles = StyleSheet.create({
         flex: 1,
     },
     webContentWrapper: {
-        maxWidth: 1200,
+        maxWidth: 1400,
         width: '100%',
         alignSelf: 'center',
         backgroundColor: colors.background.primary,
+        minHeight: '100vh',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.xl,
     },
     tableContainer: {
         flex: 1,
@@ -35,6 +38,7 @@ export const sharedStyles = StyleSheet.create({
         backgroundColor: colors.background.primary,
         borderBottomWidth: 1,
         borderBottomColor: colors.border.light,
+        ...(Platform.OS === 'web' && { position: 'sticky' as any, top: 0, zIndex: 2000 }),
     },
     headerTitle: {
         fontSize: typography.sizes.xxl,
@@ -72,7 +76,6 @@ export const sharedStyles = StyleSheet.create({
         borderLeftWidth: 3,
         borderLeftColor: colors.blue.main,
         ...shadows.md,
-        ...(Platform.OS === 'web' && { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' } as any),
     },
     cardContent: {
         marginBottom: spacing.md,
@@ -119,6 +122,7 @@ export const sharedStyles = StyleSheet.create({
     webModalOverlay: {
         justifyContent: 'center',
         alignItems: 'center',
+        padding: spacing.xl,
     },
     modalSafeArea: {
         maxHeight: '90%',
@@ -131,13 +135,14 @@ export const sharedStyles = StyleSheet.create({
         borderTopLeftRadius: borderRadius.xl,
         borderTopRightRadius: borderRadius.xl,
         maxHeight: '100%',
+        ...shadows.lg,
     },
     webModalContent: {
         borderRadius: borderRadius.lg,
         width: 600,
         maxWidth: '90%',
         maxHeight: '90%',
-        ...(Platform.OS === 'web' && { boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)' } as any),
+        ...shadows.lg,
     },
     modalHeader: {
         padding: spacing.lg,

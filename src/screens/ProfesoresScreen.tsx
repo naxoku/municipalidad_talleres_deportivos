@@ -13,12 +13,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { profesoresApi } from '../api/profesores';
+import { talleresApi } from '../api/talleres';
 import { Profesor } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { Table, TableColumn, TableAction } from '../components/Table';
+import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
+import { sharedStyles } from '../theme/sharedStyles';
+
+const colors = {
+  primary: '#0066cc',
+};
+
+const spacing = {
+  xl: 20,
+};
 
 const ProfesoresScreen = () => {
   const [profesores, setProfesores] = useState<Profesor[]>([]);
@@ -35,6 +46,7 @@ const ProfesoresScreen = () => {
 
   const { isWeb, isDesktop } = useResponsive();
   const shouldShowTable = isWeb && isDesktop;
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     cargarProfesores();
@@ -43,8 +55,27 @@ const ProfesoresScreen = () => {
   const cargarProfesores = async () => {
     setLoading(true);
     try {
-      const data = await profesoresApi.listar();
-      setProfesores(data);
+      // Fetch profesores and talleres in parallel so we can compute workshops per professor
+      const [profesData, talleresData] = await Promise.all([profesoresApi.listar(), talleresApi.listar()]);
+
+      // Build a map professorId -> taller names
+      const profTalleresMap: Record<number, string[]> = {};
+      talleresData.forEach((t) => {
+        if (!t.profesores || !Array.isArray(t.profesores)) return;
+        t.profesores.forEach((p) => {
+          const pid = Number(p.id);
+          if (!profTalleresMap[pid]) profTalleresMap[pid] = [];
+          profTalleresMap[pid].push(t.nombre);
+        });
+      });
+
+      // Attach talleres list to each profesor for display (non-destructive)
+      const merged = profesData.map((prof) => ({
+        ...prof,
+        talleres: profTalleresMap[prof.id] || [],
+      }));
+
+      setProfesores(merged as any);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -129,24 +160,26 @@ const ProfesoresScreen = () => {
   };
 
   const renderProfesor = ({ item }: { item: Profesor }) => (
-    <View style={styles.card}>
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.nombre}</Text>
-        <Text style={styles.cardDetail}>Especialidad: {item.especialidad}</Text>
-        <Text style={styles.cardDetail}>Email: {item.email}</Text>
+    <View style={sharedStyles.card}>
+      <View style={sharedStyles.cardContent}>
+        <Text style={sharedStyles.cardTitle}>{item.nombre}</Text>
+        <Text style={sharedStyles.cardDetail}>Especialidad: {item.especialidad}</Text>
+        <Text style={sharedStyles.cardDetail}>Teléfono: {item.telefono || '-'}</Text>
+        <Text style={sharedStyles.cardDetail}>Email: {(item as any).email || (item as any).profesor_email || '-'}</Text>
+        <Text style={sharedStyles.cardDetail}>Talleres: {((item as any).talleres && (item as any).talleres.length) ? (item as any).talleres.join(', ') : '-'}</Text>
       </View>
-      <View style={styles.cardActions}>
+      <View style={sharedStyles.cardActions}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
+          style={[sharedStyles.actionButton, sharedStyles.editButton]}
           onPress={() => abrirModalEditar(item)}
         >
-          <Text style={styles.actionButtonText}>Editar</Text>
+          <Text style={sharedStyles.actionButtonText}>Editar</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
+          style={[sharedStyles.actionButton, sharedStyles.deleteButton]}
           onPress={() => eliminarProfesor(item)}
         >
-          <Text style={styles.actionButtonText}>Eliminar</Text>
+          <Text style={sharedStyles.actionButtonText}>Eliminar</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -160,14 +193,19 @@ const ProfesoresScreen = () => {
       render: (item) => item.nombre,
     },
     {
-      key: 'especialidad',
-      header: 'Especialidad',
-      render: (item) => item.especialidad || '-',
+      key: 'telefono',
+      header: 'Teléfono',
+      render: (item) => item.telefono || '-',
     },
     {
       key: 'email',
       header: 'Email',
-      render: (item) => item.email || '-',
+      render: (item) => (item as any).email || (item as any).profesor_email || '-',
+    },
+    {
+      key: 'talleres',
+      header: 'Talleres',
+      render: (item) => ((item as any).talleres && (item as any).talleres.length) ? (item as any).talleres.join(', ') : '-',
     },
   ];
 
@@ -187,39 +225,89 @@ const ProfesoresScreen = () => {
   const Container = isWeb ? View : SafeAreaView;
 
   return (
-    <Container style={styles.container} edges={isWeb ? undefined : ['bottom']}>
-      <View style={[styles.contentWrapper, isWeb && styles.webContentWrapper]}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profesores</Text>
-          <TouchableOpacity style={styles.addButton} onPress={abrirModalCrear}>
-            <Text style={styles.addButtonText}>+ Nuevo</Text>
-          </TouchableOpacity>
+    <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
+      <View style={[sharedStyles.contentWrapper, isWeb && sharedStyles.webContentWrapper]}>
+        <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <Text style={sharedStyles.headerTitle}>Profesores</Text>
+            <TouchableOpacity style={sharedStyles.addButton} onPress={abrirModalCrear}>
+              <Text style={sharedStyles.addButtonText}>+ Nuevo</Text>
+            </TouchableOpacity>
+          </View>
+          {isWeb && shouldShowTable && (
+            <View style={{ marginTop: 12, width: '100%' }}>
+              <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar profesores..." onClear={() => setSearchTerm('')} />
+            </View>
+          )}
         </View>
 
-        {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
+        {isWeb ? (
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+            <View style={{ paddingBottom: spacing.xl }}>
+              {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
-        {!loading && profesores.length === 0 && (
-          <EmptyState message="No hay profesores registrados" />
-        )}
+              {!loading && profesores.length === 0 && (
+                <EmptyState message="No hay profesores registrados" />
+              )}
 
-        {!loading && profesores.length > 0 && shouldShowTable && (
-          <View style={styles.tableContainer}>
-            <Table
-              columns={tableColumns}
-              data={profesores}
-              keyExtractor={(item) => item.id.toString()}
-              actions={tableActions}
-            />
-          </View>
-        )}
+              {!loading && profesores.length > 0 && shouldShowTable && (
+                <View style={sharedStyles.tableContainer}>
+                  <Table
+                    columns={tableColumns}
+                    data={profesores}
+                    keyExtractor={(item) => item.id.toString()}
+                    actions={tableActions}
+                    pinScrollHintToWindow={true}
+                    searchable={true}
+                    searchPlaceholder="Buscar profesores..."
+                    externalSearchTerm={isWeb ? searchTerm : undefined}
+                    onExternalSearchTerm={isWeb ? setSearchTerm : undefined}
+                  />
+                </View>
+              )}
 
-        {!loading && profesores.length > 0 && !shouldShowTable && (
-          <FlatList
-            data={profesores}
-            renderItem={renderProfesor}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.listContent}
-          />
+              {!loading && profesores.length > 0 && !shouldShowTable && (
+                <FlatList
+                  data={profesores}
+                  renderItem={renderProfesor}
+                  keyExtractor={(item) => item.id.toString()}
+                  contentContainerStyle={sharedStyles.listContent}
+                  scrollEnabled={false}
+                />
+              )}
+            </View>
+          </ScrollView>
+        ) : (
+          <>
+            {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
+
+            {!loading && profesores.length === 0 && (
+              <EmptyState message="No hay profesores registrados" />
+            )}
+
+            {!loading && profesores.length > 0 && shouldShowTable && (
+              <View style={sharedStyles.tableContainer}>
+                <Table
+                  columns={tableColumns}
+                  data={profesores}
+                  keyExtractor={(item) => item.id.toString()}
+                  actions={tableActions}
+                    pinScrollHintToWindow={true}
+                  searchable={true}
+                  searchPlaceholder="Buscar profesores..."
+                />
+              </View>
+            )}
+
+            {!loading && profesores.length > 0 && !shouldShowTable && (
+              <FlatList
+                data={profesores}
+                renderItem={renderProfesor}
+                keyExtractor={(item) => item.id.toString()}
+                contentContainerStyle={sharedStyles.listContent}
+              />
+            )}
+          </>
         )}
       </View>
 
@@ -229,16 +317,16 @@ const ProfesoresScreen = () => {
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={[styles.modalOverlay, isWeb && styles.webModalOverlay]}>
-          <SafeAreaView style={[styles.modalSafeArea, isWeb && styles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
-            <View style={[styles.modalContent, isWeb && styles.webModalContent]}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
+        <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
+          <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
+            <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
+              <View style={sharedStyles.modalHeader}>
+                <Text style={sharedStyles.modalTitle}>
                   {isEditing ? 'Editar Profesor' : 'Nuevo Profesor'}
                 </Text>
               </View>
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
                 <Input
                   label="Nombre"
                   required
@@ -277,19 +365,19 @@ const ProfesoresScreen = () => {
                 )}
               </ScrollView>
 
-              <View style={styles.modalFooter}>
+              <View style={sharedStyles.modalFooter}>
                 <Button
                   title="Cancelar"
                   variant="secondary"
                   onPress={() => setModalVisible(false)}
-                  style={styles.modalButton}
+                  style={sharedStyles.modalButton}
                 />
                 <Button
                   title={isEditing ? 'Actualizar' : 'Crear'}
                   variant="success"
                   onPress={guardarProfesor}
                   loading={loading}
-                  style={styles.modalButton}
+                  style={sharedStyles.modalButton}
                 />
               </View>
             </View>
@@ -300,165 +388,7 @@ const ProfesoresScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  contentWrapper: {
-    flex: 1,
-  },
-  webContentWrapper: {
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    backgroundColor: '#fff',
-  },
-  tableContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  addButton: {
-    backgroundColor: '#28a745',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  loader: {
-    marginTop: 20,
-  },
-  listContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#0066cc',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-    }),
-  },
-  cardContent: {
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  cardDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  editButton: {
-    backgroundColor: '#007bff',
-  },
-  deleteButton: {
-    backgroundColor: '#dc3545',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  webModalOverlay: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalSafeArea: {
-    maxHeight: '90%',
-  },
-  webModalSafeArea: {
-    maxHeight: undefined,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '100%',
-  },
-  webModalContent: {
-    borderRadius: 12,
-    width: 600,
-    maxWidth: '90%',
-    maxHeight: '90%',
-  },
-  modalHeader: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: Platform.OS === 'web' ? 400 : undefined,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  modalButton: {
-    flex: 1,
-  },
-});
+// Estilos locales ya no son necesarios, se usan sharedStyles
+const styles = StyleSheet.create({});
 
 export default ProfesoresScreen;

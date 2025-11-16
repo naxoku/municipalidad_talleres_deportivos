@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
+import { Platform } from 'react-native';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -10,8 +11,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Por ahora siempre autenticado como admin
-  const [userRole, setUserRole] = useState<'administrador' | 'profesor' | null>('administrador');
+  const platformType = Platform.OS === 'web' ? 'web' : 'native';
+  const defaultRole: 'administrador' | 'profesor' = platformType === 'web' ? 'administrador' : 'profesor';
+
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [userRole, setUserRole] = useState<'administrador' | 'profesor' | null>(defaultRole);
 
   const login = (role: 'administrador' | 'profesor') => {
     setIsAuthenticated(true);
