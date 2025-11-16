@@ -8,14 +8,19 @@ import {
   Alert,
   StyleSheet,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { asistenciaApi } from '../api/asistencia';
 import { clasesApi } from '../api/clases';
 import { Asistencia, Clase } from '../types';
 import { EmptyState } from '../components/EmptyState';
+import { ProgressBar } from '../components/ProgressBar';
+import { Badge } from '../components/Badge';
 import { useAuth } from '../contexts/AuthContext';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
 
 const AsistenciaScreen = () => {
   const [clases, setClases] = useState<Clase[]>([]);
@@ -57,13 +62,47 @@ const AsistenciaScreen = () => {
     }
   };
 
+  const marcarTodos = async (presente: boolean) => {
+    if (!claseSeleccionada) return;
+    Alert.alert(
+      presente ? 'Marcar todos presentes' : 'Marcar todos ausentes',
+      presente ? '¿Confirmas marcar todos como presentes?' : '¿Confirmas marcar todos como ausentes?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Confirmar', onPress: async () => {
+          try {
+            setLoading(true);
+            await asistenciaApi.marcarMasivo(claseSeleccionada, presente);
+            await cargarAsistencia(claseSeleccionada);
+            Alert.alert('Listo', presente ? 'Se marcaron todos como presentes' : 'Se marcaron todos como ausentes');
+          } catch (e: any) {
+            Alert.alert('Error', e.message || 'Error al marcar masivo');
+          } finally {
+            setLoading(false);
+          }
+        }}
+      ]
+    );
+  };
+
   const marcarAsistencia = async (id: number, presente: boolean) => {
     try {
+      // Optimistic UI update
+      setAsistencias((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, presente } : a))
+      );
+
       await asistenciaApi.marcar(id, presente);
+      
+      // Optionally reload to ensure sync
       if (claseSeleccionada) {
         cargarAsistencia(claseSeleccionada);
       }
     } catch (error: any) {
+      // Revert on error
+      if (claseSeleccionada) {
+        cargarAsistencia(claseSeleccionada);
+      }
       Alert.alert('Error', error.message);
     }
   };
@@ -93,12 +132,14 @@ const AsistenciaScreen = () => {
   const renderAsistencia = ({ item }: { item: Asistencia }) => (
     <View style={styles.card}>
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.estudiante_nombre || `Estudiante ID: ${item.estudiante_id}`}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+          <Text style={styles.cardTitle}>{item.estudiante_nombre || `Estudiante ID: ${item.estudiante_id}`}</Text>
+        </View>
         <View style={styles.statusContainer}>
           <Ionicons 
             name={item.presente ? 'checkmark-circle' : 'close-circle'} 
             size={18} 
-            color={item.presente ? '#28a745' : '#dc3545'}
+            color={item.presente ? colors.success : colors.error}
           />
           <Text style={[styles.status, item.presente ? styles.statusPresente : styles.statusAusente]}>
             {item.presente ? 'Presente' : 'Ausente'}
@@ -108,16 +149,24 @@ const AsistenciaScreen = () => {
       {isAdmin && (
         <View style={styles.asistenciaButtons}>
           <TouchableOpacity
-            style={[styles.asistenciaButton, styles.presenteButton, item.presente && styles.buttonActive]}
+            style={[
+              styles.asistenciaButton, 
+              styles.presenteButton, 
+              item.presente && styles.buttonActive
+            ]}
             onPress={() => marcarAsistencia(item.id, true)}
           >
-            <Text style={styles.asistenciaButtonText}>Presente</Text>
+            <Ionicons name="checkmark" size={18} color={item.presente ? '#fff' : colors.success} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.asistenciaButton, styles.ausenteButton, !item.presente && styles.buttonActive]}
+            style={[
+              styles.asistenciaButton, 
+              styles.ausenteButton, 
+              !item.presente && styles.buttonActive
+            ]}
             onPress={() => marcarAsistencia(item.id, false)}
           >
-            <Text style={styles.asistenciaButtonText}>Ausente</Text>
+            <Ionicons name="close" size={18} color={!item.presente ? '#fff' : colors.error} />
           </TouchableOpacity>
         </View>
       )}
@@ -158,12 +207,67 @@ const AsistenciaScreen = () => {
       )}
 
       {!loading && !mostrarClases && asistencias.length > 0 && (
-        <FlatList
-          data={asistencias}
-          renderItem={renderAsistencia}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-        />
+        <>
+          <View style={{ paddingHorizontal: 16, paddingBottom: 8, paddingTop: 12, backgroundColor: colors.background.secondary }}>
+            <View style={{ marginBottom: spacing.md }}>
+              <ProgressBar 
+                current={asistencias.filter(a => a.presente).length} 
+                total={asistencias.length} 
+                height={10}
+                showLabel={false}
+              />
+              <Text style={{ fontSize: typography.sizes.lg, fontWeight: '600', color: colors.text.primary, marginTop: spacing.sm }}>
+                {`${asistencias.filter(a => a.presente).length}/${asistencias.length} presentes`}
+              </Text>
+            </View>
+            
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <TouchableOpacity 
+                onPress={() => marcarTodos(true)} 
+                style={{ 
+                  flex: 1,
+                  backgroundColor: colors.success, 
+                  padding: spacing.md, 
+                  borderRadius: borderRadius.lg, 
+                  flexDirection: 'row', 
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="checkmark-done" size={20} color="#fff" style={{ marginRight: spacing.xs }} />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: typography.sizes.md }}>Todos Presentes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => marcarTodos(false)} 
+                style={{ 
+                  flex: 1,
+                  backgroundColor: colors.error, 
+                  padding: spacing.md, 
+                  borderRadius: borderRadius.lg,
+                  flexDirection: 'row', 
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="close" size={20} color="#fff" style={{ marginRight: spacing.xs }} />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: typography.sizes.md }}>Todos Ausentes</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: colors.blue.soft, borderRadius: borderRadius.md }}>
+              <Text style={{ fontSize: typography.sizes.sm, color: colors.blue.dark, textAlign: 'center' }}>
+                💡 Tip: Marca todos presentes y ajusta las excepciones
+              </Text>
+            </View>
+          </View>
+
+          <FlatList
+            data={asistencias}
+            renderItem={renderAsistencia}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+          />
+        </>
       )}
     </SafeAreaView>
   );
@@ -172,123 +276,114 @@ const AsistenciaScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.secondary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.md,
+    backgroundColor: colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
   },
   backButton: {
-    marginRight: 12,
-    padding: 4,
+    marginRight: spacing.sm,
+    padding: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#0066cc',
+    fontSize: typography.sizes.md,
+    color: colors.primary,
     fontWeight: '600',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: typography.sizes.xl,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text.primary,
     flex: 1,
   },
   loader: {
-    marginTop: 20,
+    marginTop: spacing.xl,
   },
   listContent: {
-    padding: 16,
+    padding: spacing.md,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
     borderLeftWidth: 4,
-    borderLeftColor: '#fd7e14',
+    borderLeftColor: colors.accent.orange,
     flexDirection: 'row',
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-    }),
+    ...(shadows.md as any),
   },
   cardContent: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.sizes.md,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   cardDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.sizes.sm,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
   },
   cardArrow: {
-    marginLeft: 12,
+    marginLeft: spacing.sm,
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
+    gap: spacing.xs,
+    marginTop: spacing.xs,
   },
   status: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: typography.sizes.sm,
+    fontWeight: '600',
   },
   statusPresente: {
-    color: '#28a745',
+    color: colors.success,
   },
   statusAusente: {
-    color: '#dc3545',
+    color: colors.error,
   },
   asistenciaButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.xs,
   },
   asistenciaButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
     borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 44,
+    minHeight: 44,
   },
   presenteButton: {
-    borderColor: '#28a745',
-    backgroundColor: '#fff',
+    borderColor: colors.success,
+    backgroundColor: colors.background.primary,
   },
   ausenteButton: {
-    borderColor: '#dc3545',
-    backgroundColor: '#fff',
+    borderColor: colors.error,
+    backgroundColor: colors.background.primary,
   },
   buttonActive: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   asistenciaButtonText: {
-    color: '#333',
+    color: colors.text.primary,
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: typography.sizes.xs,
   },
 });
 

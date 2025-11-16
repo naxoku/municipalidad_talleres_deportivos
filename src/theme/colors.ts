@@ -36,9 +36,13 @@ export const colors = {
 
     // Estados y acciones
     success: '#00862d',
+    successLight: '#e6f4ed',
     warning: '#ff9800',
+    warningLight: '#fff4e5',
     error: '#e53935',
+    errorLight: '#fdecea',
     info: '#1e88e5',
+    infoLight: '#e3f2fd',
 
     // Bordes y divisores
     border: {

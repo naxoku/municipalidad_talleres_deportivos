@@ -18,11 +18,11 @@ import { Horario, Taller } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
-import { Table, TableColumn, TableAction } from '../components/Table';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
 import SearchBar from '../components/SearchBar';
 import { sharedStyles } from '../theme/sharedStyles';
+import { shadows } from '../theme/colors';
 import { formatTimeHHMM } from '../utils/time';
 
 const DIAS_SEMANA = [
@@ -149,16 +149,7 @@ const HorariosScreen = () => {
     </View>
   );
 
-  const tableColumns: TableColumn<Horario>[] = [
-    { key: 'taller', header: 'Taller', render: (item) => item.taller_nombre || `ID: ${item.taller_id}` },
-    { key: 'dia', header: 'Día', render: (item) => item.dia_semana, width: 120 },
-    { key: 'hora_inicio', header: 'Hora Inicio', render: (item) => formatTimeHHMM(item.hora_inicio), width: 100 },
-    { key: 'hora_fin', header: 'Hora Fin', render: (item) => formatTimeHHMM(item.hora_fin), width: 100 },
-  ];
-
-  const tableActions: TableAction<Horario>[] = [
-    { label: 'Eliminar', onPress: eliminarHorario, color: '#dc3545' },
-  ];
+  // Se eliminó la representación en tabla. Usamos listas/ítems en tarjetas.
 
   const Container = isWeb ? View : SafeAreaView;
 
@@ -186,22 +177,7 @@ const HorariosScreen = () => {
               <EmptyState message="No hay horarios registrados" />
             )}
 
-            {!loading && horarios.length > 0 && shouldShowTable && (
-              <View style={styles.tableContainer}>
-                <Table
-                  columns={tableColumns}
-                  data={horarios}
-                  keyExtractor={(item) => item.id.toString()}
-                  actions={isAdmin ? tableActions : undefined}
-                  searchable={true}
-                  searchPlaceholder="Buscar horarios..."
-                  externalSearchTerm={isWeb ? searchTerm : undefined}
-                  onExternalSearchTerm={isWeb ? setSearchTerm : undefined}
-                />
-              </View>
-            )}
-
-            {!loading && horarios.length > 0 && !shouldShowTable && (
+            {!loading && horarios.length > 0 && (
               <FlatList
                 data={horarios}
                 renderItem={renderHorario}
@@ -235,22 +211,7 @@ const HorariosScreen = () => {
             <EmptyState message="No hay horarios registrados" />
           )}
 
-          {!loading && horarios.length > 0 && shouldShowTable && (
-            <View style={styles.tableContainer}>
-              <Table
-                columns={tableColumns}
-                data={horarios}
-                keyExtractor={(item) => item.id.toString()}
-                actions={isAdmin ? tableActions : undefined}
-                searchable={true}
-                searchPlaceholder="Buscar horarios..."
-                externalSearchTerm={isWeb ? searchTerm : undefined}
-                onExternalSearchTerm={isWeb ? setSearchTerm : undefined}
-              />
-            </View>
-          )}
-
-          {!loading && horarios.length > 0 && !shouldShowTable && (
+          {!loading && horarios.length > 0 && (
             <FlatList
               data={horarios}
               renderItem={renderHorario}
@@ -415,20 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#17a2b8',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-    }),
+    ...(shadows.md as any),
   },
   cardContent: {
     marginBottom: 12,

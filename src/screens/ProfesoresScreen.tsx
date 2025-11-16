@@ -18,7 +18,6 @@ import { Profesor } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
-import { Table, TableColumn, TableAction } from '../components/Table';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { sharedStyles } from '../theme/sharedStyles';
@@ -185,48 +184,13 @@ const ProfesoresScreen = () => {
     </View>
   );
 
-  // Table configuration for web
-  const tableColumns: TableColumn<Profesor>[] = [
-    {
-      key: 'nombre',
-      header: 'Nombre',
-      render: (item) => item.nombre,
-    },
-    {
-      key: 'telefono',
-      header: 'Teléfono',
-      render: (item) => item.telefono || '-',
-    },
-    {
-      key: 'email',
-      header: 'Email',
-      render: (item) => (item as any).email || (item as any).profesor_email || '-',
-    },
-    {
-      key: 'talleres',
-      header: 'Talleres',
-      render: (item) => ((item as any).talleres && (item as any).talleres.length) ? (item as any).talleres.join(', ') : '-',
-    },
-  ];
-
-  const tableActions: TableAction<Profesor>[] = [
-    {
-      label: 'Editar',
-      onPress: abrirModalEditar,
-      color: '#007bff',
-    },
-    {
-      label: 'Eliminar',
-      onPress: eliminarProfesor,
-      color: '#dc3545',
-    },
-  ];
+  // Se eliminó la representación en tabla. Usamos listas/ítems en tarjetas.
 
   const Container = isWeb ? View : SafeAreaView;
 
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
-      <View style={[sharedStyles.contentWrapper, isWeb && sharedStyles.webContentWrapper]}>
+      <View style={{ flex: 1 }}>
         <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <Text style={sharedStyles.headerTitle}>Profesores</Text>
@@ -250,23 +214,7 @@ const ProfesoresScreen = () => {
                 <EmptyState message="No hay profesores registrados" />
               )}
 
-              {!loading && profesores.length > 0 && shouldShowTable && (
-                <View style={sharedStyles.tableContainer}>
-                  <Table
-                    columns={tableColumns}
-                    data={profesores}
-                    keyExtractor={(item) => item.id.toString()}
-                    actions={tableActions}
-                    pinScrollHintToWindow={true}
-                    searchable={true}
-                    searchPlaceholder="Buscar profesores..."
-                    externalSearchTerm={isWeb ? searchTerm : undefined}
-                    onExternalSearchTerm={isWeb ? setSearchTerm : undefined}
-                  />
-                </View>
-              )}
-
-              {!loading && profesores.length > 0 && !shouldShowTable && (
+              {!loading && profesores.length > 0 && (
                 <FlatList
                   data={profesores}
                   renderItem={renderProfesor}
@@ -285,21 +233,7 @@ const ProfesoresScreen = () => {
               <EmptyState message="No hay profesores registrados" />
             )}
 
-            {!loading && profesores.length > 0 && shouldShowTable && (
-              <View style={sharedStyles.tableContainer}>
-                <Table
-                  columns={tableColumns}
-                  data={profesores}
-                  keyExtractor={(item) => item.id.toString()}
-                  actions={tableActions}
-                    pinScrollHintToWindow={true}
-                  searchable={true}
-                  searchPlaceholder="Buscar profesores..."
-                />
-              </View>
-            )}
-
-            {!loading && profesores.length > 0 && !shouldShowTable && (
+            {!loading && profesores.length > 0 && (
               <FlatList
                 data={profesores}
                 renderItem={renderProfesor}

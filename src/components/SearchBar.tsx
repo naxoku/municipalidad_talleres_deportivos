@@ -1,16 +1,17 @@
 import React from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, borderRadius, spacing, typography } from '../theme/colors';
+import { colors, borderRadius, spacing, typography, shadows } from '../theme/colors';
 
 interface Props {
   value: string;
   onChange: (text: string) => void;
   placeholder?: string;
   onClear?: () => void;
+  onFocus?: () => void;
 }
 
-export const SearchBar: React.FC<Props> = ({ value, onChange, placeholder = 'Buscar...', onClear }) => {
+export const SearchBar: React.FC<Props> = ({ value, onChange, placeholder = 'Buscar...', onClear, onFocus }) => {
   return (
     <View style={styles.container}>
       <View style={styles.inputContainer}>
@@ -21,6 +22,7 @@ export const SearchBar: React.FC<Props> = ({ value, onChange, placeholder = 'Bus
           placeholderTextColor={colors.text.tertiary}
           value={value}
           onChangeText={onChange}
+          onFocus={onFocus}
         />
         {value.length > 0 && (
           <TouchableOpacity onPress={onClear} style={styles.clearButton}>
@@ -41,11 +43,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border.medium,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background.primary,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    backgroundColor: '#f9fafb',
     paddingHorizontal: spacing.md,
     height: 44,
+    ...(shadows.sm as any),
   },
   icon: {
     marginRight: spacing.sm,

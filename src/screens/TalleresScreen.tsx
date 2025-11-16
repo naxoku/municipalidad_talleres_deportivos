@@ -19,7 +19,6 @@ import { Taller, Profesor, Horario } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
-import { Table, TableColumn, TableAction } from '../components/Table';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
@@ -209,46 +208,13 @@ const TalleresScreen = () => {
     </View>
   );
 
-  const tableColumns: TableColumn<Taller>[] = [
-    { key: 'nombre', header: 'Nombre', render: (item) => item.nombre },
-    { key: 'descripcion', header: 'Descripción', render: (item) => item.descripcion || '-' },
-    { key: 'profesores', header: 'Profesores', render: (item) => item.profesores?.map((p: any) => p.nombre).join(', ') || '-' },
-    { key: 'horario', header: 'Horario', render: (item) => {
-        const s = (item as any).horario || '';
-        if (!s) return '-';
-        const parts = s.split(',').map(p => p.trim()).filter(Boolean);
-        const maxLines = 3;
-        const visible = parts.slice(0, maxLines);
-        const more = parts.length - visible.length;
-        return (
-          <View>
-            {visible.map((line, i) => (
-              <Text key={i} style={{ lineHeight: 18 }}>{line}</Text>
-            ))}
-            {more > 0 && (
-              <Text style={{ color: colors.blue.main }} onPress={() => {
-                setHorarioModalTitle(item.nombre);
-                setHorarioModalContent(s);
-                setHorarioModalVisible(true);
-              }}>Ver ({more} más)</Text>
-            )}
-          </View>
-        );
-      }
-    },
-    { key: 'ubicacion', header: 'Ubicación', render: (item) => (item as any).ubicacion || '-' },
-  ];
-
-  const tableActions: TableAction<Taller>[] = [
-    { label: 'Editar', onPress: abrirModalEditar, color: colors.blue.main },
-    { label: 'Eliminar', onPress: eliminarTaller, color: colors.error },
-  ];
+  // Se eliminó la representación en tabla. Usamos listas/ítems en tarjetas.
 
   const Container = isWeb ? View : SafeAreaView;
 
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
-      <View style={[sharedStyles.contentWrapper, isWeb && sharedStyles.webContentWrapper]}>
+      <View style={{ flex: 1 }}>
         <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <Text style={sharedStyles.headerTitle}>{isAdmin ? 'Talleres' : 'Mis Talleres'}</Text>
@@ -271,54 +237,13 @@ const TalleresScreen = () => {
           <EmptyState message="No hay talleres registrados" />
         )}
 
-        {!loading && talleres.length > 0 && shouldShowTable && (
-          <View style={sharedStyles.tableContainer}>
-            <Table
-              columns={tableColumns}
-              data={talleres}
-              keyExtractor={(item) => item.id.toString()}
-              actions={isAdmin ? tableActions : undefined}
-              searchable={true}
-              searchPlaceholder="Buscar talleres..."
-              externalSearchTerm={searchTerm}
-              onExternalSearchTerm={setSearchTerm}
-              searchableFields={['nombre', 'descripcion', 'profesores', 'horario', 'ubicacion']}
-            />
-          </View>
-        )}
-
-        {!loading && talleres.length > 0 && !shouldShowTable && (
-          <>
-            {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
-
-            {!loading && talleres.length === 0 && (
-              <EmptyState message="No hay talleres registrados" />
-            )}
-
-            {!loading && talleres.length > 0 && shouldShowTable && (
-              <View style={sharedStyles.tableContainer}>
-                <Table
-                  columns={tableColumns}
-                  data={talleres}
-                  keyExtractor={(item) => item.id.toString()}
-                  actions={isAdmin ? tableActions : undefined}
-                  pinScrollHintToWindow={true}
-                  searchable={true}
-                  searchPlaceholder="Buscar talleres..."
-                  searchableFields={[ 'horario', 'ubicacion' ]}
-                />
-              </View>
-            )}
-
-            {!loading && talleres.length > 0 && !shouldShowTable && (
-              <FlatList
-                data={talleres}
-                renderItem={renderTaller}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={sharedStyles.listContent}
-              />
-            )}
-          </>
+        {!loading && talleres.length > 0 && (
+          <FlatList
+            data={talleres}
+            renderItem={renderTaller}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={sharedStyles.listContent}
+          />
         )}
       </View>
 

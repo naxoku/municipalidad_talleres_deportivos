@@ -18,6 +18,7 @@ import { talleresApi } from '../api/talleres';
 import { Inscripcion, Estudiante, Taller } from '../types';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { shadows } from '../theme/colors';
 
 const InscripcionesScreen = () => {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
@@ -283,20 +284,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#28a745',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-    }),
+    ...(shadows.md as any),
   },
   cardContent: {
     marginBottom: 12,

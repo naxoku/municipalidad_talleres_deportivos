@@ -19,6 +19,7 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
+import { shadows } from '../theme/colors';
 
 const ClasesScreen = () => {
   const [clases, setClases] = useState<Clase[]>([]);
@@ -283,20 +284,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#6f42c1',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-    }),
+    ...(shadows.md as any),
   },
   cardContent: {
     marginBottom: 12,

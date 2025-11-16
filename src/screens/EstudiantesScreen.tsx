@@ -17,7 +17,6 @@ import { Estudiante } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
-import { Table, TableColumn, TableAction } from '../components/Table';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
@@ -162,22 +161,13 @@ const EstudiantesScreen = () => {
     </View>
   );
 
-  const tableColumns: TableColumn<Estudiante>[] = [
-    { key: 'nombre', header: 'Nombre', render: (item) => item.nombre },
-    { key: 'edad', header: 'Edad', render: (item) => item.edad ? `${item.edad} años` : '-', width: 120 },
-    { key: 'contacto', header: 'Contacto', render: (item) => item.contacto || '-' },
-  ];
-
-  const tableActions: TableAction<Estudiante>[] = [
-    { label: 'Editar', onPress: abrirModalEditar, color: '#007bff' },
-    { label: 'Eliminar', onPress: eliminarEstudiante, color: '#dc3545' },
-  ];
+  // Se eliminó la representación en tabla. Usamos listas/ítems en tarjetas.
 
   const Container = isWeb ? View : SafeAreaView;
 
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
-      <View style={[sharedStyles.contentWrapper, isWeb && sharedStyles.webContentWrapper]}>
+      <View style={{ flex: 1 }}>
         <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <Text style={sharedStyles.headerTitle}>{isAdmin ? 'Estudiantes' : 'Mis Estudiantes'}</Text>
@@ -203,22 +193,7 @@ const EstudiantesScreen = () => {
                 <EmptyState message="No hay estudiantes registrados" />
               )}
 
-              {!loading && estudiantes.length > 0 && shouldShowTable && (
-                <View style={sharedStyles.tableContainer}>
-                  <Table
-                    columns={tableColumns}
-                    data={estudiantes}
-                    keyExtractor={(item) => item.id.toString()}
-                    actions={isAdmin ? tableActions : undefined}
-                    searchable={true}
-                    searchPlaceholder="Buscar estudiantes..."
-                    externalSearchTerm={isWeb ? searchTerm : undefined}
-                    onExternalSearchTerm={isWeb ? setSearchTerm : undefined}
-                  />
-                </View>
-              )}
-
-              {!loading && estudiantes.length > 0 && !shouldShowTable && (
+              {!loading && estudiantes.length > 0 && (
                 <FlatList
                   data={estudiantes}
                   renderItem={renderEstudiante}
@@ -237,20 +212,7 @@ const EstudiantesScreen = () => {
               <EmptyState message="No hay estudiantes registrados" />
             )}
 
-            {!loading && estudiantes.length > 0 && shouldShowTable && (
-              <View style={sharedStyles.tableContainer}>
-                <Table
-                  columns={tableColumns}
-                  data={estudiantes}
-                  keyExtractor={(item) => item.id.toString()}
-                  actions={isAdmin ? tableActions : undefined}
-                  searchable={true}
-                  searchPlaceholder="Buscar estudiantes..."
-                />
-              </View>
-            )}
-
-            {!loading && estudiantes.length > 0 && !shouldShowTable && (
+            {!loading && estudiantes.length > 0 && (
               <FlatList
                 data={estudiantes}
                 renderItem={renderEstudiante}
