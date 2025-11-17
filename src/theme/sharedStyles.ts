@@ -1,6 +1,9 @@
 import { StyleSheet, Platform } from 'react-native';
 import { colors, borderRadius, spacing, typography, shadows } from './colors';
 
+// Altura estándar para botones compactos (quick actions, botones de header)
+export const BUTTON_HEIGHT = 36;
+
 /**
  * Estilos compartidos para todas las pantallas
  * Diseño minimalista con verde principal y azules de Deportes
@@ -100,6 +103,7 @@ export const sharedStyles = StyleSheet.create({
         paddingVertical: spacing.sm,
         borderRadius: borderRadius.md,
         alignItems: 'center',
+        minHeight: BUTTON_HEIGHT,
     },
     editButton: {
         backgroundColor: colors.blue.main,

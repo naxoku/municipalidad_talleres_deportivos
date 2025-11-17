@@ -149,7 +149,9 @@ const InscripcionesScreen = () => {
       {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
 
       {!loading && inscripciones.length === 0 && (
-        <EmptyState message="No hay inscripciones registradas" icon={<Ionicons name="person-add" size={48} color={'#888'} />} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <EmptyState message="No hay inscripciones registradas" icon={<Ionicons name="person-add" size={48} color={'#888'} />} />
+        </View>
       )}
 
       {!loading && inscripciones.length > 0 && (

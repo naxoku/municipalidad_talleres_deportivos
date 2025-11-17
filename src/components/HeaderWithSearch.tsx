@@ -5,25 +5,50 @@ import SearchBar from './SearchBar';
 import { useAuth } from '../contexts/AuthContext';
 import { useResponsive } from '../hooks/useResponsive';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
+import { BUTTON_HEIGHT } from '../theme/sharedStyles';
 
 interface Props {
   title: string;
   searchTerm?: string;
   onSearch?: (v: string) => void;
   onAdd?: (() => void) | undefined;
+  viewMode?: 'cards' | 'table';
+  onViewModeChange?: (mode: 'cards' | 'table') => void;
 }
 
-const HeaderWithSearch: React.FC<Props> = ({ title, searchTerm = '', onSearch, onAdd }) => {
+const HeaderWithSearch: React.FC<Props> = ({ 
+  title, 
+  searchTerm = '', 
+  onSearch, 
+  onAdd,
+  viewMode: externalViewMode,
+  onViewModeChange 
+}) => {
   const { isWeb, isMobile } = useResponsive();
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
 
-  const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards');
+  const [internalViewMode, setInternalViewMode] = React.useState<'cards' | 'table'>('cards');
+  
+  // Use external viewMode if provided, otherwise use internal state
+  const viewMode = externalViewMode !== undefined ? externalViewMode : internalViewMode;
+  const setViewMode = onViewModeChange || setInternalViewMode;
 
   return (
     <View style={styles.header}>
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>{title}</Text>
+        {onSearch ? (
+          <View style={styles.inlineSearch}>
+            <SearchBar
+              value={searchTerm}
+              onChange={onSearch}
+              placeholder={`Buscar ${title.toLowerCase()}...`}
+              onClear={() => onSearch('')}
+            />
+          </View>
+        ) : (
+          <Text style={styles.headerTitle}>{title}</Text>
+        )}
         <View style={styles.headerActions}>
           <View style={styles.viewToggle}>
             <TouchableOpacity
@@ -48,11 +73,7 @@ const HeaderWithSearch: React.FC<Props> = ({ title, searchTerm = '', onSearch, o
         </View>
       </View>
 
-      {onSearch && (
-        <View style={styles.searchContainer}>
-          <SearchBar value={searchTerm} onChange={onSearch} placeholder={`Buscar ${title.toLowerCase()}...`} onClear={() => onSearch('')} />
-        </View>
-      )}
+      {/* search is rendered inline in headerRow now */}
     </View>
   );
 };
@@ -101,20 +122,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
     marginLeft: spacing.sm,
+    minHeight: BUTTON_HEIGHT,
   },
   addButtonText: {
     color: colors.text.light,
     fontWeight: '600',
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.sm,
     marginLeft: spacing.xs,
+    lineHeight: 18,
   },
   searchContainer: {
     marginTop: spacing.sm,
     width: '100%'
+  }
+  ,
+  inlineSearch: {
+    flex: 1,
+    marginRight: spacing.md,
+    alignSelf: 'stretch',
   }
 });
 

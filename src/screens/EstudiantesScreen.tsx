@@ -175,7 +175,9 @@ const EstudiantesScreen = () => {
         {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
         {!loading && estudiantes.length === 0 && (
-          <EmptyState message="No hay estudiantes registrados" icon={<Ionicons name="person-circle" size={48} color={colors.primary || '#888'} />} />
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+            <EmptyState message="No hay estudiantes registrados" icon={<Ionicons name="person-circle" size={48} color={colors.primary || '#888'} />} />
+          </View>
         )}
 
         {!loading && estudiantes.length > 0 && (

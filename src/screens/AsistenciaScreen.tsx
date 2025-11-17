@@ -27,7 +27,7 @@ import HeaderWithSearch from '../components/HeaderWithSearch';
 const AsistenciaScreen = () => {
   const [clases, setClases] = useState<Clase[]>([]);
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
-  const [claseSeleccionada, setClaseSeleccionada] = useState<number | null>(null);
+  const [claseSeleccionada, setClaseSeleccionada] = useState<{ horario_id: number; fecha: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [mostrarClases, setMostrarClases] = useState(true);
 
@@ -51,12 +51,12 @@ const AsistenciaScreen = () => {
     }
   };
 
-  const cargarAsistencia = async (claseId: number) => {
+  const cargarAsistencia = async (horarioId: number, fecha: string) => {
     setLoading(true);
     try {
-      const data = await asistenciaApi.listarPorClase(claseId);
+      const data = await asistenciaApi.listarPorSesion(horarioId, fecha);
       setAsistencias(data);
-      setClaseSeleccionada(claseId);
+      setClaseSeleccionada({ horario_id: horarioId, fecha });
       setMostrarClases(false);
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -75,8 +75,9 @@ const AsistenciaScreen = () => {
         { text: 'Confirmar', onPress: async () => {
           try {
             setLoading(true);
-            await asistenciaApi.marcarMasivo(claseSeleccionada, presente);
-            await cargarAsistencia(claseSeleccionada);
+            // marcar masivo por sesión (horario + fecha)
+            await asistenciaApi.marcarMasivoSesion(claseSeleccionada.horario_id, claseSeleccionada.fecha, presente);
+            await cargarAsistencia(claseSeleccionada.horario_id, claseSeleccionada.fecha);
             Alert.alert('Listo', presente ? 'Se marcaron todos como presentes' : 'Se marcaron todos como ausentes');
           } catch (e: any) {
             Alert.alert('Error', e.message || 'Error al marcar masivo');
@@ -88,25 +89,22 @@ const AsistenciaScreen = () => {
     );
   };
 
-  const marcarAsistencia = async (id: number, presente: boolean) => {
+  const marcarAsistencia = async (estudianteId: number, presente: boolean) => {
+    if (!claseSeleccionada) return;
     try {
-      // Optimistic UI update
+      // Optimistic UI update (identify by estudiante_id)
       setAsistencias((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, presente } : a))
+        prev.map((a) => (a.estudiante_id === estudianteId ? { ...a, presente } : a))
       );
 
-      await asistenciaApi.marcar(id, presente);
-      
+      await asistenciaApi.marcarSesion(claseSeleccionada.horario_id, claseSeleccionada.fecha, estudianteId, presente);
+
       // Optionally reload to ensure sync
-      if (claseSeleccionada) {
-        cargarAsistencia(claseSeleccionada);
-      }
+      await cargarAsistencia(claseSeleccionada.horario_id, claseSeleccionada.fecha);
     } catch (error: any) {
       // Revert on error
-      if (claseSeleccionada) {
-        cargarAsistencia(claseSeleccionada);
-      }
-      Alert.alert('Error', error.message);
+      await cargarAsistencia(claseSeleccionada.horario_id, claseSeleccionada.fecha);
+      Alert.alert('Error', error.message || 'Error al marcar asistencia');
     }
   };
 
@@ -119,7 +117,7 @@ const AsistenciaScreen = () => {
   const renderClase = ({ item }: { item: Clase }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => cargarAsistencia(item.id)}
+      onPress={() => cargarAsistencia((item as any).horario_id, item.fecha)}
     >
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{item.taller_nombre || `Taller ID: ${item.taller_id}`}</Text>
@@ -157,7 +155,7 @@ const AsistenciaScreen = () => {
               styles.presenteButton, 
               item.presente && styles.buttonActive
             ]}
-            onPress={() => marcarAsistencia(item.id, true)}
+            onPress={() => marcarAsistencia(item.estudiante_id, true)}
           >
             <Ionicons name="checkmark" size={18} color={item.presente ? '#fff' : colors.success} />
           </TouchableOpacity>
@@ -167,7 +165,7 @@ const AsistenciaScreen = () => {
               styles.ausenteButton, 
               !item.presente && styles.buttonActive
             ]}
-            onPress={() => marcarAsistencia(item.id, false)}
+            onPress={() => marcarAsistencia(item.estudiante_id, false)}
           >
             <Ionicons name="close" size={18} color={!item.presente ? '#fff' : colors.error} />
           </TouchableOpacity>
@@ -199,20 +197,24 @@ const AsistenciaScreen = () => {
       {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
       {!loading && mostrarClases && clases.length === 0 && (
-        <EmptyState message="No hay clases registradas" icon={<Ionicons name="calendar" size={48} color={colors.primary || '#888'} />} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+          <EmptyState message="No hay clases registradas" icon={<Ionicons name="calendar" size={48} color={colors.primary || '#888'} />} />
+        </View>
       )}
 
       {!loading && mostrarClases && clases.length > 0 && (
         <FlatList
-          data={clases}
-          renderItem={renderClase}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={sharedStyles.listContent}
-        />
+            data={clases}
+            renderItem={renderClase}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={sharedStyles.listContent}
+          />
       )}
 
       {!loading && !mostrarClases && asistencias.length === 0 && (
-        <EmptyState message="No hay estudiantes inscritos en esta clase" icon={<Ionicons name="people" size={48} color={colors.primary || '#888'} />} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+          <EmptyState message="No hay estudiantes inscritos en esta clase" icon={<Ionicons name="people" size={48} color={colors.primary || '#888'} />} />
+        </View>
       )}
 
       {!loading && !mostrarClases && asistencias.length > 0 && (

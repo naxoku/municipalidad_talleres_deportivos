@@ -13,7 +13,7 @@ import DashboardScreen from '../screens/DashboardScreen';
 import GlobalSearch from '../components/GlobalSearch';
 import ProfesoresScreen from '../screens/ProfesoresScreen';
 
-import TalleresEnhancedScreen from '../screens/TalleresEnhancedScreen';
+import TalleresScreen from '../screens/TalleresScreen';
 import EstudiantesEnhancedScreen from '../screens/EstudiantesEnhancedScreen';
 
 import HorariosScreen from '../screens/HorariosScreen';
@@ -38,7 +38,7 @@ function DrawerNavigatorContent() {
       {shouldShowPermanent && (
         <View style={[styles.topBar, { left: 0, right: 0 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: shouldShowPermanent ? 250 : 0 }}>
-            <Text style={styles.topBarTitle}>Talleres Municipales</Text>
+            <Text style={styles.topBarTitle}>Talleres municipales</Text>
           </View>
           <View style={{ marginLeft: shouldShowPermanent ? 250 : 0 }}>
             <GlobalSearch inline />
@@ -93,7 +93,7 @@ function DrawerNavigatorContent() {
               ),
             }}
           />
-          <Drawer.Screen name="Talleres" component={TalleresEnhancedScreen} 
+          <Drawer.Screen name="Talleres" component={TalleresScreen} 
             options={{
               drawerIcon: ({ color, size }) => (
                 <Ionicons name="book" size={size} color={color} />
@@ -165,7 +165,7 @@ function DrawerNavigatorContent() {
         <>
           <Drawer.Screen
             name="Mis Talleres"
-            component={TalleresEnhancedScreen}
+            component={TalleresScreen}
             options={{
               drawerIcon: ({ color, size }) => (
                 <Ionicons name="book" size={size} color={color} />

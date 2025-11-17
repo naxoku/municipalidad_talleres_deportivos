@@ -8,7 +8,12 @@ export const clasesApi = {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
-            return data.datos || [];
+            // Normalizar respuesta: si el backend devuelve 'fecha_clase', mapear a 'fecha'
+            const raw = data.datos || [];
+            return raw.map((r: any) => ({
+                ...r,
+                fecha: r.fecha_clase || r.fecha || null,
+            }));
         } catch (error) {
             handleNetworkError(error);
             return [];

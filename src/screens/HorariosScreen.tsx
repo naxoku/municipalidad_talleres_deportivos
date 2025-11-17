@@ -44,6 +44,7 @@ const HorariosScreen = () => {
   const [talleres, setTalleres] = useState<Taller[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<'calendar' | 'table'>('calendar');
   const [formData, setFormData] = useState({
     taller_id: '',
     dia_semana: '',
@@ -52,7 +53,6 @@ const HorariosScreen = () => {
   });
 
   const { isWeb, isDesktop, isMobile } = useResponsive();
-  const shouldShowTable = isWeb && isDesktop;
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const { userRole } = useAuth();
@@ -63,7 +63,6 @@ const HorariosScreen = () => {
     cargarTalleres();
   }, []);
 
-  // Agrupar horarios por día de la semana para mostrar en formato tipo calendario
   const groupedHorarios = useMemo(() => {
     const map: Record<string, Horario[]> = {};
     DIAS_SEMANA.forEach((d) => (map[d.value] = []));
@@ -78,16 +77,12 @@ const HorariosScreen = () => {
       else map['Otros'].push(h);
     });
 
-    // Ordenar cada día por hora_inicio
     Object.keys(map).forEach((k) => {
       map[k].sort((a, b) => (a.hora_inicio || '').localeCompare(b.hora_inicio || ''));
     });
 
     return map;
   }, [horarios]);
-
-  const screenWidth = Dimensions.get('window').width;
-  const isNarrow = screenWidth < 700;
 
   const cargarHorarios = async () => {
     setLoading(true);
@@ -162,99 +157,372 @@ const HorariosScreen = () => {
     );
   };
 
-  const renderHorario = ({ item }: { item: Horario }) => (
-    <View style={styles.card}>
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.taller_nombre || `Taller ID: ${item.taller_id}`}</Text>
-        <Text style={styles.cardDetail}>Día: {item.dia_semana}</Text>
-        <Text style={styles.cardDetail}>Horario: {formatTimeHHMM(item.hora_inicio)} - {formatTimeHHMM(item.hora_fin)}</Text>
+  const toggleViewMode = () => {
+    setViewMode(viewMode === 'calendar' ? 'table' : 'calendar');
+  };
+
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const toggleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+  };
+
+  const displayedHorarios = useMemo(() => {
+    let arr = [...horarios];
+    // Apply simple search filter on taller and profesor
+    if (searchTerm && searchTerm.trim() !== '') {
+      const q = searchTerm.trim().toLowerCase();
+      arr = arr.filter((h) =>
+        (h.taller_nombre || (`Taller ${h.taller_id}`)).toLowerCase().includes(q) ||
+        (h.profesor_nombre || '').toLowerCase().includes(q) ||
+        (h.dia_semana || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (!sortBy) return arr;
+
+    arr.sort((a, b) => {
+      let va: any = '';
+      let vb: any = '';
+      switch (sortBy) {
+        case 'taller':
+          va = (a.taller_nombre || `Taller ${a.taller_id}`).toString().toLowerCase();
+          vb = (b.taller_nombre || `Taller ${b.taller_id}`).toString().toLowerCase();
+          break;
+        case 'dia':
+          va = (a.dia_semana || '').toString().toLowerCase();
+          vb = (b.dia_semana || '').toString().toLowerCase();
+          break;
+        case 'inicio':
+          va = (a.hora_inicio || '').toString();
+          vb = (b.hora_inicio || '').toString();
+          break;
+        case 'fin':
+          va = (a.hora_fin || '').toString();
+          vb = (b.hora_fin || '').toString();
+          break;
+        case 'profesor':
+          va = (a.profesor_nombre || '').toString().toLowerCase();
+          vb = (b.profesor_nombre || '').toString().toLowerCase();
+          break;
+        case 'ubicacion':
+          va = (a.ubicacion_nombre || '').toString().toLowerCase();
+          vb = (b.ubicacion_nombre || '').toString().toLowerCase();
+          break;
+        case 'direccion':
+          va = ((a as any).direccion || (a as any).ubicacion_direccion || '').toString().toLowerCase();
+          vb = ((b as any).direccion || (b as any).ubicacion_direccion || '').toString().toLowerCase();
+          break;
+        default:
+          va = (a.taller_nombre || `Taller ${a.taller_id}`).toString().toLowerCase();
+          vb = (b.taller_nombre || `Taller ${b.taller_id}`).toString().toLowerCase();
+      }
+
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return arr;
+  }, [horarios, sortBy, sortDir, searchTerm]);
+
+  const renderTableView = () => {
+    const renderTableContent = () => (
+      <View style={[styles.table, isWeb ? styles.tableWeb : styles.tableMobile]}>
+        {/* Table Header */}
+        <View style={styles.tableHeader}>
+            <TouchableOpacity
+              style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 2 } : { width: 200 }, styles.tableHeaderButton]}
+              onPress={() => toggleSort('taller')}
+            >
+              <Text style={styles.headerText}>Taller</Text>
+              <Ionicons
+                name={sortBy === 'taller' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+                size={14}
+                color={sortBy === 'taller' ? '#3B82F6' : '#94A3B8'}
+                style={styles.sortIcon}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1 } : { width: 120 }, styles.tableHeaderButton]}
+              onPress={() => toggleSort('dia')}
+            >
+              <Text style={styles.headerText}>Día</Text>
+              <Ionicons
+                name={sortBy === 'dia' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+                size={14}
+                color={sortBy === 'dia' ? '#3B82F6' : '#94A3B8'}
+                style={styles.sortIcon}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 0.8 } : { width: 100 }, styles.tableHeaderButton]}
+              onPress={() => toggleSort('inicio')}
+            >
+              <Text style={styles.headerText}>Inicio</Text>
+              <Ionicons
+                name={sortBy === 'inicio' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+                size={14}
+                color={sortBy === 'inicio' ? '#3B82F6' : '#94A3B8'}
+                style={styles.sortIcon}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 0.8 } : { width: 100 }, styles.tableHeaderButton]}
+              onPress={() => toggleSort('fin')}
+            >
+              <Text style={styles.headerText}>Fin</Text>
+              <Ionicons
+                name={sortBy === 'fin' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+                size={14}
+                color={sortBy === 'fin' ? '#3B82F6' : '#94A3B8'}
+                style={styles.sortIcon}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1.5 } : { width: 180 }, styles.tableHeaderButton]}
+              onPress={() => toggleSort('profesor')}
+            >
+              <Text style={styles.headerText}>Profesor</Text>
+              <Ionicons
+                name={sortBy === 'profesor' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+                size={14}
+                color={sortBy === 'profesor' ? '#3B82F6' : '#94A3B8'}
+                style={styles.sortIcon}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1.5 } : { width: 150 }, styles.tableHeaderButton]}
+              onPress={() => toggleSort('ubicacion')}
+            >
+              <Text style={styles.headerText}>Ubicación</Text>
+              <Ionicons
+                name={sortBy === 'ubicacion' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+                size={14}
+                color={sortBy === 'ubicacion' ? '#3B82F6' : '#94A3B8'}
+                style={styles.sortIcon}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1.2 } : { width: 160 }, styles.tableHeaderButton]}
+              onPress={() => toggleSort('direccion')}
+            >
+              <Text style={styles.headerText}>Dirección</Text>
+              <Ionicons
+                name={sortBy === 'direccion' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+                size={14}
+                color={sortBy === 'direccion' ? '#3B82F6' : '#94A3B8'}
+                style={styles.sortIcon}
+              />
+            </TouchableOpacity>
+
+            {isAdmin && (
+              <View style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1 } : { width: 100 }]}> 
+                <Text style={styles.headerText}>Acciones</Text>
+              </View>
+            )}
+          </View>
+
+        {/* Table Body */}
+        {displayedHorarios.map((horario, index) => (
+          <View 
+            key={horario.id} 
+            style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}
+          >
+            <View style={[styles.tableCell, isWeb ? { flex: 2 } : { width: 200 }]}>
+              <Text style={styles.cellText} numberOfLines={2}>
+                {horario.taller_nombre || `Taller ${horario.taller_id}`}
+              </Text>
+            </View>
+            <View style={[styles.tableCell, isWeb ? { flex: 1 } : { width: 120 }]}>
+              <Text style={styles.cellText}>{horario.dia_semana}</Text>
+            </View>
+            <View style={[styles.tableCell, isWeb ? { flex: 0.8 } : { width: 100 }]}>
+              <Text style={styles.cellText}>{formatTimeHHMM(horario.hora_inicio)}</Text>
+            </View>
+            <View style={[styles.tableCell, isWeb ? { flex: 0.8 } : { width: 100 }]}>
+              <Text style={styles.cellText}>{formatTimeHHMM(horario.hora_fin)}</Text>
+            </View>
+            <View style={[styles.tableCell, isWeb ? { flex: 1.5 } : { width: 180 }]}>
+              <Text style={styles.cellText} numberOfLines={2}>
+                {horario.profesor_nombre || '-'}
+              </Text>
+            </View>
+            <View style={[styles.tableCell, isWeb ? { flex: 1.5 } : { width: 150 }]}>
+              <Text style={styles.cellText} numberOfLines={2}>
+                {horario.ubicacion_nombre || '-'}
+              </Text>
+            </View>
+            <View style={[styles.tableCell, isWeb ? { flex: 1.2 } : { width: 160 }]}>
+              <Text style={styles.cellText} numberOfLines={2}>
+                {((horario as any).direccion || (horario as any).ubicacion_direccion || '-')}
+              </Text>
+            </View>
+            {isAdmin && (
+              <View style={[styles.tableCell, isWeb ? { flex: 1 } : { width: 100 }]}>
+                <TouchableOpacity 
+                  style={styles.tableDeleteButton}
+                  onPress={() => eliminarHorario(horario)}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ))}
       </View>
-      {isAdmin && (
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => eliminarHorario(item)}
-        >
-          <Text style={styles.actionButtonText}>Eliminar</Text>
-        </TouchableOpacity>
-      )}
+    );
+
+    return (
+      <View style={styles.tableContainer}>
+        {isWeb ? (
+          renderTableContent()
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {renderTableContent()}
+          </ScrollView>
+        )}
+      </View>
+    );
+  };
+
+  const renderCalendarView = () => (
+    <View style={styles.calendarWrapper}>
+      {DIAS_SEMANA.map((dia) => {
+        const horariosDelDia = groupedHorarios[dia.value];
+        return (
+          <View key={dia.value} style={styles.dayColumn}>
+            {/* Header del día */}
+            <View style={styles.dayHeader}>
+              <Text style={styles.dayHeaderTitle}>{dia.label}</Text>
+              <View style={styles.dayHeaderBadge}>
+                <Text style={styles.dayHeaderCount}>{horariosDelDia.length}</Text>
+              </View>
+            </View>
+
+            {/* Lista de horarios del día */}
+            <View style={styles.dayContent}>
+              {horariosDelDia.length === 0 ? (
+                <View style={styles.emptyDay}>
+                  <Ionicons name="calendar-outline" size={28} color="#E0E0E0" />
+                  <Text style={styles.emptyDayText}>Sin clases</Text>
+                </View>
+              ) : (
+                horariosDelDia.map((horario) => (
+                  <View key={horario.id} style={styles.scheduleCard}>
+                    {/* Time Badge */}
+                    <View style={styles.timeBadge}>
+                      <Text style={styles.timeStart}>{formatTimeHHMM(horario.hora_inicio)}</Text>
+                      <View style={styles.timeDivider} />
+                      <Text style={styles.timeEnd}>{formatTimeHHMM(horario.hora_fin)}</Text>
+                    </View>
+
+                    {/* Card Content */}
+                    <View style={styles.cardContent}>
+                      <Text style={styles.cardTitle} numberOfLines={2}>
+                        {horario.taller_nombre || `Taller ${horario.taller_id}`}
+                      </Text>
+
+                      <View style={styles.cardDetails}>
+                        <View style={styles.detailRow}>
+                          <Ionicons name="person-outline" size={13} color="#7C8DB5" />
+                          <Text style={styles.detailText} numberOfLines={1}>
+                            {horario.profesor_nombre || 'Sin profesor'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.detailRow}>
+                          <Ionicons name="location-outline" size={13} color="#7C8DB5" />
+                          <Text style={styles.detailText} numberOfLines={1}>
+                            {horario.ubicacion_nombre || 'Sin ubicación'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Delete Button */}
+                      {isAdmin && (
+                        <TouchableOpacity 
+                          style={styles.deleteButton}
+                          onPress={() => eliminarHorario(horario)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={13} color="#EF4444" />
+                          <Text style={styles.deleteButtonText}>Eliminar</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
-
-  // Se eliminó la representación en tabla. Usamos listas/ítems en tarjetas.
 
   const Container = SafeAreaView;
 
   return (
-    <Container style={sharedStyles.container} edges={['bottom']}>
+    <Container style={styles.container} edges={['bottom']}>
       <View style={styles.contentWrapper}>
-        <HeaderWithSearch title={isAdmin ? 'Horarios' : 'Mis Horarios'} searchTerm={searchTerm} onSearch={setSearchTerm} onAdd={isAdmin ? abrirModal : undefined} />
+        <HeaderWithSearch 
+          title={isAdmin ? 'Horarios' : 'Mis Horarios'} 
+          searchTerm={searchTerm} 
+          onSearch={setSearchTerm} 
+          onAdd={isAdmin ? abrirModal : undefined}
+          viewMode={viewMode === 'calendar' ? 'cards' : 'table'}
+          onViewModeChange={(m) => setViewMode(m === 'cards' ? 'calendar' : 'table')}
+        />
 
-        <ScrollView style={styles.scrollView} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await cargarHorarios(); setRefreshing(false); }} />}>
-            {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={async () => { 
+                setRefreshing(true); 
+                await cargarHorarios(); 
+                setRefreshing(false); 
+              }} 
+            />
+          }
+        >
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#3B82F6" />
+            </View>
+          )}
 
-            {!loading && horarios.length === 0 && (
-              <EmptyState message="No hay horarios registrados" icon={<Ionicons name="time-outline" size={48} color={colors.text.tertiary} />} />
-            )}
+          {!loading && horarios.length === 0 && (
+            <View style={styles.emptyStateContainer}>
+              <EmptyState 
+                message="No hay horarios registrados" 
+                icon={<Ionicons name="time-outline" size={48} color={colors.text.tertiary} />} 
+              />
+            </View>
+          )}
 
-            {!loading && horarios.length > 0 && (
-              <ScrollView horizontal={!isNarrow} contentContainerStyle={styles.calendarScroll} showsHorizontalScrollIndicator={false}>
-                {Object.keys(groupedHorarios).map((dia) => (
-                  <View key={dia} style={[styles.dayColumn, isNarrow && styles.dayColumnNarrow]}>
-                    <View style={styles.dayHeader}>
-                      <Text style={styles.dayHeaderTitle}>{dia}</Text>
-                      <Text style={styles.dayHeaderCount}>{groupedHorarios[dia].length}</Text>
-                    </View>
-
-                    {groupedHorarios[dia].length === 0 ? (
-                      <View style={styles.emptyDay}>
-                        <Text style={styles.emptyDayText}>Sin clases</Text>
-                      </View>
-                    ) : (
-                      groupedHorarios[dia].map((item) => (
-                        <View key={item.id} style={[styles.scheduleCard, isMobile ? styles.cardMobile : styles.cardWeb]}> 
-                          <View style={styles.cardHeaderRow}>
-                            <View style={styles.timeBadge}> 
-                              <Text style={styles.timeBadgeText}>{formatTimeHHMM(item.hora_inicio)}</Text>
-                              <Text style={styles.timeBadgeSub}>{formatTimeHHMM(item.hora_fin)}</Text>
-                            </View>
-
-                            <View style={styles.cardBody}>
-                              <Text style={styles.cardTitle}>{item.taller_nombre || `Taller ${item.taller_id}`}</Text>
-
-                              <View style={styles.infoRow}> 
-                                <Ionicons name="person" size={14} color={colors.text.tertiary} />
-                                <Text style={styles.cardDetail} numberOfLines={1}>{item.profesor_nombre || '-'}</Text>
-                              </View>
-
-                              <View style={styles.infoRow}> 
-                                <Ionicons name="time-outline" size={14} color={colors.text.tertiary} />
-                                <Text style={styles.cardDetail}>{item.hora_inicio} - {item.hora_fin}</Text>
-                              </View>
-
-                              <View style={styles.infoRow}> 
-                                <Ionicons name="location-outline" size={14} color={colors.text.tertiary} />
-                                <Text style={styles.cardDetail} numberOfLines={1}>{item.ubicacion_nombre || '-'}</Text>
-                              </View>
-                            </View>
-
-                            <View style={styles.cardActions}> 
-                              {isAdmin && (
-                                <TouchableOpacity style={styles.deleteSmall} onPress={() => eliminarHorario(item)}>
-                                  <Text style={styles.deleteSmallText}>Eliminar</Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          </View>
-                        </View>
-                      ))
-                    )}
-                  </View>
-                ))}
-              </ScrollView>
-            )}
+          {!loading && horarios.length > 0 && (
+            viewMode === 'calendar' ? renderCalendarView() : renderTableView()
+          )}
         </ScrollView>
       </View>
 
+      {/* Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -352,334 +620,265 @@ const HorariosScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.secondary,
-    paddingTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    minHeight: '100%'
+    backgroundColor: '#F5F7FA',
   },
   contentWrapper: {
     flex: 1,
-    paddingBottom: spacing.lg,
-  },
-  webContentWrapper: {
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    backgroundColor: colors.background.primary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginVertical: spacing.md,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
-  tableContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
+  scrollContent: {
     padding: 16,
+    paddingBottom: 24,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-  },
-  headerWeb: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    marginBottom: spacing.md,
-  },
-  headerTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: '700',
-    color: colors.text.primary,
-  },
-  headerActions: {
-    flexDirection: 'row',
+  loadingContainer: {
+    paddingVertical: 60,
     alignItems: 'center',
   },
-  searchContainer: {
-    padding: spacing.md,
-    backgroundColor: colors.background.primary,
+  emptyStateContainer: {
+    paddingVertical: 80,
+    alignItems: 'center',
+    paddingHorizontal: 32,
   },
-  addButton: {
-    backgroundColor: '#28a745',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  viewToggleButton: {
+    padding: 8,
     borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  loader: {
-    marginTop: 20,
-  },
-  listContent: {
-    padding: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  card: {
-    backgroundColor: colors.background.primary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...(shadows.md as any),
+    backgroundColor: '#EFF6FF',
     borderWidth: 1,
-    borderColor: colors.border.light,
-  },
-  cardContent: {
-    marginBottom: 12,
+    borderColor: '#BFDBFE',
   },
   
-  /* responsive schedule cards */
-  cardWeb: {
-    width: '100%',
-    marginBottom: spacing.sm,
-  },
-  cardMobile: {
-    width: '100%',
-    marginBottom: spacing.sm,
-  },
-  cardHeaderRow: {
+  // Calendar View
+  calendarWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardMetaRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  metaItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  cardActions: {
-    marginLeft: spacing.sm,
-  },
-  actionButton: {
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteButton: {
-    backgroundColor: '#dc3545',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  webModalOverlay: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalSafeArea: {
-    maxHeight: '90%',
-  },
-  webModalSafeArea: {
-    maxHeight: undefined,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '100%',
-  },
-  webModalContent: {
-    borderRadius: 12,
-    width: 600,
-    maxWidth: '90%',
-    maxHeight: '90%',
-  },
-  modalHeader: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: Platform.OS === 'web' ? 400 : undefined,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  modalButton: {
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    maxHeight: 150,
-  },
-  pickerScroll: {
-    maxHeight: 150,
-  },
-  pickerItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  pickerItemSelected: {
-    backgroundColor: '#e3f2fd',
-  },
-  pickerItemText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  calendarScroll: {
-    padding: 12,
-    alignItems: 'flex-start',
-    flexGrow: 1,
-    justifyContent: 'space-between',
+    gap: 8,
+    flexWrap: 'nowrap',
   },
   dayColumn: {
     flex: 1,
-    minWidth: 220,
-    minHeight: 200,
-    backgroundColor: colors.background.primary,
-    borderRadius: borderRadius.lg,
-    marginRight: spacing.md,
-    padding: spacing.md,
-    ...(shadows.md as any),
+    minWidth: 160,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  dayColumnNarrow: {
-    width: '100%',
-  },
+  
+  // Day Header
   dayHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8ECF2',
   },
   dayHeaderTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    letterSpacing: -0.2,
+  },
+  dayHeaderBadge: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 22,
+    alignItems: 'center',
   },
   dayHeaderCount: {
-    backgroundColor: '#eef7ff',
-    color: '#0077cc',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  
+  // Day Content
+  dayContent: {
+    padding: 8,
+    gap: 6,
   },
   emptyDay: {
-    padding: 12,
+    paddingVertical: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyDayText: {
-    color: '#888',
+    marginTop: 8,
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
+  
+  // Schedule Card
   scheduleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  
+  // Time Badge
+  timeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#fbfbff',
-    marginBottom: 8,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  cardLeft: {
-    marginRight: 8,
+  timeStart: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1E293B',
+    flex: 1,
   },
-  timeBadge: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+  timeDivider: {
+    width: 8,
+    height: 1,
+    backgroundColor: '#CBD5E1',
+    marginHorizontal: 4,
+  },
+  timeEnd: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    flex: 1,
+    textAlign: 'right',
+  },
+  
+  // Card Content
+  cardContent: {
+    gap: 5,
+  },
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 16,
+    marginBottom: 2,
+  },
+  cardDetails: {
+    gap: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  detailText: {
+    fontSize: 11,
+    color: '#64748B',
+    flex: 1,
+  },
+  
+  // Delete Button
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    marginTop: 3,
+  },
+  deleteButtonText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+
+  // Table View
+  tableContainer: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  table: {
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    overflow: 'hidden',
+    alignSelf: 'stretch',
+  },
+  tableWeb: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  tableMobile: {
+    minWidth: 720,
+    alignSelf: 'flex-start',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E8ECF2',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  tableRowEven: {
+    backgroundColor: '#FAFBFC',
+  },
+  tableCell: {
+    padding: 12,
+    justifyContent: 'center',
+  },
+  headerCell: {
+    backgroundColor: '#F8FAFC',
+  },
+  headerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+    letterSpacing: -0.2,
+  },
+  cellText: {
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  tableDeleteButton: {
     padding: 6,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#eee',
-    minWidth: 64,
+    borderColor: '#FEE2E2',
   },
-  timeBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#333',
-  },
-  timeBadgeSub: {
-    fontSize: 11,
-    color: '#666',
-  },
-  cardBody: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#222',
-  },
-  cardDetail: {
-    fontSize: 12,
-    color: '#666',
-  },
-  cardMeta: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 6,
-  },
-  metaItem: {
+  tableHeaderButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  metaText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  deleteSmall: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    backgroundColor: '#ffecec',
-    borderRadius: 8,
-  },
-  deleteSmallText: {
-    color: '#c3302b',
-    fontWeight: '600',
-    fontSize: 12,
+  sortIcon: {
+    marginLeft: 6,
   },
 });
 

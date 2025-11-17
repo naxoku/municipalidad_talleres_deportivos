@@ -293,14 +293,16 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
         )}
 
         {!loading && filteredEstudiantes.length === 0 && (
-          <EmptyState
-            message={
-              searchTerm
-                ? `No se encontraron estudiantes con "${searchTerm}"`
-                : 'No hay estudiantes registrados'
-            }
-            icon={<Ionicons name="person-circle" size={48} color={colors.text.tertiary} />}
-          />
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+            <EmptyState
+              message={
+                searchTerm
+                  ? `No se encontraron estudiantes con "${searchTerm}"`
+                  : 'No hay estudiantes registrados'
+              }
+              icon={<Ionicons name="person-circle" size={48} color={colors.text.tertiary} />}
+            />
+          </View>
         )}
 
         {!loading && filteredEstudiantes.length > 0 && (

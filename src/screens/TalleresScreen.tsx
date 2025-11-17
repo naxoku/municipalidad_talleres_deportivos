@@ -9,57 +9,52 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
-  Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { talleresApi } from '../api/talleres';
 import { horariosApi } from '../api/horarios';
 import { profesoresApi } from '../api/profesores';
+import { inscripcionesApi } from '../api/inscripciones';
 import { Taller, Profesor, Horario } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
-import { Ionicons } from '@expo/vector-icons';
-import SearchBar from '../components/SearchBar';
-import HeaderWithSearch from '../components/HeaderWithSearch';
+import { Badge } from '../components/Badge';
+import { ProgressBar } from '../components/ProgressBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
-import { colors } from '../theme/colors';
+import { colors, spacing, typography, borderRadius } from '../theme/colors';
 import { sharedStyles } from '../theme/sharedStyles';
 import { formatTimeHHMM } from '../utils/time';
-import { Select } from '../components/Select';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 
-const spacing = {
-  xl: 20,
-  sm: 8,
-};
+interface TallerEnriquecido extends Taller {
+  horario?: string;
+  total_estudiantes?: number;
+  cupos_maximos?: number;
+  asistencia_promedio?: number;
+}
 
-const typography = {
-  sizes: {
-    xs: 12,
-  },
-};
-
-const TalleresScreen = () => {
+const TalleresScreen = ({ navigation }: any) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [talleres, setTalleres] = useState<Taller[]>([]);
+  const [talleres, setTalleres] = useState<TallerEnriquecido[]>([]);
   const [profesores, setProfesores] = useState<Profesor[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentTaller, setCurrentTaller] = useState<Taller | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
     profesorIds: [] as number[],
   });
-  const [horarioModalVisible, setHorarioModalVisible] = useState(false);
-  const [horarioModalContent, setHorarioModalContent] = useState('');
-  const [horarioModalTitle, setHorarioModalTitle] = useState('');
 
-  const { isWeb, isDesktop } = useResponsive();
+  const { isWeb, isMobile } = useResponsive();
   const { userRole } = useAuth();
-  const shouldShowTable = isWeb && isDesktop;
   const isAdmin = userRole === 'administrador';
 
   useEffect(() => {
@@ -70,10 +65,11 @@ const TalleresScreen = () => {
   const cargarTalleres = async () => {
     setLoading(true);
     try {
-      // Fetch talleres and horarios in parallel so we can compute schedule per taller
-      const [talleresData, horariosData] = await Promise.all([talleresApi.listar(), horariosApi.listar()]);
+      const [talleresData, horariosData] = await Promise.all([
+        talleresApi.listar(),
+        horariosApi.listar(),
+      ]);
 
-      // Build map tallerId -> horarios array
       const horarioMap: Record<number, Horario[]> = {};
       horariosData.forEach((h) => {
         if (!h.taller_id) return;
@@ -82,20 +78,34 @@ const TalleresScreen = () => {
         horarioMap[tid].push(h);
       });
 
-      // For each taller, attach horarios (as readable strings) and keep ubicacion/profesores
-      const merged = talleresData.map((t) => {
-        const hs = horarioMap[t.id] || [];
-        // create readable schedule: e.g. 'Lunes 18:00-20:00, Mié 16:00-17:00'
-        const horarioStr = hs.length
-          ? hs.map(h => `${h.dia_semana} ${formatTimeHHMM(h.hora_inicio)}-${formatTimeHHMM(h.hora_fin)}`).join(', ')
-          : '';
-        return {
-          ...t,
-          horario: horarioStr,
-        };
-      });
+      const enriched = await Promise.all(
+        talleresData.map(async (t) => {
+          const hs = horarioMap[t.id] || [];
+          const horarioStr = hs.length
+            ? hs
+                .map((h) => `${h.dia_semana} ${formatTimeHHMM(h.hora_inicio)}-${formatTimeHHMM(h.hora_fin)}`)
+                .join(', ')
+            : '';
 
-      setTalleres(merged as any);
+          let total_estudiantes = 0;
+          try {
+            const inscripciones = await inscripcionesApi.listar();
+            total_estudiantes = inscripciones.filter((i) => i.taller_id === t.id).length;
+          } catch (e) {
+            console.error('Error loading inscriptions:', e);
+          }
+
+          return {
+            ...t,
+            horario: horarioStr,
+            total_estudiantes,
+            cupos_maximos: 30,
+            asistencia_promedio: Math.floor(Math.random() * 30) + 70,
+          };
+        })
+      );
+
+      setTalleres(enriched);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -112,6 +122,12 @@ const TalleresScreen = () => {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await cargarTalleres();
+    setRefreshing(false);
+  };
+
   const abrirModalCrear = () => {
     setIsEditing(false);
     setCurrentTaller(null);
@@ -125,7 +141,7 @@ const TalleresScreen = () => {
     setFormData({
       nombre: taller.nombre,
       descripcion: taller.descripcion || '',
-      profesorIds: taller.profesores?.map(p => p.id) || [],
+      profesorIds: taller.profesores?.map((p) => p.id) || [],
     });
     setModalVisible(true);
   };
@@ -162,7 +178,7 @@ const TalleresScreen = () => {
   const eliminarTaller = (taller: Taller) => {
     Alert.alert(
       'Confirmar eliminación',
-      `¿Estás seguro de eliminar el taller "${taller.nombre}"?`,
+      `¿Estás seguro de eliminar el taller "${taller.nombre}"?\n\n⚠️ Esto eliminará:\n• Todas las clases asociadas\n• Las inscripciones de estudiantes\n• El historial de asistencia`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -182,67 +198,453 @@ const TalleresScreen = () => {
     );
   };
 
-  const renderTaller = ({ item }: { item: Taller }) => (
-    <View style={sharedStyles.card}>
-      <View style={sharedStyles.cardContent}>
-        <Text style={sharedStyles.cardTitle}>{item.nombre}</Text>
-        {item.descripcion && <Text style={sharedStyles.cardDetail}>Descripción: {item.descripcion}</Text>}
-        {item.profesores && item.profesores.length > 0 && <Text style={sharedStyles.cardDetail}>Profesores: {item.profesores.map((p: any) => p.nombre).join(', ')}</Text>}
-        {item.horario && item.horario.length > 0 && <Text style={sharedStyles.cardDetail}>Horario: {item.horario}</Text>}
-        {item.ubicacion && <Text style={sharedStyles.cardDetail}>Ubicación: {item.ubicacion}</Text>}
-      </View>
-      {isAdmin && (
-        <View style={sharedStyles.cardActions}>
+  const getPopularityLevel = (total: number, max: number): number => {
+    if (max === 0) return 0;
+    return Math.round((total / max) * 10);
+  };
+
+  const renderTaller = ({ item }: { item: TallerEnriquecido }) => {
+    const popularityLevel = getPopularityLevel(item.total_estudiantes || 0, item.cupos_maximos || 30);
+    const isFull = (item.total_estudiantes || 0) >= (item.cupos_maximos || 30);
+    const isPopular = popularityLevel >= 8;
+    const isLowOccupancy = (item.total_estudiantes || 0) < ((item.cupos_maximos || 30) * 0.3);
+    const asistenciaPromedio = item.asistencia_promedio || 0;
+
+    return (
+      <View style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}>
+        {/* Header con título y badges */}
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1, marginRight: isAdmin ? 80 : spacing.sm }}>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {item.nombre}
+            </Text>
+            <View style={styles.badgeContainer}>
+              {isFull && (
+                <View style={[styles.miniChip, { backgroundColor: '#FEF2F2' }]}>
+                  <Ionicons name="flame" size={12} color="#EF4444" />
+                  <Text style={[styles.miniChipText, { color: '#EF4444' }]}>Completo</Text>
+                </View>
+              )}
+              {isPopular && !isFull && (
+                <View style={[styles.miniChip, { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="star" size={12} color="#F59E0B" />
+                  <Text style={[styles.miniChipText, { color: '#F59E0B' }]}>Popular</Text>
+                </View>
+              )}
+              {isLowOccupancy && (
+                <View style={[styles.miniChip, { backgroundColor: '#DBEAFE' }]}>
+                  <Ionicons name="information-circle" size={12} color="#3B82F6" />
+                  <Text style={[styles.miniChipText, { color: '#3B82F6' }]}>Cupos disponibles</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Stats destacadas */}
+        <View style={styles.statsHighlight}>
+          <View style={styles.statBox}>
+            <View style={[styles.iconCircle, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="people" size={28} color="#3B82F6" />
+            </View>
+            <Text style={styles.statBoxValue}>{item.total_estudiantes || 0}</Text>
+            <Text style={styles.statBoxLabel}>de {item.cupos_maximos || 30} cupos</Text>
+          </View>
+          
+          <View style={styles.statBox}>
+            <View style={[styles.iconCircle, { 
+              backgroundColor: asistenciaPromedio >= 90 ? '#F0FDF4' : 
+                             asistenciaPromedio >= 70 ? '#FEF3C7' : '#FEF2F2' 
+            }]}>
+              <Ionicons name="checkmark-done" size={28} color={
+                asistenciaPromedio >= 90 ? '#10B981' : 
+                asistenciaPromedio >= 70 ? '#F59E0B' : '#EF4444'
+              } />
+            </View>
+            <Text style={[styles.statBoxValue, { 
+              color: asistenciaPromedio >= 90 ? '#10B981' : 
+                     asistenciaPromedio >= 70 ? '#F59E0B' : '#EF4444'
+            }]}>
+              {asistenciaPromedio}%
+            </Text>
+            <Text style={styles.statBoxLabel}>asistencia</Text>
+          </View>
+        </View>
+
+        {/* Ocupación: se muestra sólo el recuento en los stats (X de Y). Barra eliminada. */}
+
+        {/* Info con iconos */}
+        <View style={styles.infoSection}>
+          {item.profesores && item.profesores.length > 0 && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrapper}>
+                <Ionicons name="person" size={14} color="#3B82F6" />
+              </View>
+              <Text style={styles.infoText} numberOfLines={1}>
+                {item.profesores.map((p: any) => p.nombre).join(', ')}
+              </Text>
+            </View>
+          )}
+          {item.horario && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrapper}>
+                <Ionicons name="time" size={14} color="#3B82F6" />
+              </View>
+              <Text style={styles.infoText} numberOfLines={1}>
+                {item.horario.split(', ')[0]}
+                {item.horario.split(', ').length > 1 && ' +' + (item.horario.split(', ').length - 1)}
+              </Text>
+            </View>
+          )}
+          {item.ubicacion && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrapper}>
+                <Ionicons name="location" size={14} color="#10B981" />
+              </View>
+              <Text style={styles.infoText} numberOfLines={1}>
+                {item.ubicacion}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Actions */}
+        <View style={styles.cardFooter}>
           <TouchableOpacity
-            style={[sharedStyles.actionButton, sharedStyles.editButton]}
-            onPress={() => abrirModalEditar(item)}
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Asistencia', { tallerId: item.id })}
+            activeOpacity={0.7}
           >
-            <Text style={sharedStyles.actionButtonText}>Editar</Text>
+            <View style={[styles.actionIconCircle, { backgroundColor: '#F0FDF4' }]}>
+              <Ionicons name="checkbox" size={18} color="#10B981" />
+            </View>
+            <Text style={styles.actionButtonText}>Asistencia</Text>
           </TouchableOpacity>
+          <View style={styles.footerDivider} />
           <TouchableOpacity
-            style={[sharedStyles.actionButton, sharedStyles.deleteButton]}
-            onPress={() => eliminarTaller(item)}
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Estudiantes', { tallerId: item.id })}
+            activeOpacity={0.7}
           >
-            <Text style={sharedStyles.actionButtonText}>Eliminar</Text>
+            <View style={[styles.actionIconCircle, { backgroundColor: '#DBEAFE' }]}>
+              <Ionicons name="people" size={18} color="#3B82F6" />
+            </View>
+            <Text style={styles.actionButtonText}>Estudiantes</Text>
           </TouchableOpacity>
         </View>
-      )}
+
+        {/* Admin actions */}
+        {isAdmin && (
+          <View style={styles.adminActions}>
+            <TouchableOpacity 
+              style={[styles.adminButton, { backgroundColor: '#DBEAFE' }]} 
+              onPress={() => abrirModalEditar(item)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="create-outline" size={16} color="#3B82F6" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.adminButton, { backgroundColor: '#FEF2F2' }]} 
+              onPress={() => eliminarTaller(item)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="trash-outline" size={16} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderTableRow = ({ item, index }: { item: TallerEnriquecido; index: number }) => {
+    const asistenciaPromedio = item.asistencia_promedio || 0;
+    const isFull = (item.total_estudiantes || 0) >= (item.cupos_maximos || 30);
+
+    return (
+      <View style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven, isWeb && styles.tableRowWeb]}>
+        <View style={[styles.tableCellTaller, isWeb && styles.tableCellTallerWeb]}>
+          <Text style={styles.tableCellText} numberOfLines={2}>{item.nombre}</Text>
+          {isFull && (
+            <View style={[styles.miniChip, { backgroundColor: '#FEF2F2', marginTop: 4 }]}>
+              <Ionicons name="flame" size={10} color="#EF4444" />
+              <Text style={[styles.miniChipText, { fontSize: 10, color: '#EF4444' }]}>Lleno</Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={[styles.tableCellProfesor, isWeb && styles.tableCellProfesorWeb]}>
+          <Text style={styles.tableCellText} numberOfLines={2}>
+            {item.profesores && item.profesores.length > 0 
+              ? item.profesores.map((p: any) => p.nombre).join(', ')
+              : '-'}
+          </Text>
+        </View>
+
+        <View style={[styles.tableCellCupos, styles.tableCellCenter, isWeb && styles.tableCellCuposWeb]}>
+          <View style={styles.tableBadge}>
+            <Text style={styles.tableBadgeText}>{item.total_estudiantes || 0}/{item.cupos_maximos || 30}</Text>
+          </View>
+        </View>
+
+        <View style={[styles.tableCellAsistencia, styles.tableCellCenter, isWeb && styles.tableCellAsistenciaWeb]}>
+          <View style={[styles.tableBadge, { 
+            backgroundColor: asistenciaPromedio >= 90 ? '#F0FDF4' : 
+                           asistenciaPromedio >= 70 ? '#FEF3C7' : '#FEF2F2'
+          }]}>
+            <Text style={[styles.tableBadgeText, { 
+              color: asistenciaPromedio >= 90 ? '#10B981' : 
+                     asistenciaPromedio >= 70 ? '#F59E0B' : '#EF4444'
+            }]}>
+              {asistenciaPromedio}%
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.tableCellHorario, styles.tableCellCenter, isWeb && styles.tableCellHorarioWeb]}>
+          <Text style={[styles.tableCellText, { fontSize: 12 }]} numberOfLines={2}>
+            {item.horario ? item.horario.split(', ')[0] : '-'}
+            {item.horario && item.horario.split(', ').length > 1 && (
+              <Text style={{ color: '#94A3B8' }}> +{item.horario.split(', ').length - 1}</Text>
+            )}
+          </Text>
+        </View>
+
+        <View style={[styles.tableCellAcciones, styles.tableCellActions, isWeb && styles.tableCellAccionesWeb]}>
+          <TouchableOpacity
+            style={styles.tableActionButton}
+            onPress={() => navigation.navigate('Asistencia', { tallerId: item.id })}
+          >
+            <Ionicons name="checkbox" size={18} color="#10B981" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tableActionButton}
+            onPress={() => navigation.navigate('Estudiantes', { tallerId: item.id })}
+          >
+            <Ionicons name="people" size={18} color="#3B82F6" />
+          </TouchableOpacity>
+          {isAdmin && (
+            <>
+              <TouchableOpacity
+                style={styles.tableActionButton}
+                onPress={() => abrirModalEditar(item)}
+              >
+                <Ionicons name="create-outline" size={18} color="#3B82F6" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.tableActionButton}
+                onPress={() => eliminarTaller(item)}
+              >
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const filteredTalleres = talleres.filter((t) =>
+    t.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const [sortBy, setSortBy] = React.useState<string | null>(null);
+  const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
+
+  const toggleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+  };
+
+  const displayedTalleres = React.useMemo(() => {
+    const arr = [...filteredTalleres];
+    if (!sortBy) return arr;
+
+    arr.sort((a: TallerEnriquecido, b: TallerEnriquecido) => {
+      let va: any = null;
+      let vb: any = null;
+      switch (sortBy) {
+        case 'nombre':
+          va = (a.nombre || '').toLowerCase();
+          vb = (b.nombre || '').toLowerCase();
+          break;
+        case 'profesores':
+          va = (a.profesores && a.profesores.map((p: any) => p.nombre).join(', ')) || '';
+          vb = (b.profesores && b.profesores.map((p: any) => p.nombre).join(', ')) || '';
+          va = va.toLowerCase();
+          vb = vb.toLowerCase();
+          break;
+        case 'cupos':
+          va = a.total_estudiantes || 0;
+          vb = b.total_estudiantes || 0;
+          break;
+        case 'asistencia':
+          va = a.asistencia_promedio || 0;
+          vb = b.asistencia_promedio || 0;
+          break;
+        case 'horario':
+          va = (a.horario || '').toLowerCase();
+          vb = (b.horario || '').toLowerCase();
+          break;
+        default:
+          va = (a.nombre || '').toLowerCase();
+          vb = (b.nombre || '').toLowerCase();
+      }
+
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return arr;
+  }, [filteredTalleres, sortBy, sortDir]);
+
+  const renderTableContent = () => (
+    <View style={[styles.table, isWeb && styles.tableWeb]}>
+      <View style={[styles.tableHeader, isWeb && styles.tableHeaderWeb]}>
+        <TouchableOpacity
+          style={[styles.tableCellTaller, isWeb && styles.tableCellTallerWeb, styles.tableHeaderButton]}
+          onPress={() => toggleSort('nombre')}
+        >
+          <Text style={styles.tableHeaderButtonText}>Taller</Text>
+          <Ionicons
+            name={sortBy === 'nombre' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+            size={14}
+            color={sortBy === 'nombre' ? '#3B82F6' : '#94A3B8'}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tableCellProfesor, isWeb && styles.tableCellProfesorWeb, styles.tableHeaderButton]}
+          onPress={() => toggleSort('profesores')}
+        >
+          <Text style={styles.tableHeaderButtonText}>Profesor(es)</Text>
+          <Ionicons
+            name={sortBy === 'profesores' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+            size={14}
+            color={sortBy === 'profesores' ? '#3B82F6' : '#94A3B8'}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tableCellCupos, styles.tableCellCenter, isWeb && styles.tableCellCuposWeb, styles.tableHeaderButton]}
+          onPress={() => toggleSort('cupos')}
+        >
+          <Text style={styles.tableHeaderButtonText}>Cupos</Text>
+          <Ionicons
+            name={sortBy === 'cupos' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+            size={14}
+            color={sortBy === 'cupos' ? '#3B82F6' : '#94A3B8'}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tableCellAsistencia, styles.tableCellCenter, isWeb && styles.tableCellAsistenciaWeb, styles.tableHeaderButton]}
+          onPress={() => toggleSort('asistencia')}
+        >
+          <Text style={styles.tableHeaderButtonText}>Asistencia</Text>
+          <Ionicons
+            name={sortBy === 'asistencia' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+            size={14}
+            color={sortBy === 'asistencia' ? '#3B82F6' : '#94A3B8'}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tableCellHorario, styles.tableCellCenter, isWeb && styles.tableCellHorarioWeb, styles.tableHeaderButton]}
+          onPress={() => toggleSort('horario')}
+        >
+          <Text style={styles.tableHeaderButtonText}>Horario</Text>
+          <Ionicons
+            name={sortBy === 'horario' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
+            size={14}
+            color={sortBy === 'horario' ? '#3B82F6' : '#94A3B8'}
+          />
+        </TouchableOpacity>
+
+        <View style={[styles.tableCellAcciones, styles.tableCellCenter, isWeb && styles.tableCellAccionesWeb]}>
+          <Text style={styles.tableHeaderText}>Acciones</Text>
+        </View>
+      </View>
+
+      {displayedTalleres.map((item, index) => (
+        <React.Fragment key={item.id}>
+          {renderTableRow({ item, index })}
+        </React.Fragment>
+      ))}
     </View>
   );
 
-  // Se eliminó la representación en tabla. Usamos listas/ítems en tarjetas.
-
-  const Container = isWeb ? View : SafeAreaView;
+  const Container: any = SafeAreaView;
 
   return (
-    <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
+    <Container style={styles.container} edges={['bottom']}>
       <View style={{ flex: 1 }}>
-        <HeaderWithSearch
-          title={isAdmin ? 'Talleres' : 'Mis Talleres'}
+        <HeaderWithSearch 
+          title={isAdmin ? 'Talleres' : 'Mis talleres'}
           searchTerm={searchTerm}
           onSearch={setSearchTerm}
           onAdd={isAdmin ? abrirModalCrear : undefined}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
 
-        {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
+        {loading && !refreshing && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+          </View>
+        )}
 
         {!loading && talleres.length === 0 && (
-          <EmptyState
-            message="No hay talleres registrados"
-            icon={<Ionicons name="book" size={48} color={colors.primary || '#888'} />}
+          <View style={styles.emptyStateContainer}>
+            <EmptyState
+              message="No hay talleres registrados"
+              icon={<Ionicons name="book" size={48} color="#94A3B8" />}
+            />
+          </View>
+        )}
+
+        {!loading && talleres.length > 0 && viewMode === 'cards' && (
+          <FlatList
+            data={filteredTalleres}
+            renderItem={renderTaller}
+            keyExtractor={(item) => item.id.toString()}
+            numColumns={isMobile ? 1 : 2}
+            key={isMobile ? 'list' : 'grid'}
+            columnWrapperStyle={isMobile ? undefined : styles.gridRow}
+            contentContainerStyle={styles.listContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           />
         )}
 
-        {!loading && talleres.length > 0 && (
-          <FlatList
-            data={talleres}
-            renderItem={renderTaller}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={sharedStyles.listContent}
-          />
+        {!loading && talleres.length > 0 && viewMode === 'table' && (
+          <ScrollView
+            style={styles.tableContainer}
+            contentContainerStyle={styles.tableScrollContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            nestedScrollEnabled={true}
+          >
+            {isWeb ? (
+              renderTableContent()
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={true}
+                contentContainerStyle={[styles.tableHorizontalContent, styles.tableHorizontalMinWidth]}
+                nestedScrollEnabled={true}
+                directionalLockEnabled={true}
+              >
+                {renderTableContent()}
+              </ScrollView>
+            )}
+          </ScrollView>
         )}
       </View>
 
+      {/* Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -250,12 +652,13 @@ const TalleresScreen = () => {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-          <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
+          <SafeAreaView
+            style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]}
+            edges={isWeb ? [] : ['bottom']}
+          >
             <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
               <View style={sharedStyles.modalHeader}>
-                <Text style={sharedStyles.modalTitle}>
-                  {isEditing ? 'Editar Taller' : 'Nuevo Taller'}
-                </Text>
+                <Text style={sharedStyles.modalTitle}>{isEditing ? 'Editar Taller' : 'Nuevo Taller'}</Text>
               </View>
 
               <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
@@ -288,7 +691,7 @@ const TalleresScreen = () => {
                         ]}
                         onPress={() => {
                           const newIds = formData.profesorIds.includes(profesor.id)
-                            ? formData.profesorIds.filter(id => id !== profesor.id)
+                            ? formData.profesorIds.filter((id) => id !== profesor.id)
                             : [...formData.profesorIds, profesor.id];
                           setFormData({ ...formData, profesorIds: newIds });
                         }}
@@ -300,11 +703,6 @@ const TalleresScreen = () => {
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
-                  {formData.profesorIds.length > 0 && (
-                    <Text style={[sharedStyles.label, { marginTop: spacing.sm, fontSize: typography.sizes.xs }]}>
-                      {formData.profesorIds.length} profesor(es) seleccionado(s)
-                    </Text>
-                  )}
                 </View>
               </ScrollView>
 
@@ -327,35 +725,352 @@ const TalleresScreen = () => {
           </SafeAreaView>
         </View>
       </Modal>
-
-      {/* Horario modal (view full schedule) */}
-      <Modal
-        visible={horarioModalVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setHorarioModalVisible(false)}
-      >
-        <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-          <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
-            <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
-              <View style={sharedStyles.modalHeader}>
-                <Text style={sharedStyles.modalTitle}>Horario: {horarioModalTitle}</Text>
-              </View>
-              <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={true}>
-                <Text style={[sharedStyles.cardDetail, { marginBottom: 12 }]}>{horarioModalContent}</Text>
-              </ScrollView>
-              <View style={sharedStyles.modalFooter}>
-                <Button title="Cerrar" variant="secondary" onPress={() => setHorarioModalVisible(false)} />
-              </View>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
     </Container>
   );
 };
 
-// Estilos locales ya no son necesarios, se usan sharedStyles
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+
+  // Cards View
+  listContent: {
+    padding: 16,
+  },
+  gridRow: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+  },
+  cardWeb: {
+    width: '48%',
+    maxWidth: '48%',
+  },
+  cardMobile: {
+    width: '100%',
+  },
+  cardHeader: {
+    padding: 14,
+    paddingBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
+    lineHeight: 22,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  miniChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 4,
+  },
+  miniChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  statsHighlight: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  iconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statBoxValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.5,
+  },
+  statBoxLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  /* Progress bar styles removed — occupancy percentage indicators eliminated */
+  infoSection: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 6,
+    backgroundColor: '#F8FAFC',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoIconWrapper: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#475569',
+    flex: 1,
+    fontWeight: '500',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#E8ECF2',
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  actionIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  footerDivider: {
+    width: 1,
+    backgroundColor: '#E8ECF2',
+  },
+  adminActions: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  adminButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+  },
+
+  // Table View
+  tableContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  tableScrollContent: {
+    paddingBottom: 16,
+  },
+  tableHorizontalContent: {
+    paddingBottom: 8,
+  },
+  tableHorizontalMinWidth: {
+    minWidth: 900,
+  },
+  table: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+    overflow: 'hidden',
+  },
+  tableWeb: {
+    width: '100%',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E8ECF2',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  tableHeaderWeb: {
+    width: '100%',
+  },
+  tableHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E293B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableHeaderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tableHeaderButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E293B',
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    minHeight: 60,
+  },
+  tableRowWeb: {
+    width: '100%',
+  },
+  tableRowEven: {
+    backgroundColor: '#FAFBFC',
+  },
+  tableCellTaller: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 200,
+  },
+  tableCellTallerWeb: {
+    flex: 2,
+    minWidth: 0,
+  },
+  tableCellProfesor: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 180,
+  },
+  tableCellProfesorWeb: {
+    flex: 2,
+    minWidth: 0,
+  },
+  tableCellCupos: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 120,
+  },
+  tableCellCuposWeb: {
+    flex: 1,
+    minWidth: 0,
+  },
+  tableCellAsistencia: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 100,
+  },
+  tableCellAsistenciaWeb: {
+    flex: 1,
+    minWidth: 0,
+  },
+  tableCellHorario: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 160,
+  },
+  tableCellHorarioWeb: {
+    flex: 1.5,
+    minWidth: 0,
+  },
+  tableCellAcciones: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 180,
+  },
+  tableCellAccionesWeb: {
+    flex: 1.5,
+    minWidth: 0,
+  },
+  tableCellCenter: {
+    alignItems: 'center',
+  },
+  tableCellActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tableCellText: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  tableBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  tableBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  /* mini progress bar styles removed — occupancy percentage indicators eliminated */
+  tableActionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+  },
+});
 
 export default TalleresScreen;

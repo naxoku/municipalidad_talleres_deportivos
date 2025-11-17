@@ -62,7 +62,10 @@ export interface Inscripcion {
 
 export interface Asistencia {
     id: number;
-    clase_id: number;
+    // En el esquema actual la asistencia se asocia a `horario_id` + `fecha` en lugar de `clase_id`
+    clase_id?: number;
+    horario_id?: number;
+    fecha?: string;
     estudiante_id: number;
     estudiante_nombre?: string;
     presente: boolean;

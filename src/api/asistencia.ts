@@ -17,11 +17,20 @@ export const asistenciaApi = {
 
     listarPorClase: async (claseId: number): Promise<Asistencia[]> => {
         try {
-            const response = await fetch(`${API_URL}/api/asistencia.php?action=por_clase&clase_id=${claseId}`, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || [];
+            // Compatibilidad: obtener detalle de la clase y pedir asistencia por sesión (horario + fecha)
+            const resp = await fetch(`${API_URL}/api/clases.php?action=obtener&id=${claseId}`, { headers: getHeaders() });
+            const det = await handleApiResponse(resp);
+            const detalle = det.datos;
+            if (!detalle) return [];
+            const horarioId = detalle.horario_id || detalle.horarioId;
+            const fecha = detalle.fecha_clase || detalle.fecha;
+            if (!horarioId || !fecha) return [];
+            return await (async () => {
+                const url = `${API_URL}/api/asistencia.php?action=por_sesion&horario_id=${horarioId}&fecha=${encodeURIComponent(fecha)}`;
+                const response = await fetch(url, { headers: getHeaders() });
+                const data = await handleApiResponse(response);
+                return data.datos || [];
+            })();
         } catch (error) {
             handleNetworkError(error);
             return [];

@@ -48,6 +48,10 @@ const ProfesoresScreen = () => {
   const { isWeb, isDesktop } = useResponsive();
   const shouldShowTable = isWeb && isDesktop;
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(shouldShowTable ? 'table' : 'cards');
+
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     cargarProfesores();
@@ -161,28 +165,181 @@ const ProfesoresScreen = () => {
   };
 
   const renderProfesor = ({ item }: { item: Profesor }) => (
-    <View style={sharedStyles.card}>
-      <View style={sharedStyles.cardContent}>
-        <Text style={sharedStyles.cardTitle}>{item.nombre}</Text>
-        <Text style={sharedStyles.cardDetail}>Especialidad: {item.especialidad}</Text>
-        <Text style={sharedStyles.cardDetail}>Teléfono: {item.telefono || '-'}</Text>
-        <Text style={sharedStyles.cardDetail}>Email: {(item as any).email || (item as any).profesor_email || '-'}</Text>
-        <Text style={sharedStyles.cardDetail}>Talleres: {((item as any).talleres && (item as any).talleres.length) ? (item as any).talleres.join(', ') : '-'}</Text>
+    <View style={[styles.card, isWeb ? styles.cardWeb : styles.cardMobile]}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{item.nombre}</Text>
+        <View style={styles.badgeContainer}>
+          {((item as any).talleres || []).slice(0, 3).map((t: string, i: number) => (
+            <View key={i} style={[styles.miniChip, { backgroundColor: '#EFF6FF' }]}>
+              <Text style={[styles.miniChipText, { color: '#1E40AF' }]} numberOfLines={1}>{t}</Text>
+            </View>
+          ))}
+          {((item as any).talleres || []).length > 3 && (
+            <View style={[styles.miniChip, { backgroundColor: '#F1F5F9' }]}>
+              <Text style={styles.miniChipText}>+{((item as any).talleres || []).length - 3}</Text>
+            </View>
+          )}
+        </View>
       </View>
-      <View style={sharedStyles.cardActions}>
-        <TouchableOpacity
-          style={[sharedStyles.actionButton, sharedStyles.editButton]}
-          onPress={() => abrirModalEditar(item)}
-        >
-          <Text style={sharedStyles.actionButtonText}>Editar</Text>
+
+      <View style={styles.cardContent}>
+        <Text style={styles.cardDetail}>Especialidad: {item.especialidad || '-'}</Text>
+        <Text style={styles.cardDetail}>Teléfono: {item.telefono || '-'}</Text>
+        <Text style={styles.cardDetail}>Email: {(item as any).email || (item as any).profesor_email || '-'}</Text>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => abrirModalEditar(item)}>
+          <View style={[styles.actionIconCircle, { backgroundColor: '#EFF6FF' }]}>
+            <Ionicons name="pencil" size={16} color="#0F172A" />
+          </View>
+          <Text style={styles.actionButtonText}>Editar</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[sharedStyles.actionButton, sharedStyles.deleteButton]}
-          onPress={() => eliminarProfesor(item)}
-        >
-          <Text style={sharedStyles.actionButtonText}>Eliminar</Text>
+
+        <View style={styles.footerDivider} />
+
+        <TouchableOpacity style={styles.actionButton} onPress={() => eliminarProfesor(item)}>
+          <View style={[styles.actionIconCircle, { backgroundColor: '#FEF2F2' }]}>
+            <Ionicons name="trash" size={16} color="#EF4444" />
+          </View>
+          <Text style={styles.actionButtonText}>Eliminar</Text>
         </TouchableOpacity>
       </View>
+    </View>
+  );
+
+  const toggleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+  };
+
+  const filteredProfesores = profesores.filter((p) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (p.nombre || '').toString().toLowerCase().includes(q) ||
+      (p.especialidad || '').toString().toLowerCase().includes(q) ||
+      ((p as any).email || '').toString().toLowerCase().includes(q) ||
+      (((p as any).talleres || []).join(', ') || '').toString().toLowerCase().includes(q)
+    );
+  });
+
+  const displayedProfesores = React.useMemo(() => {
+    const arr = [...filteredProfesores];
+    if (!sortBy) return arr;
+
+    arr.sort((a, b) => {
+      let va: any = '';
+      let vb: any = '';
+      switch (sortBy) {
+        case 'nombre':
+          va = (a.nombre || '').toString().toLowerCase();
+          vb = (b.nombre || '').toString().toLowerCase();
+          break;
+        case 'especialidad':
+          va = (a.especialidad || '').toString().toLowerCase();
+          vb = (b.especialidad || '').toString().toLowerCase();
+          break;
+        case 'telefono':
+          va = ((a as any).telefono || '').toString().toLowerCase();
+          vb = ((b as any).telefono ||  '').toString().toLowerCase();
+          break;
+        case 'email':
+          va = ((a as any).email || '').toString().toLowerCase();
+          vb = ((b as any).email || '').toString().toLowerCase();
+          break;
+        case 'talleres':
+          va = (((a as any).talleres || []).join(', ') || '').toString().toLowerCase();
+          vb = (((b as any).talleres || []).join(', ') || '').toString().toLowerCase();
+          break;
+        default:
+          va = (a.nombre || '').toString().toLowerCase();
+          vb = (b.nombre || '').toString().toLowerCase();
+      }
+
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return arr;
+  }, [filteredProfesores, sortBy, sortDir]);
+
+  const renderTableRow = ({ item, index }: { item: Profesor; index: number }) => (
+    <TouchableOpacity activeOpacity={0.9} onPress={() => abrirModalEditar(item)} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven, isWeb && styles.tableRowWeb]}>
+      <View style={[styles.tableCellNombre, isWeb && styles.tableCellNombreWeb]}>
+        <Text style={styles.tableCellText}>{item.nombre}</Text>
+      </View>
+
+      <View style={[styles.tableCellEspecialidad, isWeb && styles.tableCellEspecialidadWeb]}>
+        <Text style={styles.tableCellText}>{item.especialidad || '-'}</Text>
+      </View>
+
+      <View style={[styles.tableCellTelefono, styles.tableCellCenter, isWeb && styles.tableCellTelefonoWeb]}>
+        <Text style={styles.tableCellText}>{(item as any).telefono || '-'}</Text>
+      </View>
+
+      <View style={[styles.tableCellEmail, isWeb && styles.tableCellEmailWeb]}>
+        <Text style={styles.tableCellText} numberOfLines={1}>{((item as any).email || (item as any).profesor_email) || '-'}</Text>
+      </View>
+
+      <View style={[styles.tableCellTalleres, isWeb && styles.tableCellTalleresWeb]}>
+        <Text style={styles.tableCellText} numberOfLines={1}>{(((item as any).talleres || []).length) ? ((item as any).talleres.join(', ')) : '-'}</Text>
+      </View>
+
+      <View style={[styles.tableCellAcciones, styles.tableCellActions, isWeb && styles.tableCellAccionesWeb]}>
+        <TouchableOpacity style={styles.tableActionButton} onPress={() => abrirModalEditar(item)}>
+          <Ionicons name="pencil" size={16} color="#0F172A" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tableActionButton} onPress={() => eliminarProfesor(item)}>
+          <Ionicons name="trash" size={16} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderTableContent = () => (
+    <View style={[styles.table, isWeb && styles.tableWeb]}>
+      <View style={[styles.tableHeader, isWeb && styles.tableHeaderWeb]}>
+        <TouchableOpacity style={[styles.tableCellNombre, isWeb && styles.tableCellNombreWeb, styles.tableHeaderButton]} onPress={() => toggleSort('nombre')}>
+          <Text style={styles.tableHeaderButtonText}>Nombre</Text>
+          <Ionicons name={sortBy === 'nombre' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'} size={14} color={sortBy === 'nombre' ? '#3B82F6' : '#94A3B8'} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.tableCellEspecialidad, isWeb && styles.tableCellEspecialidadWeb, styles.tableHeaderButton]} onPress={() => toggleSort('especialidad')}>
+          <Text style={styles.tableHeaderButtonText}>Especialidad</Text>
+          <Ionicons name={sortBy === 'especialidad' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'} size={14} color={sortBy === 'especialidad' ? '#3B82F6' : '#94A3B8'} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.tableCellTelefono, styles.tableCellCenter, isWeb && styles.tableCellTelefonoWeb, styles.tableHeaderButton]} onPress={() => toggleSort('telefono')}>
+          <Text style={styles.tableHeaderButtonText}>Teléfono</Text>
+          <Ionicons name={sortBy === 'telefono' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'} size={14} color={sortBy === 'telefono' ? '#3B82F6' : '#94A3B8'} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.tableCellEmail, isWeb && styles.tableCellEmailWeb, styles.tableHeaderButton]} onPress={() => toggleSort('email')}>
+          <Text style={styles.tableHeaderButtonText}>Email</Text>
+          <Ionicons name={sortBy === 'email' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'} size={14} color={sortBy === 'email' ? '#3B82F6' : '#94A3B8'} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.tableCellTalleres, isWeb && styles.tableCellTalleresWeb, styles.tableHeaderButton]} onPress={() => toggleSort('talleres')}>
+          <Text style={styles.tableHeaderButtonText}>Talleres</Text>
+          <Ionicons name={sortBy === 'talleres' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'} size={14} color={sortBy === 'talleres' ? '#3B82F6' : '#94A3B8'} />
+        </TouchableOpacity>
+
+        <View style={[styles.tableCellAcciones, styles.tableCellCenter, isWeb && styles.tableCellAccionesWeb]}>
+          <Text style={styles.tableHeaderButtonText}>Acciones</Text>
+        </View>
+      </View>
+
+      {displayedProfesores.map((item, index) => (
+        <React.Fragment key={item.id}>
+          {renderTableRow({ item, index })}
+        </React.Fragment>
+      ))}
     </View>
   );
 
@@ -198,6 +355,8 @@ const ProfesoresScreen = () => {
           searchTerm={searchTerm}
           onSearch={setSearchTerm}
           onAdd={abrirModalCrear}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
 
         {isWeb ? (
@@ -206,17 +365,33 @@ const ProfesoresScreen = () => {
               {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
               {!loading && profesores.length === 0 && (
-                <EmptyState message="No hay profesores registrados" icon={<Ionicons name="person" size={48} color={colors.primary || '#888'} />} />
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+                  <EmptyState message="No hay profesores registrados" icon={<Ionicons name="person" size={48} color={colors.primary || '#888'} />} />
+                </View>
               )}
 
-              {!loading && profesores.length > 0 && (
+              {!loading && profesores.length > 0 && viewMode === 'cards' && (
                 <FlatList
-                  data={profesores}
+                  data={displayedProfesores}
                   renderItem={renderProfesor}
                   keyExtractor={(item) => item.id.toString()}
                   contentContainerStyle={sharedStyles.listContent}
                   scrollEnabled={false}
+                  numColumns={isWeb && isDesktop ? 2 : 1}
+                  columnWrapperStyle={isWeb && isDesktop ? styles.gridRow : undefined}
                 />
+              )}
+
+              {!loading && profesores.length > 0 && viewMode === 'table' && (
+                <View style={styles.tableContainer}>
+                  {isWeb ? (
+                    renderTableContent()
+                  ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableHorizontalContent}>
+                      {renderTableContent()}
+                    </ScrollView>
+                  )}
+                </View>
               )}
             </View>
           </ScrollView>
@@ -225,16 +400,28 @@ const ProfesoresScreen = () => {
             {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
             {!loading && profesores.length === 0 && (
-              <EmptyState message="No hay profesores registrados" icon={<Ionicons name="person" size={48} color={colors.primary || '#888'} />} />
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+                <EmptyState message="No hay profesores registrados" icon={<Ionicons name="person" size={48} color={colors.primary || '#888'} />} />
+              </View>
             )}
 
-            {!loading && profesores.length > 0 && (
+            {!loading && profesores.length > 0 && viewMode === 'cards' && (
               <FlatList
-                data={profesores}
+                data={displayedProfesores}
                 renderItem={renderProfesor}
                 keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={sharedStyles.listContent}
+                numColumns={isWeb && isDesktop ? 2 : 1}
+                columnWrapperStyle={isWeb && isDesktop ? styles.gridRow : undefined}
               />
+            )}
+
+            {!loading && profesores.length > 0 && viewMode === 'table' && (
+              <View style={styles.tableContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableHorizontalContent}>
+                  {renderTableContent()}
+                </ScrollView>
+              </View>
             )}
           </>
         )}
@@ -317,7 +504,263 @@ const ProfesoresScreen = () => {
   );
 };
 
-// Estilos locales ya no son necesarios, se usan sharedStyles
-const styles = StyleSheet.create({});
+// Estilos locales para la pantalla de Profesores (cards + table view)
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+  listContent: {
+    padding: 16,
+  },
+
+  // Table styles
+  table: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+    overflow: 'hidden',
+  },
+  tableWeb: {
+    width: '100%',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E8ECF2',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  tableHeaderWeb: {
+    width: '100%',
+  },
+  tableHeaderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tableHeaderButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E293B',
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    minHeight: 56,
+    alignItems: 'center',
+  },
+  tableRowEven: {
+    backgroundColor: '#FAFBFC',
+  },
+  tableRowWeb: {
+    width: '100%',
+  },
+  tableCellNombre: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 220,
+    flex: 2,
+  },
+  tableCellNombreWeb: {
+    flex: 2,
+    minWidth: 0,
+  },
+  tableCellEspecialidad: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 160,
+    flex: 1.5,
+  },
+  tableCellEspecialidadWeb: {
+    flex: 1.5,
+    minWidth: 0,
+  },
+  tableCellTelefono: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 120,
+    flex: 1,
+  },
+  tableCellTelefonoWeb: {
+    flex: 1,
+    minWidth: 0,
+  },
+  tableCellEmail: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 180,
+    flex: 2,
+  },
+  tableCellEmailWeb: {
+    flex: 2,
+    minWidth: 0,
+  },
+  tableCellTalleres: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 200,
+    flex: 2,
+  },
+  tableCellTalleresWeb: {
+    flex: 2,
+    minWidth: 0,
+  },
+  tableCellAcciones: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 120,
+    flex: 1,
+  },
+  tableCellAccionesWeb: {
+    flex: 1,
+    minWidth: 0,
+  },
+  tableCellCenter: {
+    alignItems: 'center',
+  },
+  tableCellActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tableCellText: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  tableActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+  },
+  tableContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  tableHorizontalContent: {
+    paddingBottom: 8,
+    minWidth: 760,
+  },
+  // Cards (cards view)
+  gridRow: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#E8ECF2',
+    paddingBottom: 8,
+  },
+  cardWeb: {
+    width: '48%',
+    maxWidth: '48%',
+  },
+  cardMobile: {
+    width: '100%',
+  },
+  cardHeader: {
+    padding: 14,
+    paddingBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
+    lineHeight: 22,
+    flex: 1,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginLeft: 8,
+  },
+  miniChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 4,
+  },
+  miniChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  cardContent: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  cardDetail: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#E8ECF2',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 8,
+  },
+  actionIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  footerDivider: {
+    width: 1,
+    backgroundColor: '#E8ECF2',
+    marginHorizontal: 8,
+    height: 36,
+  },
+});
 
 export default ProfesoresScreen;
