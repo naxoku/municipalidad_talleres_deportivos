@@ -18,8 +18,11 @@ import { Clase, Taller } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { shadows } from '../theme/colors';
+import { colors } from '../theme/colors';
+import { sharedStyles } from '../theme/sharedStyles';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 
 const ClasesScreen = () => {
   const [clases, setClases] = useState<Clase[]>([]);
@@ -35,6 +38,7 @@ const ClasesScreen = () => {
 
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     cargarClases();
@@ -116,38 +120,31 @@ const ClasesScreen = () => {
   };
 
   const renderClase = ({ item }: { item: Clase }) => (
-    <View style={styles.card}>
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.taller_nombre || `Taller ID: ${item.taller_id}`}</Text>
-        <Text style={styles.cardDetail}>Fecha: {item.fecha}</Text>
-        <Text style={styles.cardDetail}>Horario: {item.hora_inicio} - {item.hora_fin}</Text>
+    <View style={sharedStyles.card}>
+      <View style={sharedStyles.cardContent}>
+        <Text style={sharedStyles.cardTitle}>{item.taller_nombre || `Taller ID: ${item.taller_id}`}</Text>
+        <Text style={sharedStyles.cardDetail}>Fecha: {item.fecha}</Text>
+        <Text style={sharedStyles.cardDetail}>Horario: {item.hora_inicio} - {item.hora_fin}</Text>
       </View>
       {isAdmin && (
         <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
+          style={[sharedStyles.actionButton, sharedStyles.deleteButton]}
           onPress={() => eliminarClase(item)}
         >
-          <Text style={styles.actionButtonText}>Eliminar</Text>
+          <Text style={sharedStyles.actionButtonText}>Eliminar</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{isAdmin ? 'Clases' : 'Mis Clases'}</Text>
-        {isAdmin && (
-          <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
-            <Text style={styles.addButtonText}>+ Nueva</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+    <SafeAreaView style={sharedStyles.container} edges={['bottom']}>
+      <HeaderWithSearch title={isAdmin ? 'Clases' : 'Mis Clases'} searchTerm={searchTerm} onSearch={setSearchTerm} onAdd={isAdmin ? abrirModal : undefined} />
 
-      {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
+      {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
       {!loading && clases.length === 0 && (
-        <EmptyState message="No hay clases registradas" />
+        <EmptyState message="No hay clases registradas" icon={<Ionicons name="calendar" size={48} color={colors.primary || '#888'} />} />
       )}
 
       {!loading && clases.length > 0 && (
@@ -155,7 +152,7 @@ const ClasesScreen = () => {
           data={clases}
           renderItem={renderClase}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={sharedStyles.listContent}
         />
       )}
 
@@ -165,28 +162,28 @@ const ClasesScreen = () => {
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <SafeAreaView style={styles.modalSafeArea} edges={['bottom']}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Nueva Clase</Text>
+        <View style={sharedStyles.modalOverlay}>
+          <SafeAreaView style={sharedStyles.modalSafeArea} edges={['bottom']}>
+            <View style={sharedStyles.modalContent}>
+              <View style={sharedStyles.modalHeader}>
+                <Text style={sharedStyles.modalTitle}>Nueva Clase</Text>
               </View>
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Taller *</Text>
-                  <View style={styles.pickerWrapper}>
-                    <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
+              <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
+                <View style={sharedStyles.inputContainer}>
+                  <Text style={sharedStyles.label}>Taller *</Text>
+                  <View style={sharedStyles.pickerWrapper}>
+                    <ScrollView style={sharedStyles.pickerScroll} nestedScrollEnabled>
                       {talleres.map((taller) => (
                         <TouchableOpacity
                           key={taller.id}
                           style={[
-                            styles.pickerItem,
-                            formData.taller_id === taller.id.toString() && styles.pickerItemSelected,
+                            sharedStyles.pickerItem,
+                            formData.taller_id === taller.id.toString() && sharedStyles.pickerItemSelected,
                           ]}
                           onPress={() => setFormData({ ...formData, taller_id: taller.id.toString() })}
                         >
-                          <Text style={styles.pickerItemText}>{taller.nombre}</Text>
+                          <Text style={sharedStyles.pickerItemText}>{taller.nombre}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -218,19 +215,19 @@ const ClasesScreen = () => {
                 />
               </ScrollView>
 
-              <View style={styles.modalFooter}>
+              <View style={sharedStyles.modalFooter}>
                 <Button
                   title="Cancelar"
                   variant="secondary"
                   onPress={() => setModalVisible(false)}
-                  style={styles.modalButton}
+                  style={sharedStyles.modalButton}
                 />
                 <Button
                   title="Crear"
                   variant="success"
                   onPress={crearClase}
                   loading={loading}
-                  style={styles.modalButton}
+                  style={sharedStyles.modalButton}
                 />
               </View>
             </View>
@@ -241,148 +238,6 @@ const ClasesScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  addButton: {
-    backgroundColor: '#28a745',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  loader: {
-    marginTop: 20,
-  },
-  listContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#6f42c1',
-    ...(shadows.md as any),
-  },
-  cardContent: {
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  cardDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  actionButton: {
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteButton: {
-    backgroundColor: '#dc3545',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalSafeArea: {
-    maxHeight: '90%',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '100%',
-  },
-  modalHeader: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: Platform.OS === 'web' ? 400 : undefined,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  modalButton: {
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    maxHeight: 150,
-  },
-  pickerScroll: {
-    maxHeight: 150,
-  },
-  pickerItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  pickerItemSelected: {
-    backgroundColor: '#e3f2fd',
-  },
-  pickerItemText: {
-    fontSize: 14,
-    color: '#333',
-  },
-});
+const styles = StyleSheet.create({});
 
 export default ClasesScreen;

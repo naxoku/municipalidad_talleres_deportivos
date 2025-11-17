@@ -18,7 +18,9 @@ import { Profesor } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 import { useResponsive } from '../hooks/useResponsive';
 import { sharedStyles } from '../theme/sharedStyles';
 
@@ -191,19 +193,12 @@ const ProfesoresScreen = () => {
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={{ flex: 1 }}>
-        <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <Text style={sharedStyles.headerTitle}>Profesores</Text>
-            <TouchableOpacity style={sharedStyles.addButton} onPress={abrirModalCrear}>
-              <Text style={sharedStyles.addButtonText}>+ Nuevo</Text>
-            </TouchableOpacity>
-          </View>
-          {isWeb && shouldShowTable && (
-            <View style={{ marginTop: 12, width: '100%' }}>
-              <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar profesores..." onClear={() => setSearchTerm('')} />
-            </View>
-          )}
-        </View>
+        <HeaderWithSearch
+          title="Profesores"
+          searchTerm={searchTerm}
+          onSearch={setSearchTerm}
+          onAdd={abrirModalCrear}
+        />
 
         {isWeb ? (
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
@@ -211,7 +206,7 @@ const ProfesoresScreen = () => {
               {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
               {!loading && profesores.length === 0 && (
-                <EmptyState message="No hay profesores registrados" />
+                <EmptyState message="No hay profesores registrados" icon={<Ionicons name="person" size={48} color={colors.primary || '#888'} />} />
               )}
 
               {!loading && profesores.length > 0 && (
@@ -230,7 +225,7 @@ const ProfesoresScreen = () => {
             {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
             {!loading && profesores.length === 0 && (
-              <EmptyState message="No hay profesores registrados" />
+              <EmptyState message="No hay profesores registrados" icon={<Ionicons name="person" size={48} color={colors.primary || '#888'} />} />
             )}
 
             {!loading && profesores.length > 0 && (

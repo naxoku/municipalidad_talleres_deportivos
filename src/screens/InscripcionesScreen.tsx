@@ -18,7 +18,9 @@ import { talleresApi } from '../api/talleres';
 import { Inscripcion, Estudiante, Taller } from '../types';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
 import { shadows } from '../theme/colors';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 
 const InscripcionesScreen = () => {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
@@ -30,6 +32,7 @@ const InscripcionesScreen = () => {
     estudiante_id: '',
     taller_id: '',
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     cargarInscripciones();
@@ -140,18 +143,13 @@ const InscripcionesScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Inscripciones</Text>
-        <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
-          <Text style={styles.addButtonText}>+ Nueva</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <HeaderWithSearch title="Inscripciones" searchTerm={searchTerm} onSearch={setSearchTerm} onAdd={abrirModal} />
 
       {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
 
       {!loading && inscripciones.length === 0 && (
-        <EmptyState message="No hay inscripciones registradas" />
+        <EmptyState message="No hay inscripciones registradas" icon={<Ionicons name="person-add" size={48} color={'#888'} />} />
       )}
 
       {!loading && inscripciones.length > 0 && (

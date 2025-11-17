@@ -21,6 +21,8 @@ import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { useAuth } from '../contexts/AuthContext';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
+import { sharedStyles } from '../theme/sharedStyles';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 
 const AsistenciaScreen = () => {
   const [clases, setClases] = useState<Clase[]>([]);
@@ -31,6 +33,7 @@ const AsistenciaScreen = () => {
 
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     cargarClases();
@@ -174,23 +177,29 @@ const AsistenciaScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.header}>
+    <SafeAreaView style={sharedStyles.container} edges={['bottom']}>
+      <View>
         {!mostrarClases && (
           <TouchableOpacity onPress={volverAClases} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#0066cc" />
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
             <Text style={styles.backButtonText}>Volver</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.headerTitle}>
-          {mostrarClases ? (isAdmin ? 'Seleccionar Clase' : 'Seleccionar Mis Clases') : (isAdmin ? 'Registro de Asistencia' : 'Asistencia de Mis Clases')}
-        </Text>
+        <HeaderWithSearch
+          title={
+            mostrarClases
+              ? (isAdmin ? 'Seleccionar Clase' : 'Seleccionar Mis Clases')
+              : (isAdmin ? 'Registro de Asistencia' : 'Asistencia de Mis Clases')
+          }
+          searchTerm={searchTerm}
+          onSearch={setSearchTerm}
+        />
       </View>
 
-      {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
+      {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
       {!loading && mostrarClases && clases.length === 0 && (
-        <EmptyState message="No hay clases registradas" />
+        <EmptyState message="No hay clases registradas" icon={<Ionicons name="calendar" size={48} color={colors.primary || '#888'} />} />
       )}
 
       {!loading && mostrarClases && clases.length > 0 && (
@@ -198,12 +207,12 @@ const AsistenciaScreen = () => {
           data={clases}
           renderItem={renderClase}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={sharedStyles.listContent}
         />
       )}
 
       {!loading && !mostrarClases && asistencias.length === 0 && (
-        <EmptyState message="No hay estudiantes inscritos en esta clase" />
+        <EmptyState message="No hay estudiantes inscritos en esta clase" icon={<Ionicons name="people" size={48} color={colors.primary || '#888'} />} />
       )}
 
       {!loading && !mostrarClases && asistencias.length > 0 && (
@@ -265,7 +274,7 @@ const AsistenciaScreen = () => {
             data={asistencias}
             renderItem={renderAsistencia}
             keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={sharedStyles.listContent}
           />
         </>
       )}
@@ -274,10 +283,6 @@ const AsistenciaScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.secondary,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -303,9 +308,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text.primary,
     flex: 1,
-  },
-  loader: {
-    marginTop: spacing.xl,
   },
   listContent: {
     padding: spacing.md,

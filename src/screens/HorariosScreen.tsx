@@ -21,6 +21,7 @@ import { EmptyState } from '../components/EmptyState';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
 import SearchBar from '../components/SearchBar';
+import HeaderWithSearch from '../components/HeaderWithSearch';
  
 import { sharedStyles } from '../theme/sharedStyles';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
@@ -184,28 +185,15 @@ const HorariosScreen = () => {
   const Container = SafeAreaView;
 
   return (
-    <Container style={styles.container} edges={['bottom']}>
+    <Container style={sharedStyles.container} edges={['bottom']}>
       <View style={styles.contentWrapper}>
-        <View style={[styles.header, isWeb && styles.headerWeb]}> 
-          <Text style={styles.headerTitle}>{isAdmin ? 'Horarios' : 'Mis Horarios'}</Text>
-          <View style={styles.headerActions}>
-            {isAdmin && (
-              <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
-                <Text style={styles.addButtonText}>+ Nuevo</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.searchContainer}>
-          <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar horarios..." onClear={() => setSearchTerm('')} />
-        </View>
+        <HeaderWithSearch title={isAdmin ? 'Horarios' : 'Mis Horarios'} searchTerm={searchTerm} onSearch={setSearchTerm} onAdd={isAdmin ? abrirModal : undefined} />
 
         <ScrollView style={styles.scrollView} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await cargarHorarios(); setRefreshing(false); }} />}>
-            {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
+            {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
             {!loading && horarios.length === 0 && (
-              <EmptyState message="No hay horarios registrados" />
+              <EmptyState message="No hay horarios registrados" icon={<Ionicons name="time-outline" size={48} color={colors.text.tertiary} />} />
             )}
 
             {!loading && horarios.length > 0 && (
@@ -273,48 +261,48 @@ const HorariosScreen = () => {
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={[styles.modalOverlay, isWeb && styles.webModalOverlay]}>
-          <SafeAreaView style={[styles.modalSafeArea, isWeb && styles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
-            <View style={[styles.modalContent, isWeb && styles.webModalContent]}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Nuevo Horario</Text>
+        <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
+          <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
+            <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
+              <View style={sharedStyles.modalHeader}>
+                <Text style={sharedStyles.modalTitle}>Nuevo Horario</Text>
               </View>
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Taller *</Text>
-                  <View style={styles.pickerWrapper}>
-                    <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
+              <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
+                <View style={sharedStyles.inputContainer}>
+                  <Text style={sharedStyles.label}>Taller *</Text>
+                  <View style={sharedStyles.pickerWrapper}>
+                    <ScrollView style={sharedStyles.pickerScroll} nestedScrollEnabled>
                       {talleres.map((taller) => (
                         <TouchableOpacity
                           key={taller.id}
                           style={[
-                            styles.pickerItem,
-                            formData.taller_id === taller.id.toString() && styles.pickerItemSelected,
+                            sharedStyles.pickerItem,
+                            formData.taller_id === taller.id.toString() && sharedStyles.pickerItemSelected,
                           ]}
                           onPress={() => setFormData({ ...formData, taller_id: taller.id.toString() })}
                         >
-                          <Text style={styles.pickerItemText}>{taller.nombre}</Text>
+                          <Text style={sharedStyles.pickerItemText}>{taller.nombre}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   </View>
                 </View>
 
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Día de la semana *</Text>
-                  <View style={styles.pickerWrapper}>
-                    <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
+                <View style={sharedStyles.inputContainer}>
+                  <Text style={sharedStyles.label}>Día de la semana *</Text>
+                  <View style={sharedStyles.pickerWrapper}>
+                    <ScrollView style={sharedStyles.pickerScroll} nestedScrollEnabled>
                       {DIAS_SEMANA.map((dia) => (
                         <TouchableOpacity
                           key={dia.value}
                           style={[
-                            styles.pickerItem,
-                            formData.dia_semana === dia.value && styles.pickerItemSelected,
+                            sharedStyles.pickerItem,
+                            formData.dia_semana === dia.value && sharedStyles.pickerItemSelected,
                           ]}
                           onPress={() => setFormData({ ...formData, dia_semana: dia.value })}
                         >
-                          <Text style={styles.pickerItemText}>{dia.label}</Text>
+                          <Text style={sharedStyles.pickerItemText}>{dia.label}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -338,19 +326,19 @@ const HorariosScreen = () => {
                 />
               </ScrollView>
 
-              <View style={styles.modalFooter}>
+              <View style={sharedStyles.modalFooter}>
                 <Button
                   title="Cancelar"
                   variant="secondary"
                   onPress={() => setModalVisible(false)}
-                  style={styles.modalButton}
+                  style={sharedStyles.modalButton}
                 />
                 <Button
                   title="Crear"
                   variant="success"
                   onPress={crearHorario}
                   loading={loading}
-                  style={styles.modalButton}
+                  style={sharedStyles.modalButton}
                 />
               </View>
             </View>

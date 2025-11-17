@@ -17,10 +17,12 @@ import { Estudiante } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
 import { sharedStyles } from '../theme/sharedStyles';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 
 const colors = {
   primary: '#0066cc',
@@ -168,59 +170,21 @@ const EstudiantesScreen = () => {
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={{ flex: 1 }}>
-        <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <Text style={sharedStyles.headerTitle}>{isAdmin ? 'Estudiantes' : 'Mis Estudiantes'}</Text>
-            {isAdmin && (
-              <TouchableOpacity style={sharedStyles.addButton} onPress={abrirModalCrear}>
-                <Text style={sharedStyles.addButtonText}>+ Nuevo</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {isWeb && shouldShowTable && (
-            <View style={{ marginTop: 12, width: '100%' }}>
-              <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar estudiantes..." onClear={() => setSearchTerm('')} />
-            </View>
-          )}
-        </View>
+        <HeaderWithSearch title={isAdmin ? 'Estudiantes' : 'Mis Estudiantes'} searchTerm={searchTerm} onSearch={setSearchTerm} onAdd={isAdmin ? abrirModalCrear : undefined} />
 
-        {isWeb ? (
-          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-            <View style={{ paddingBottom: spacing.xl }}>
-              {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
+        {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
-              {!loading && estudiantes.length === 0 && (
-                <EmptyState message="No hay estudiantes registrados" />
-              )}
+        {!loading && estudiantes.length === 0 && (
+          <EmptyState message="No hay estudiantes registrados" icon={<Ionicons name="person-circle" size={48} color={colors.primary || '#888'} />} />
+        )}
 
-              {!loading && estudiantes.length > 0 && (
-                <FlatList
-                  data={estudiantes}
-                  renderItem={renderEstudiante}
-                  keyExtractor={(item) => item.id.toString()}
-                  contentContainerStyle={sharedStyles.listContent}
-                  scrollEnabled={false}
-                />
-              )}
-            </View>
-          </ScrollView>
-        ) : (
-          <>
-            {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
-
-            {!loading && estudiantes.length === 0 && (
-              <EmptyState message="No hay estudiantes registrados" />
-            )}
-
-            {!loading && estudiantes.length > 0 && (
-              <FlatList
-                data={estudiantes}
-                renderItem={renderEstudiante}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={sharedStyles.listContent}
-              />
-            )}
-          </>
+        {!loading && estudiantes.length > 0 && (
+          <FlatList
+            data={estudiantes}
+            renderItem={renderEstudiante}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={sharedStyles.listContent}
+          />
         )}
       </View>
 

@@ -19,7 +19,9 @@ import { Taller, Profesor, Horario } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../theme/colors';
@@ -215,26 +217,20 @@ const TalleresScreen = () => {
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={{ flex: 1 }}>
-        <View style={[sharedStyles.header, { flexDirection: 'column' }] }>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <Text style={sharedStyles.headerTitle}>{isAdmin ? 'Talleres' : 'Mis Talleres'}</Text>
-            {isAdmin && (
-              <TouchableOpacity style={sharedStyles.addButton} onPress={abrirModalCrear}>
-                <Text style={sharedStyles.addButtonText}>+ Nuevo</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {isWeb && shouldShowTable && (
-            <View style={{ marginTop: 12, width: '100%' }}>
-              <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar talleres..." onClear={() => setSearchTerm('')} />
-            </View>
-          )}
-        </View>
+        <HeaderWithSearch
+          title={isAdmin ? 'Talleres' : 'Mis Talleres'}
+          searchTerm={searchTerm}
+          onSearch={setSearchTerm}
+          onAdd={isAdmin ? abrirModalCrear : undefined}
+        />
 
         {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
         {!loading && talleres.length === 0 && (
-          <EmptyState message="No hay talleres registrados" />
+          <EmptyState
+            message="No hay talleres registrados"
+            icon={<Ionicons name="book" size={48} color={colors.primary || '#888'} />}
+          />
         )}
 
         {!loading && talleres.length > 0 && (

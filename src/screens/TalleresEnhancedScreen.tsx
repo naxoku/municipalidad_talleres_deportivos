@@ -356,11 +356,11 @@ const TalleresEnhancedScreen = ({ navigation }: any) => {
         {isAdmin && (
           <View style={styles.adminActions}>
             <TouchableOpacity 
-              style={[styles.adminButton, { backgroundColor: colors.blue.light }]} 
+              style={[styles.adminButton, { backgroundColor: colors.infoLight }]} 
               onPress={() => abrirModalEditar(item)}
               activeOpacity={0.8}
             >
-              <Ionicons name="create-outline" size={18} color={colors.blue.main} />
+              <Ionicons name="create-outline" size={18} color={colors.info} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.adminButton, { backgroundColor: colors.errorLight }]} 
@@ -652,7 +652,7 @@ const TalleresEnhancedScreen = ({ navigation }: any) => {
     <Container style={styles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={{ flex: 1 }}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>📚 {isAdmin ? 'Talleres' : 'Mis Talleres'}</Text>
+          <Text style={styles.headerTitle}>{isAdmin ? 'Talleres' : 'Mis Talleres'}</Text>
           <View style={styles.headerActions}>
             <View style={styles.viewToggle}>
               <TouchableOpacity
@@ -698,7 +698,12 @@ const TalleresEnhancedScreen = ({ navigation }: any) => {
           <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
         )}
 
-        {!loading && talleres.length === 0 && <EmptyState message="No hay talleres registrados" icon="📚" />}
+        {!loading && talleres.length === 0 && (
+          <EmptyState
+            message="No hay talleres registrados"
+            icon={<Ionicons name="book" size={48} color={colors.text.tertiary} />}
+          />
+        )}
 
         {!loading && talleres.length > 0 && viewMode === 'cards' && (
           <FlatList
@@ -749,7 +754,7 @@ const TalleresEnhancedScreen = ({ navigation }: any) => {
           >
             <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
               <View style={sharedStyles.modalHeader}>
-                <Text style={sharedStyles.modalTitle}>{isEditing ? '✏️ Editar Taller' : '➕ Nuevo Taller'}</Text>
+                <Text style={sharedStyles.modalTitle}>{isEditing ? 'Editar Taller' : 'Nuevo Taller'}</Text>
               </View>
 
               <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>

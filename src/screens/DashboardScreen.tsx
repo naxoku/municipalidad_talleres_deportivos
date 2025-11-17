@@ -3,11 +3,9 @@ import { SafeAreaView, ScrollView, View, Text, ActivityIndicator, TouchableOpaci
 import { API_URL, handleApiResponse, getHeaders } from '../api/config';
 import MetricCard from '../components/MetricCard';
 import QuickActions from '../components/QuickActions';
-import SimpleBarChart from '../components/SimpleBarChart';
 import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { CardSkeleton } from '../components/LoadingSkeleton';
-import WeekCalendar from '../components/WeekCalendar';
 import { useResponsive } from '../hooks/useResponsive';
 import { sharedStyles } from '../theme/sharedStyles';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,8 +46,10 @@ export default function DashboardScreen({ navigation }: any) {
       const now = new Date();
       const day = now.getDay();
       const diffToMonday = ((day + 6) % 7);
+      
       const monday = new Date(now);
       monday.setDate(now.getDate() - diffToMonday);
+      
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
 
@@ -81,8 +81,12 @@ export default function DashboardScreen({ navigation }: any) {
       const end = new Date(fin);
       const dateMap: Record<string, string[]> = {};
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const iso = new Date(d).toISOString().slice(0, 10);
-        const idx = new Date(d).getDay(); // 0..6
+        // Use local date components instead of toISOString() to avoid UTC timezone shift
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const iso = `${year}-${month}-${day}`;
+        const idx = d.getDay(); // 0..6
         const rawName = dayNamesOrder[idx];
         const name = normalize(rawName);
         if (!dateMap[name]) dateMap[name] = [];
@@ -256,9 +260,11 @@ export default function DashboardScreen({ navigation }: any) {
   // Helpers to compute current and next classes
   const parseDateTime = (fecha: string | undefined, time: string | undefined) => {
     if (!fecha || !time) return null;
-    // Normalize time to HH:MM:SS
+    // Normalize time to HH:MM or HH:MM:SS
     const t = String(time).trim();
-    const hhmm = t.length === 5 ? t : t.split(':').slice(0,2).join(':');
+    const parts = t.split(':');
+    if (parts.length < 2) return null;
+    const hhmm = parts.slice(0, 2).join(':');
     try {
       // Construct ISO-like string (local timezone)
       return new Date(fecha + 'T' + hhmm + ':00');
@@ -274,7 +280,18 @@ export default function DashboardScreen({ navigation }: any) {
   });
 
   const now = new Date();
-  const clasesActuales = clasesSemana.filter((c: any) => c.__start && c.__end && c.__start <= now && now < c.__end);
+  
+  // Filter classes happening RIGHT NOW (check date AND time range)
+  const clasesActuales = clasesSemana.filter((c: any) => {
+    if (!c.__start || !c.__end) {
+      return false;
+    }
+    
+    // Check if now is between start and end
+    return c.__start <= now && now < c.__end;
+  });
+
+  // Filter upcoming classes (today or future, after current moment)
   const clasesProximas = clasesSemana
     .filter((c: any) => c.__start && c.__start > now)
     .sort((a: any, b: any) => (a.__start as Date).getTime() - (b.__start as Date).getTime())
@@ -311,7 +328,7 @@ export default function DashboardScreen({ navigation }: any) {
                   { key: 'talleres', title: 'Talleres', value: data.total_talleres || (data.talleres ? data.talleres.length : 0), icon: <Ionicons name="book" size={28} color="#666" />, color: undefined, onPress: () => navigation.navigate('Talleres') },
                   { key: 'estudiantes', title: 'Estudiantes', value: data.total_estudiantes, icon: <Ionicons name="school" size={28} color="#666" />, color: '#1e88e5', onPress: () => navigation.navigate('Estudiantes') },
                   { key: 'profesores', title: 'Profesores', value: data.total_profesores, icon: <Ionicons name="person" size={28} color="#666" />, color: '#7c4dff', onPress: () => navigation.navigate('Profesores') },
-                  { key: 'clases_hoy', title: 'Clases Hoy', value: clasesHoy.length, icon: <Ionicons name="calendar" size={28} color="#666" />, color: '#00b894', onPress: () => navigation.navigate('Clases') },
+                  { key: 'clases_hoy', title: 'Clases Hoy', value: clasesHoy.length, icon: <Ionicons name="calendar" size={28} color="#666" />, color: '#00b894', onPress: () => navigation.navigate('Horarios') },
                 ];
 
                 if (isMobile) {
@@ -411,15 +428,9 @@ export default function DashboardScreen({ navigation }: any) {
                       <Text style={sharedStyles.cardDetail}>{c.ubicacion_nombre || ''}</Text>
                     </View>
                     <View style={{ marginLeft: spacing.md }}>
-                      {String(c.id).match(/^\d+$/) ? (
-                        <TouchableOpacity onPress={() => navigation.navigate('Asistencia', { claseId: c.id })} style={[sharedStyles.actionButton, { backgroundColor: colors.primary, paddingHorizontal: spacing.md }]}> 
-                          <Text style={{ color: '#fff', fontWeight: '600' }}>Pasar lista</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity onPress={() => navigation.navigate('Horarios')} style={[sharedStyles.actionButton, { backgroundColor: '#eef7ff', paddingHorizontal: spacing.md }]}> 
-                          <Text style={{ color: colors.primary, fontWeight: '600' }}>Ver horario</Text>
-                        </TouchableOpacity>
-                      )}
+                      <TouchableOpacity onPress={() => navigation.navigate('Horarios')} style={[sharedStyles.actionButton, { backgroundColor: '#eef7ff', paddingHorizontal: spacing.md }]}> 
+                        <Text style={{ color: colors.primary, fontWeight: '600' }}>Ver horario</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -456,33 +467,9 @@ export default function DashboardScreen({ navigation }: any) {
             )}
           </View>
 
-          <Text style={{ fontSize: typography.sizes.lg, fontWeight: '600', marginBottom: spacing.sm, color: colors.text.primary }}>
-            Calendario semanal
-          </Text>
-          <View>
-            {/* Week calendar component */}
-            {data.clases_semana ? (
-              // Lazy-load the calendar component to keep bundle small
-              <React.Suspense fallback={<Text>Cargando calendario...</Text>}>
-                <WeekCalendar
-                  clases={data.clases_semana}
-                  talleresMap={data.talleres_map}
-                  onOpenClase={(c: any) => navigation.navigate('Asistencia', { claseId: c.id })}
-                />
-              </React.Suspense>
-            ) : (
-              <View style={{ padding: spacing.xl, backgroundColor: colors.background.secondary, borderRadius: 12, alignItems: 'center' }}>
-                <Ionicons name="calendar-outline" size={48} color={colors.text.tertiary} style={{ marginBottom: spacing.sm }} />
-                <Text style={{ color: colors.text.secondary, fontSize: typography.sizes.md }}>Cargando calendario...</Text>
-              </View>
-            )}
-          </View>
+          
         </View>
 
-        <View style={{ marginTop: spacing.md }}>
-          <Text style={{ fontSize: typography.sizes.lg, fontWeight: '600', marginBottom: spacing.sm }}>Asistencia semanal</Text>
-          <SimpleBarChart data={(data.asistencia_semanal || []).map((d: any) => ({ label: d.fecha, value: parseInt(d.presentes || 0) }))} />
-        </View>
         </ScrollView>
       </View>
     </Container>

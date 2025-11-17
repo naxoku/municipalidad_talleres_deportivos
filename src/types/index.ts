@@ -68,26 +68,6 @@ export interface Asistencia {
     presente: boolean;
 }
 
-export interface Indumentaria {
-    id: number;
-    nombre: string;
-    descripcion?: string;
-    tipo?: string;
-    // Some backends return a single `cantidad` field, others separate total/available.
-    // Make all optional to allow flexible mapping in screens.
-    cantidad?: number;
-    cantidad_total?: number;
-    cantidad_disponible?: number;
-}
-
-export interface IndumentariaTaller {
-    id: number;
-    indumentaria_id: number;
-    indumentaria_nombre?: string;
-    taller_id: number;
-    taller_nombre?: string;
-}
-
 export interface ApiResponse<T> {
     status: 'success' | 'error';
     mensaje?: string;

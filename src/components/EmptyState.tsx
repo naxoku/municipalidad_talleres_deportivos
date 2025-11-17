@@ -4,13 +4,13 @@ import { colors, spacing, typography } from '../theme/colors';
 
 interface EmptyStateProps {
   message: string;
-  icon?: string;
+  icon?: React.ReactNode;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ message, icon }) => {
   return (
     <View style={styles.container}>
-      {icon && <Text style={styles.icon}>{icon}</Text>}
+      {icon && <View style={styles.iconWrapper}>{icon}</View>}
       <Text style={styles.message}>{message}</Text>
     </View>
   );
@@ -23,10 +23,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xxl,
   },
-  icon: {
-    fontSize: 48,
+  iconWrapper: {
     marginBottom: spacing.md,
-    opacity: 0.5,
+    opacity: 0.7,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   message: {
     fontSize: typography.sizes.md,

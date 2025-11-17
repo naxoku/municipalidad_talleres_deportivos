@@ -12,18 +12,14 @@ import { colors } from '../theme/colors';
 import DashboardScreen from '../screens/DashboardScreen';
 import GlobalSearch from '../components/GlobalSearch';
 import ProfesoresScreen from '../screens/ProfesoresScreen';
-// import EstudiantesScreen from '../screens/EstudiantesScreen';
-// import TalleresScreen from '../screens/TalleresScreen';
 
 import TalleresEnhancedScreen from '../screens/TalleresEnhancedScreen';
 import EstudiantesEnhancedScreen from '../screens/EstudiantesEnhancedScreen';
-
 
 import HorariosScreen from '../screens/HorariosScreen';
 import InscripcionesScreen from '../screens/InscripcionesScreen';
 import ClasesScreen from '../screens/ClasesScreen';
 import AsistenciaScreen from '../screens/AsistenciaScreen';
-import IndumentariaScreen from '../screens/IndumentariaScreen';
 import ReportesScreen from '../screens/ReportesScreen';
 
 const Drawer = createDrawerNavigator();
@@ -97,6 +93,14 @@ function DrawerNavigatorContent() {
               ),
             }}
           />
+          <Drawer.Screen name="Talleres" component={TalleresEnhancedScreen} 
+            options={{
+              drawerIcon: ({ color, size }) => (
+                <Ionicons name="book" size={size} color={color} />
+              ),
+              title: 'Talleres',
+            }}
+          />
           <Drawer.Screen
             name="Profesores"
             component={ProfesoresScreen}
@@ -105,34 +109,6 @@ function DrawerNavigatorContent() {
                 <Ionicons name="person" size={size} color={color} />
               ),
               title: 'Profesores',
-            }}
-          />
-          {/* <Drawer.Screen
-            name="Estudiantes"
-            component={EstudiantesScreen}
-            options={{
-              drawerIcon: ({ color, size }) => (
-                <Ionicons name="school" size={size} color={color} />
-              ),
-              title: 'Estudiantes',
-            }}
-          />
-          <Drawer.Screen
-            name="Talleres"
-            component={TalleresScreen}
-            options={{
-              drawerIcon: ({ color, size }) => (
-                <Ionicons name="book" size={size} color={color} />
-              ),
-              title: 'Talleres',
-            }}
-          /> */}
-          <Drawer.Screen name="Talleres" component={TalleresEnhancedScreen} 
-            options={{
-              drawerIcon: ({ color, size }) => (
-                <Ionicons name="book" size={size} color={color} />
-              ),
-              title: 'Talleres',
             }}
           />
           <Drawer.Screen name="Estudiantes" component={EstudiantesEnhancedScreen}
@@ -164,16 +140,6 @@ function DrawerNavigatorContent() {
             }}
           />
           <Drawer.Screen
-            name="Clases"
-            component={ClasesScreen}
-            options={{
-              drawerIcon: ({ color, size }) => (
-                <Ionicons name="calendar" size={size} color={color} />
-              ),
-              title: 'Clases',
-            }}
-          />
-          <Drawer.Screen
             name="Asistencia"
             component={AsistenciaScreen}
             options={{
@@ -181,16 +147,6 @@ function DrawerNavigatorContent() {
                 <Ionicons name="location" size={size} color={color} />
               ),
               title: 'Asistencia',
-            }}
-          />
-          <Drawer.Screen
-            name="Indumentaria"
-            component={IndumentariaScreen}
-            options={{
-              drawerIcon: ({ color, size }) => (
-                <Ionicons name="shirt" size={size} color={color} />
-              ),
-              title: 'Indumentaria',
             }}
           />
           <Drawer.Screen
@@ -245,16 +201,6 @@ function DrawerNavigatorContent() {
                 <Ionicons name="location" size={size} color={color} />
               ),
               title: 'Asistencia',
-            }}
-          />
-          <Drawer.Screen
-            name="Clases"
-            component={ClasesScreen}
-            options={{
-              drawerIcon: ({ color, size }) => (
-                <Ionicons name="calendar" size={size} color={color} />
-              ),
-              title: 'Clases',
             }}
           />
         </>

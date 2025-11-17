@@ -12,11 +12,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../api/config';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
+import { colors, spacing, typography, borderRadius } from '../theme/colors';
 import { Badge } from '../components/Badge';
 import { ProgressBar } from '../components/ProgressBar';
 import SimpleBarChart from '../components/SimpleBarChart';
 import { useResponsive } from '../hooks/useResponsive';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 import { sharedStyles } from '../theme/sharedStyles';
 
 interface TallerStats {
@@ -32,6 +33,7 @@ export default function ReportesScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [searchTerm, setSearchTerm] = useState('');
   const { isWeb } = useResponsive();
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function ReportesScreen({ navigation, route }: any) {
 
   if (loading && !stats) {
     return (
-      <Container style={styles.container}>
+      <Container style={sharedStyles.container}>
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Cargando estadísticas...</Text>
@@ -81,10 +83,10 @@ export default function ReportesScreen({ navigation, route }: any) {
   }
 
   return (
-    <Container style={styles.container} edges={isWeb ? undefined : ['bottom']}>
+    <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={{ flex: 1 }}>
+        <HeaderWithSearch title="📊 Reportes y Estadísticas" searchTerm={searchTerm} onSearch={setSearchTerm} />
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>📊 Reportes y Estadísticas</Text>
           <View style={styles.periodSelector}>
             <TouchableOpacity
               style={[styles.periodButton, selectedPeriod === 'week' && styles.periodButtonActive]}
@@ -246,10 +248,6 @@ export default function ReportesScreen({ navigation, route }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.secondary,
-  },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
@@ -317,7 +315,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
-    ...(shadows.md as any),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   exportButtonText: {
     marginTop: spacing.xs,
@@ -340,7 +342,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
-    ...(shadows.md as any),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   metricValue: {
     fontSize: typography.sizes.xxl,
@@ -364,7 +370,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.sm,
-    ...(shadows.sm as any),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   rankBadge: {
     width: 40,
@@ -395,7 +405,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.sm,
-    ...(shadows.sm as any),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tallerHeader: {
     flexDirection: 'row',

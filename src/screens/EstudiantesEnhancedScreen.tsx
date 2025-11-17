@@ -20,8 +20,9 @@ import { ProgressBar } from '../components/ProgressBar';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
+import { colors, spacing, typography, borderRadius } from '../theme/colors';
 import { sharedStyles } from '../theme/sharedStyles';
+import HeaderWithSearch from '../components/HeaderWithSearch';
 
 interface EstudianteEnriquecido extends Estudiante {
   talleres_inscritos?: Array<{
@@ -248,20 +249,10 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
   const Container: any = isWeb ? View : SafeAreaView;
 
   return (
-    <Container style={styles.container} edges={isWeb ? undefined : ['bottom']}>
+    <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={{ flex: 1 }}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>👥 {isAdmin ? 'Estudiantes' : 'Mis Estudiantes'}</Text>
-        </View>
-
-        <View style={styles.searchContainer}>
-          <SearchBar
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Buscar estudiantes..."
-            onClear={() => setSearchTerm('')}
-          />
-          <View style={styles.filterButtons}>
+        <HeaderWithSearch title={isAdmin ? 'Estudiantes' : 'Mis Estudiantes'} searchTerm={searchTerm} onSearch={setSearchTerm} />
+        <View style={styles.filterButtons}>
             <TouchableOpacity
               style={[styles.filterButton, filterBy === 'all' && styles.filterButtonActive]}
               onPress={() => setFilterBy('all')}
@@ -296,10 +287,9 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
 
         {loading && !refreshing && (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+          <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />
         )}
 
         {!loading && filteredEstudiantes.length === 0 && (
@@ -309,7 +299,7 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
                 ? `No se encontraron estudiantes con "${searchTerm}"`
                 : 'No hay estudiantes registrados'
             }
-            icon="👤"
+            icon={<Ionicons name="person-circle" size={48} color={colors.text.tertiary} />}
           />
         )}
 
@@ -328,10 +318,6 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.secondary,
-  },
   header: {
     padding: spacing.md,
     backgroundColor: colors.background.primary,
@@ -371,9 +357,6 @@ const styles = StyleSheet.create({
   filterButtonTextActive: {
     color: colors.text.light,
   },
-  loader: {
-    marginTop: spacing.xl,
-  },
   listContent: {
     padding: spacing.md,
   },
@@ -383,7 +366,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderLeftWidth: 4,
     borderLeftColor: colors.blue.main,
-    ...(shadows.md as any),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
