@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   ActivityIndicator,
   Alert,
   StyleSheet,
   ScrollView,
   Modal,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { horariosApi } from '../api/horarios';
@@ -21,9 +21,12 @@ import { EmptyState } from '../components/EmptyState';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
 import SearchBar from '../components/SearchBar';
+ 
 import { sharedStyles } from '../theme/sharedStyles';
-import { shadows } from '../theme/colors';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
 import { formatTimeHHMM } from '../utils/time';
+import { Ionicons } from '@expo/vector-icons';
+import { Dimensions } from 'react-native';
 
 const DIAS_SEMANA = [
   { label: 'Lunes', value: 'Lunes' },
@@ -47,9 +50,10 @@ const HorariosScreen = () => {
     hora_fin: '',
   });
 
-  const { isWeb, isDesktop } = useResponsive();
+  const { isWeb, isDesktop, isMobile } = useResponsive();
   const shouldShowTable = isWeb && isDesktop;
   const [searchTerm, setSearchTerm] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
 
@@ -57,6 +61,32 @@ const HorariosScreen = () => {
     cargarHorarios();
     cargarTalleres();
   }, []);
+
+  // Agrupar horarios por día de la semana para mostrar en formato tipo calendario
+  const groupedHorarios = useMemo(() => {
+    const map: Record<string, Horario[]> = {};
+    DIAS_SEMANA.forEach((d) => (map[d.value] = []));
+    map['Otros'] = [];
+
+    const normalize = (s?: string) => (s || '').toString().trim().toLowerCase();
+
+    horarios.forEach((h) => {
+      const ds = normalize(h.dia_semana);
+      const match = DIAS_SEMANA.find((d) => normalize(d.value) === ds || normalize(d.label) === ds || ds.startsWith(normalize(d.value).slice(0, 3)));
+      if (match) map[match.value].push(h);
+      else map['Otros'].push(h);
+    });
+
+    // Ordenar cada día por hora_inicio
+    Object.keys(map).forEach((k) => {
+      map[k].sort((a, b) => (a.hora_inicio || '').localeCompare(b.hora_inicio || ''));
+    });
+
+    return map;
+  }, [horarios]);
+
+  const screenWidth = Dimensions.get('window').width;
+  const isNarrow = screenWidth < 700;
 
   const cargarHorarios = async () => {
     setLoading(true);
@@ -151,26 +181,27 @@ const HorariosScreen = () => {
 
   // Se eliminó la representación en tabla. Usamos listas/ítems en tarjetas.
 
-  const Container = isWeb ? View : SafeAreaView;
+  const Container = SafeAreaView;
 
   return (
-    <Container style={styles.container} edges={isWeb ? undefined : ['bottom']}>
-      {isWeb ? (
-        <View style={[styles.contentWrapper, styles.webContentWrapper]}>
-            <View style={styles.header}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <Text style={styles.headerTitle}>{isAdmin ? 'Horarios' : 'Mis Horarios'}</Text>
-                {isAdmin && (
-                  <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
-                    <Text style={styles.addButtonText}>+ Nuevo</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {isWeb && shouldShowTable && (
-                <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar horarios..." onClear={() => setSearchTerm('')} />
-              )}
-            </View>
-          <ScrollView style={styles.scrollView}>
+    <Container style={styles.container} edges={['bottom']}>
+      <View style={styles.contentWrapper}>
+        <View style={[styles.header, isWeb && styles.headerWeb]}> 
+          <Text style={styles.headerTitle}>{isAdmin ? 'Horarios' : 'Mis Horarios'}</Text>
+          <View style={styles.headerActions}>
+            {isAdmin && (
+              <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
+                <Text style={styles.addButtonText}>+ Nuevo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar horarios..." onClear={() => setSearchTerm('')} />
+        </View>
+
+        <ScrollView style={styles.scrollView} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await cargarHorarios(); setRefreshing(false); }} />}>
             {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
 
             {!loading && horarios.length === 0 && (
@@ -178,49 +209,63 @@ const HorariosScreen = () => {
             )}
 
             {!loading && horarios.length > 0 && (
-              <FlatList
-                data={horarios}
-                renderItem={renderHorario}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={styles.listContent}
-              />
+              <ScrollView horizontal={!isNarrow} contentContainerStyle={styles.calendarScroll} showsHorizontalScrollIndicator={false}>
+                {Object.keys(groupedHorarios).map((dia) => (
+                  <View key={dia} style={[styles.dayColumn, isNarrow && styles.dayColumnNarrow]}>
+                    <View style={styles.dayHeader}>
+                      <Text style={styles.dayHeaderTitle}>{dia}</Text>
+                      <Text style={styles.dayHeaderCount}>{groupedHorarios[dia].length}</Text>
+                    </View>
+
+                    {groupedHorarios[dia].length === 0 ? (
+                      <View style={styles.emptyDay}>
+                        <Text style={styles.emptyDayText}>Sin clases</Text>
+                      </View>
+                    ) : (
+                      groupedHorarios[dia].map((item) => (
+                        <View key={item.id} style={[styles.scheduleCard, isMobile ? styles.cardMobile : styles.cardWeb]}> 
+                          <View style={styles.cardHeaderRow}>
+                            <View style={styles.timeBadge}> 
+                              <Text style={styles.timeBadgeText}>{formatTimeHHMM(item.hora_inicio)}</Text>
+                              <Text style={styles.timeBadgeSub}>{formatTimeHHMM(item.hora_fin)}</Text>
+                            </View>
+
+                            <View style={styles.cardBody}>
+                              <Text style={styles.cardTitle}>{item.taller_nombre || `Taller ${item.taller_id}`}</Text>
+
+                              <View style={styles.infoRow}> 
+                                <Ionicons name="person" size={14} color={colors.text.tertiary} />
+                                <Text style={styles.cardDetail} numberOfLines={1}>{item.profesor_nombre || '-'}</Text>
+                              </View>
+
+                              <View style={styles.infoRow}> 
+                                <Ionicons name="time-outline" size={14} color={colors.text.tertiary} />
+                                <Text style={styles.cardDetail}>{item.hora_inicio} - {item.hora_fin}</Text>
+                              </View>
+
+                              <View style={styles.infoRow}> 
+                                <Ionicons name="location-outline" size={14} color={colors.text.tertiary} />
+                                <Text style={styles.cardDetail} numberOfLines={1}>{item.ubicacion_nombre || '-'}</Text>
+                              </View>
+                            </View>
+
+                            <View style={styles.cardActions}> 
+                              {isAdmin && (
+                                <TouchableOpacity style={styles.deleteSmall} onPress={() => eliminarHorario(item)}>
+                                  <Text style={styles.deleteSmallText}>Eliminar</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                ))}
+              </ScrollView>
             )}
-          </ScrollView>
-        </View>
-      ) : (
-        <View style={styles.contentWrapper}>
-          <View style={[styles.header, { flexDirection: 'column' }] }>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-              <Text style={styles.headerTitle}>{isAdmin ? 'Horarios' : 'Mis Horarios'}</Text>
-              {isAdmin && (
-                <TouchableOpacity style={styles.addButton} onPress={abrirModal}>
-                  <Text style={styles.addButtonText}>+ Nuevo</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {isWeb && shouldShowTable && (
-              <View style={{ marginTop: 12, width: '100%' }}>
-                <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar horarios..." onClear={() => setSearchTerm('')} />
-              </View>
-            )}
-          </View>
-
-          {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
-
-          {!loading && horarios.length === 0 && (
-            <EmptyState message="No hay horarios registrados" />
-          )}
-
-          {!loading && horarios.length > 0 && (
-            <FlatList
-              data={horarios}
-              renderItem={renderHorario}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={styles.listContent}
-            />
-          )}
-        </View>
-      )}
+        </ScrollView>
+      </View>
 
       <Modal
         visible={modalVisible}
@@ -319,19 +364,27 @@ const HorariosScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.secondary,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    minHeight: '100%'
   },
   contentWrapper: {
     flex: 1,
+    paddingBottom: spacing.lg,
   },
   webContentWrapper: {
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginVertical: spacing.md,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   tableContainer: {
     flex: 1,
@@ -342,15 +395,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.md,
+    backgroundColor: colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+  },
+  headerWeb: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+    marginBottom: spacing.md,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: typography.sizes.xl,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchContainer: {
+    padding: spacing.md,
+    backgroundColor: colors.background.primary,
   },
   addButton: {
     backgroundColor: '#28a745',
@@ -367,30 +435,47 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   listContent: {
-    padding: 16,
+    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#17a2b8',
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     ...(shadows.md as any),
+    borderWidth: 1,
+    borderColor: colors.border.light,
   },
   cardContent: {
     marginBottom: 12,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+  
+  /* responsive schedule cards */
+  cardWeb: {
+    width: '100%',
+    marginBottom: spacing.sm,
   },
-  cardDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+  cardMobile: {
+    width: '100%',
+    marginBottom: spacing.sm,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  metaItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  cardActions: {
+    marginLeft: spacing.sm,
   },
   actionButton: {
     paddingVertical: 10,
@@ -487,6 +572,126 @@ const styles = StyleSheet.create({
   pickerItemText: {
     fontSize: 14,
     color: '#333',
+  },
+  calendarScroll: {
+    padding: 12,
+    alignItems: 'flex-start',
+    flexGrow: 1,
+    justifyContent: 'space-between',
+  },
+  dayColumn: {
+    flex: 1,
+    minWidth: 220,
+    minHeight: 200,
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    marginRight: spacing.md,
+    padding: spacing.md,
+    ...(shadows.md as any),
+  },
+  dayColumnNarrow: {
+    width: '100%',
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  dayHeaderTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  dayHeaderCount: {
+    backgroundColor: '#eef7ff',
+    color: '#0077cc',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyDay: {
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyDayText: {
+    color: '#888',
+  },
+  scheduleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#fbfbff',
+    marginBottom: 8,
+  },
+  cardLeft: {
+    marginRight: 8,
+  },
+  timeBadge: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#eee',
+    minWidth: 64,
+  },
+  timeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#333',
+  },
+  timeBadgeSub: {
+    fontSize: 11,
+    color: '#666',
+  },
+  cardBody: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#222',
+  },
+  cardDetail: {
+    fontSize: 12,
+    color: '#666',
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  deleteSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: '#ffecec',
+    borderRadius: 8,
+  },
+  deleteSmallText: {
+    color: '#c3302b',
+    fontWeight: '600',
+    fontSize: 12,
   },
 });
 

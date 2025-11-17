@@ -19,7 +19,7 @@ export const sharedStyles = StyleSheet.create({
         width: '100%',
         alignSelf: 'center',
         backgroundColor: colors.background.primary,
-        minHeight: '100vh',
+        minHeight: Platform.OS === 'web' ? ('100vh' as any) : undefined,
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.xl,
     },
