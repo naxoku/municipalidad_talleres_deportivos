@@ -21,7 +21,6 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { Badge } from '../components/Badge';
-import { ProgressBar } from '../components/ProgressBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,7 +37,7 @@ interface TallerEnriquecido extends Taller {
   asistencia_promedio?: number;
 }
 
-const TalleresScreen = ({ navigation }: any) => {
+const TalleresScreen = () => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [talleres, setTalleres] = useState<TallerEnriquecido[]>([]);

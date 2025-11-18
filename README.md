@@ -1,15 +1,16 @@
-# 📱 Aplicación Talleres Deportivos - Municipalidad de Angol
+# 📱 Talleres Deportivos - Municipalidad de Angol
 
 Sistema de gestión de talleres deportivos desarrollado con **React Native + Expo** para móvil, tablet y web.
 
-## 🎨 Sistema de Diseño
+## 🎨 Características Principales
 
-### Colores Corporativos
-- **Verde Muni**: `#00862d` - Color principal de la Municipalidad de Angol
-- **Azul Deportes**: `#1e88e5` - Del logo de la Unidad de Deportes
-- **Estilo**: Minimalista con toques coloridos
-
-Ver documentación completa en [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)
+- ✅ **Navegación por Drawer** con menú lateral responsivo
+- ✅ **9 secciones principales** con operaciones CRUD completas
+- ✅ **Diseño responsive** (móvil, tablet, web)
+- ✅ **Modales deslizables** para formularios
+- ✅ **Estados de carga** y confirmaciones
+- ✅ **Sistema de autenticación** por roles (Admin/Profesor/Alumno)
+- ✅ **Búsqueda global** integrada
 
 ## 🚀 Inicio Rápido
 
@@ -24,336 +25,135 @@ export const API_URL = 'http://localhost/talleres_backend';
 
 ```bash
 npm install
-npm run web      # Para web
-npm run android  # Para Android
-npm start        # Para desarrollo
+npx expo start --clear    # Para desarrollo
+npm run web              # Para web
+npm run android          # Para Android
 ```
 
-## 🗂️ Estructura del Proyecto
+## 🗺️ Rutas de la Aplicación
 
-```
-municipalidad_talleres_deportivos/
-├── src/
-│   ├── api/              # Servicios de API
-│   ├── components/       # Componentes reutilizables
-│   ├── contexts/         # Contextos de React
-│   ├── navigation/       # Configuración de navegación
-│   ├── screens/          # Pantallas de la app
-│   ├── theme/            # Sistema de diseño
-│   └── types/            # Tipos TypeScript
-├── DESIGN_SYSTEM.md      # Documentación del diseño
-└── README.md             # Este archivo
-```
+### Rutas Principales
+| Ruta | Descripción | Acceso |
+|------|-------------|--------|
+| `/` | Dashboard principal | Todos |
+| `/talleres` | Gestión de talleres | Admin/Profesor |
+| `/profesores` | Gestión de profesores | Admin |
+| `/alumnos` | Gestión de alumnos | Admin/Profesor |
+| `/horarios` | Gestión de horarios | Admin/Profesor |
+| `/inscripciones` | Gestión de inscripciones | Admin |
+| `/asistencia` | Control de asistencia | Admin/Profesor |
+| `/reportes` | Reportes y estadísticas | Admin |
+| `/clases` | Gestión de clases programadas | Admin |
 
-## 📡 Rutas API y Endpoints
+### Rutas Modales
+Los modales se muestran localmente sin cambiar la URL de navegación.
+
+## 📡 API Endpoints
 
 ### Configuración Base
-**Archivo**: `src/api/config.ts`
-```typescript
-export const API_URL = 'http://localhost/talleres_backend';
-```
+**URL Base**: `http://localhost/talleres_backend/api/`
 
 ### 👨‍🏫 Profesores
-**Archivo**: `src/api/profesores.ts`  
-**Ruta Base**: `/api/profesores.php`
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=listar` | Listar todos los profesores |
-| POST | `?accion=crear` | Crear nuevo profesor |
-| PUT | `?accion=actualizar` | Actualizar profesor existente |
-| DELETE | `?accion=eliminar` | Eliminar profesor |
-
-**Pantalla**: `ProfesoresScreen.tsx`  
-**Campos**: nombre, especialidad, email, contraseña (solo crear)
-
----
+**Endpoint**: `profesores.php`
+- `GET ?accion=listar` - Listar profesores
+- `POST ?accion=crear` - Crear profesor
+- `PUT ?accion=actualizar` - Actualizar profesor
+- `DELETE ?accion=eliminar` - Eliminar profesor
 
 ### 👨‍🎓 Alumnos
-**Archivo**: `src/api/Alumnos.ts`  
-**Ruta Base**: `/api/Alumnos.php`
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=listar` | Listar todos los Alumnos |
-| POST | `?accion=crear` | Crear nuevo estudiante |
-| PUT | `?accion=actualizar` | Actualizar estudiante |
-| DELETE | `?accion=eliminar` | Eliminar estudiante |
-
-**Pantalla**: `AlumnosScreen.tsx`  
-**Campos**: nombre, fecha_nacimiento, contacto
-
----
+**Endpoint**: `alumnos.php`
+- `GET ?accion=listar` - Listar alumnos
+- `POST ?accion=crear` - Crear alumno
+- `PUT ?accion=actualizar` - Actualizar alumno
+- `DELETE ?accion=eliminar` - Eliminar alumno
 
 ### 📚 Talleres
-**Archivo**: `src/api/talleres.ts`  
-**Ruta Base**: `/api/talleres.php`
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=listar` | Listar todos los talleres |
-| POST | `?accion=crear` | Crear nuevo taller |
-| PUT | `?accion=actualizar` | Actualizar taller |
-| DELETE | `?accion=eliminar` | Eliminar taller |
-
-**Pantalla**: `TalleresScreen.tsx`  
-**Campos**: nombre, descripción, profesor_id  
-**Relación**: Con Profesores (FK)
-
----
+**Endpoint**: `talleres.php`
+- `GET ?accion=listar` - Listar talleres
+- `POST ?accion=crear` - Crear taller
+- `PUT ?accion=actualizar` - Actualizar taller
+- `DELETE ?accion=eliminar` - Eliminar taller
 
 ### 🕐 Horarios
-**Archivo**: `src/api/horarios.ts`  
-**Ruta Base**: `/api/horarios.php`
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=listar` | Listar todos los horarios |
-| POST | `?accion=crear` | Crear nuevo horario |
-| DELETE | `?accion=eliminar` | Eliminar horario |
-
-**Pantalla**: `HorariosScreen.tsx`  
-**Campos**: taller_id, dia_semana, hora_inicio, hora_fin  
-**Relación**: Con Talleres (FK)
-
----
+**Endpoint**: `horarios.php`
+- `GET ?accion=listar` - Listar horarios
+- `POST ?accion=crear` - Crear horario
+- `DELETE ?accion=eliminar` - Eliminar horario
 
 ### ✅ Inscripciones
-**Archivo**: `src/api/inscripciones.ts`  
-**Ruta Base**: `/api/inscripciones.php`
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=listar` | Listar todas las inscripciones |
-| POST | `?accion=crear` | Inscribir estudiante a taller |
-| DELETE | `?accion=eliminar` | Eliminar inscripción |
-
-**Pantalla**: `InscripcionesScreen.tsx`  
-**Campos**: estudiante_id, taller_id, fecha_inscripcion  
-**Relaciones**: Con Alumnos y Talleres (FK)
-
----
+**Endpoint**: `inscripciones.php`
+- `GET ?accion=listar` - Listar inscripciones
+- `POST ?accion=crear` - Crear inscripción
+- `DELETE ?accion=eliminar` - Eliminar inscripción
 
 ### 📅 Clases
-**Archivo**: `src/api/clases.ts`  
-**Ruta Base**: `/api/clases.php`
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=listar` | Listar todas las clases |
-| POST | `?accion=crear` | Crear nueva clase |
-| DELETE | `?accion=eliminar` | Eliminar clase |
-
-**Pantalla**: `ClasesScreen.tsx`  
-**Campos**: taller_id, fecha, hora_inicio, hora_fin  
-**Relación**: Con Talleres (FK)
-
----
+**Endpoint**: `clases.php`
+- `GET ?accion=listar` - Listar clases
+- `POST ?accion=crear` - Crear clase
+- `DELETE ?accion=eliminar` - Eliminar clase
 
 ### 📍 Asistencia
-**Archivo**: `src/api/asistencia.ts`  
-**Ruta Base**: `/api/asistencia.php`
+**Endpoint**: `asistencia.php`
+- `GET ?accion=obtener&clase_id=X` - Obtener asistencia
+- `POST ?accion=marcar` - Marcar asistencia
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=obtener&clase_id=X` | Obtener asistencia de una clase |
-| POST | `?accion=marcar` | Marcar/actualizar asistencia |
+### 📊 Dashboard
+**Endpoint**: `dashboard.php`
+- `GET` - Datos del dashboard
 
-**Pantalla**: `AsistenciaScreen.tsx`  
-**Campos**: clase_id, estudiante_id, presente  
-**Relaciones**: Con Clases y Alumnos (FK)
-
----
-
-### 🎽 Indumentaria
-**Archivo**: `src/api/indumentaria.ts`  
-**Ruta Base**: `/api/indumentaria.php` y `/api/indumentaria_taller.php`
-
-#### Indumentaria
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=listar` | Listar indumentaria |
-| POST | `?accion=crear` | Crear indumentaria |
-| PUT | `?accion=actualizar` | Actualizar indumentaria |
-| DELETE | `?accion=eliminar` | Eliminar indumentaria |
-
-#### Asignaciones (Indumentaria ↔ Taller)
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `?accion=listar` | Listar asignaciones |
-| POST | `?accion=asignar` | Asignar a taller |
-| DELETE | `?accion=desasignar` | Desasignar de taller |
-
-**Pantalla**: `IndumentariaScreen.tsx` (con tabs)  
-**Campos**: nombre, descripción, cantidad  
-**Relación**: Con Talleres (muchos a muchos)
-
----
-
-## 🧩 Componentes Reutilizables
-
-### Button
-**Archivo**: `src/components/Button.tsx`
-```typescript
-<Button 
-  title="Guardar" 
-  variant="primary"  // primary, secondary, success, danger, outline
-  onPress={handleSave}
-  loading={isLoading}
-/>
-```
-
-### Input
-**Archivo**: `src/components/Input.tsx`
-```typescript
-<Input
-  label="Nombre"
-  required
-  value={nombre}
-  onChangeText={setNombre}
-  placeholder="Ingrese nombre"
-/>
-```
-
-### Table
-**Archivo**: `src/components/Table.tsx`  
-Usado en vista web/desktop para mostrar datos tabulares.
-
-### EmptyState
-**Archivo**: `src/components/EmptyState.tsx`
-```typescript
-<EmptyState message="No hay datos disponibles" />
-```
-
----
-
-## 🎨 Sistema de Colores
-
-### Paleta Principal
-```typescript
-// src/theme/colors.ts
-colors = {
-  primary: '#00862d',        // Verde Muni
-  blue: {
-    main: '#1e88e5',         // Azul Deportes
-    soft: '#e3f2fd',         // Azul suave (fondos)
-  },
-  success: '#00862d',
-  error: '#e53935',
-  warning: '#ff9800',
-}
-```
-
-### Uso en Pantallas
-- **Drawer Navigation**: Fondo verde `#00862d`
-- **Botón Principal**: Verde `#00862d`
-- **Botón Secundario**: Azul `#1e88e5`
-- **Tabs Activos**: Verde `#00862d`
-- **Bordes de Tarjetas**: Azul, morado, naranja (variantes)
-
-Ver [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) para detalles completos.
-
----
-
-## 📱 Características
-
-- ✅ **Drawer Navigation** con menú lateral
-- ✅ **8 Pantallas completas** con CRUD
-- ✅ **Diseño responsive** (móvil, tablet, web)
-- ✅ **Safe Areas** para notch y barras
-- ✅ **Modales** deslizables
-- ✅ **Estados de carga** y confirmaciones
-- ✅ **Diseño minimalista** con colores corporativos
+### 📈 Reportes
+**Endpoint**: `reportes.php`
+- `GET ?accion=estadisticas&period=X` - Estadísticas
+- `GET ?accion=exportar_X&period=X` - Exportar reportes
 
 ## 🛠️ Stack Tecnológico
 
 - **React Native** 0.81.5 + **Expo** ~54.0
+- **Expo Router** (navegación basada en archivos)
 - **TypeScript** ~5.9
-- **React Navigation** 7.x (Drawer)
-- **Safe Area Context**
-- **Fetch API** para HTTP
+- **React Navigation** (integrado con Expo Router)
 
-## 📝 Convenciones de Código
+## 📱 Testing
 
-### Estructura de Servicios API
-Todos los archivos en `src/api/` siguen este patrón:
-
-```typescript
-import { API_URL } from './config';
-
-export const moduloApi = {
-  listar: async () => { /* GET */ },
-  crear: async (data) => { /* POST */ },
-  actualizar: async (data) => { /* PUT */ },
-  eliminar: async (id) => { /* DELETE */ },
-};
-```
-
-### Estructura de Pantallas
-Todas las pantallas siguen este patrón:
-
-```typescript
-// 1. Imports
-import { sharedStyles } from '../theme/sharedStyles';
-
-// 2. Estados
-const [datos, setDatos] = useState([]);
-const [loading, setLoading] = useState(false);
-
-// 3. Efectos
-useEffect(() => { cargarDatos(); }, []);
-
-// 4. Funciones
-const cargarDatos = async () => { /* ... */ };
-
-// 5. Render
-return (
-  <View style={sharedStyles.container}>
-    {/* Header */}
-    {/* Lista/Tabla */}
-    {/* Modal */}
-  </View>
-);
-```
-
-### Estilos Compartidos
-Usa `sharedStyles` de `src/theme/sharedStyles.ts`:
-
-```typescript
-import { sharedStyles } from '../theme/sharedStyles';
-
-<View style={sharedStyles.card}>
-  <Text style={sharedStyles.cardTitle}>Título</Text>
-  <Text style={sharedStyles.cardDetail}>Detalle</Text>
-</View>
-```
+- **Web**: `http://localhost:8081`
+- **Android/iOS**: Expo Go + QR code (misma red WiFi)
+- **Móvil**: Usar IP de la PC, no `localhost`
 
 ## 🐛 Troubleshooting
 
 ### Backend no conecta
-1. Verifica WAMP esté corriendo
-2. Revisa URL en `src/api/config.ts`
-3. Móvil: usa IP de tu PC, no `localhost`
-4. Verifica firewall
+1. Verificar que WAMP esté ejecutándose
+2. Revisar URL en `src/api/config.ts`
+3. Para móvil: usar IP de la PC (ej: `http://192.168.1.100/talleres_backend`)
+4. Verificar firewall/antivirus
 
-### Reiniciar cache
+### Limpiar caché
 ```bash
-npm start -- --reset-cache
+npx expo start --clear
 ```
 
-### TypeScript errors
-VS Code: `Ctrl+Shift+P` > "TypeScript: Restart TS Server"
+### Errores de TypeScript
+En VS Code: `Ctrl+Shift+P` → "TypeScript: Restart TS Server"
 
-## 📱 Testing
+## 📁 Estructura del Proyecto
 
-- **Android/iOS**: Expo Go + QR code (misma WiFi)
-- **Web**: `http://localhost:8081`
-
-## 📚 Documentación Adicional
-
-- [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) - Sistema de colores y componentes
-- [`ACTUALIZACION_DISENO.md`](./ACTUALIZACION_DISENO.md) - Cambios de diseño
-- [`CONFIGURACION_APP.md`](./CONFIGURACION_APP.md) - Guía técnica completa
+```
+municipalidad_talleres_deportivos/
+├── app/                    # Rutas de Expo Router
+│   ├── (drawer)/          # Layout con drawer
+│   ├── (modals)/          # Rutas modales
+│   ├── _layout.tsx        # Layout raíz
+│   └── [ruta].tsx         # Páginas principales
+├── src/
+│   ├── api/               # Servicios API
+│   ├── components/        # Componentes reutilizables
+│   ├── contexts/          # Contextos React
+│   ├── hooks/             # Hooks personalizados
+│   ├── screens/           # Pantallas (componentes)
+│   ├── theme/             # Sistema de diseño
+│   └── types/             # Tipos TypeScript
+└── talleres_backend/      # Backend PHP
+```
 
 ## 📄 Licencia
 

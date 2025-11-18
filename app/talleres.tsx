@@ -1,6 +1,2 @@
-import React from 'react';
-import TalleresScreen from '../src/screens/TalleresScreen';
-
-export default function TalleresPage() {
-  return <TalleresScreen />;
-}
+import TalleresPage from './(drawer)/talleres';
+export default TalleresPage;

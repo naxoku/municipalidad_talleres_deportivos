@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../api/config';
 import { colors, spacing, typography, borderRadius } from '../theme/colors';
 import { Badge } from '../components/Badge';
-import { ProgressBar } from '../components/ProgressBar';
 import SimpleBarChart from '../components/SimpleBarChart';
 import { useResponsive } from '../hooks/useResponsive';
 import HeaderWithSearch from '../components/HeaderWithSearch';
@@ -29,7 +28,7 @@ interface TallerStats {
   tendencia: 'up' | 'down' | 'stable';
 }
 
-export default function ReportesScreen({ navigation, route }: any) {
+export default function ReportesScreen() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
@@ -172,12 +171,6 @@ export default function ReportesScreen({ navigation, route }: any) {
                 </View>
                 <View style={styles.rankInfo}>
                   <Text style={styles.rankName}>{estudiante.nombre}</Text>
-                  <ProgressBar
-                    current={estudiante.asistencia_porcentaje}
-                    total={100}
-                    height={6}
-                    showLabel={false}
-                  />
                 </View>
                 <Badge
                   label={`${estudiante.asistencia_porcentaje}%`}
@@ -217,12 +210,6 @@ export default function ReportesScreen({ navigation, route }: any) {
                     <Text style={styles.tallerStatText}>{taller.total_clases} clases</Text>
                   </View>
                 </View>
-                <ProgressBar
-                  current={taller.asistencia_promedio}
-                  total={100}
-                  height={8}
-                  showLabel={false}
-                />
               </View>
             )) || (
               <Text style={styles.emptyText}>No hay datos disponibles</Text>

@@ -1,6 +1,2 @@
-import React from 'react';
-import ClasesScreen from '../src/screens/ClasesScreen';
-
-export default function ClasesPage() {
-  return <ClasesScreen />;
-}
+import ClasesPage from './(drawer)/clases';
+export default ClasesPage;

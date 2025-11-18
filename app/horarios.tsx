@@ -1,6 +1,2 @@
-import React from 'react';
-import HorariosScreen from '../src/screens/HorariosScreen';
-
-export default function HorariosPage() {
-  return <HorariosScreen />;
-}
+import HorariosPage from './(drawer)/horarios';
+export default HorariosPage;

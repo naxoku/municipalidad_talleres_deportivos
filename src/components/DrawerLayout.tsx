@@ -5,6 +5,7 @@ import GlobalSearch from './GlobalSearch';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../theme/colors';
+import { useRouter } from 'expo-router';
 
 export default function DrawerLayout({ children }: { children: React.ReactNode }) {
   const { isWeb, isDesktop } = useResponsive();
@@ -12,10 +13,20 @@ export default function DrawerLayout({ children }: { children: React.ReactNode }
   const isAdmin = userRole === 'administrador';
   const isProfesor = userRole === 'profesor';
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const makeLink = (href: string, label: string, icon?: string) => {
     return (
-      <TouchableOpacity key={href} style={styles.link}>
+      <TouchableOpacity 
+        key={href} 
+        style={styles.link}
+        onPress={() => {
+          router.push(href);
+          if (!isWeb || !isDesktop) {
+            setOpen(false); // Cerrar el drawer en móvil
+          }
+        }}
+      >
         <View style={styles.linkContent}>
           {icon && <Ionicons name={icon as any} size={18} color={'#fff'} />}
           <Text style={styles.linkText}>{label}</Text>
@@ -33,6 +44,7 @@ export default function DrawerLayout({ children }: { children: React.ReactNode }
     { href: '/inscripciones', label: 'Inscripciones', icon: 'checkmark-circle' },
     { href: '/asistencia', label: 'Asistencia', icon: 'location' },
     { href: '/reportes', label: 'Reportes', icon: 'bar-chart' },
+    { href: '/design-showcase', label: 'Design Showcase', icon: 'color-palette' },
   ];
 
   const profesorLinks = [

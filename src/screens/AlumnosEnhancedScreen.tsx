@@ -16,7 +16,6 @@ import { inscripcionesApi } from '../api/inscripciones';
 import { Estudiante } from '../types';
 import { EmptyState } from '../components/EmptyState';
 import { Badge } from '../components/Badge';
-import { ProgressBar } from '../components/ProgressBar';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
@@ -157,12 +156,6 @@ export default function AlumnosEnhancedScreen() {
                 <Text style={styles.statLabel}>Asistencia global</Text>
                 <Text style={styles.statValue}>{item.asistencia_global}%</Text>
               </View>
-              <ProgressBar
-                current={item.asistencia_global || 0}
-                total={100}
-                height={8}
-                showLabel={false}
-              />
             </View>
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
@@ -188,12 +181,6 @@ export default function AlumnosEnhancedScreen() {
                 <View key={taller.id} style={styles.tallerRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.tallerName}>{taller.nombre}</Text>
-                    <ProgressBar
-                      current={taller.asistencia_porcentaje}
-                      total={100}
-                      height={4}
-                      showLabel={false}
-                    />
                   </View>
                   <Text style={styles.tallerPercentage}>{taller.asistencia_porcentaje}%</Text>
                 </View>

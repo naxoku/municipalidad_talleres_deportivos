@@ -8,7 +8,7 @@ import SearchBar from './SearchBar';
 
 type Props = { navigation?: any; inline?: boolean };
 
-export default function GlobalSearch({ navigation, inline = false }: Props) {
+export default function GlobalSearch({ inline = false }: Props) {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');

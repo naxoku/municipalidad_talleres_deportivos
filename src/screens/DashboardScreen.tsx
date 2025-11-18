@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL, handleApiResponse, getHeaders } from '../api/config';
 import MetricCard from '../components/MetricCard';
 import QuickActions from '../components/QuickActions';
-import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { CardSkeleton } from '../components/LoadingSkeleton';
 import { useResponsive } from '../hooks/useResponsive';
@@ -22,7 +21,7 @@ import { asistenciaApi } from '../api/asistencia';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 
-export default function DashboardScreen({ navigation }: any) {
+export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<any>({
@@ -35,6 +34,30 @@ export default function DashboardScreen({ navigation }: any) {
   const { isWeb, isDesktop, isMobile, width } = useResponsive();
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
+
+  // Estados para modales
+  const [modalNuevoAlumnoVisible, setModalNuevoAlumnoVisible] = useState(false);
+  const [modalNuevaInscripcionVisible, setModalNuevaInscripcionVisible] = useState(false);
+  const [modalNuevoTallerVisible, setModalNuevoTallerVisible] = useState(false);
+
+  // Estados para listas de datos
+  const [listaAlumnos, setListaAlumnos] = useState<any[]>([]);
+  const [listaTalleres, setListaTalleres] = useState<any[]>([]);
+
+  // Estados para formularios
+  const [formNuevoAlumno, setFormNuevoAlumno] = useState({
+    nombre: '',
+    edad: '',
+    contacto: '',
+  });
+  const [formNuevaInscripcion, setFormNuevaInscripcion] = useState({
+    estudiante_id: '',
+    taller_id: '',
+  });
+  const [formNuevoTaller, setFormNuevoTaller] = useState({
+    nombre: '',
+    descripcion: '',
+  });
 
   const cargar = async () => {
     setLoading(true);
@@ -192,15 +215,90 @@ export default function DashboardScreen({ navigation }: any) {
   }, []);
 
   const abrirModalNuevoEstudiante = () => {
-    router.push('/(modals)/nuevo-alumno');
+    setFormNuevoAlumno({ nombre: '', edad: '', contacto: '' });
+    setModalNuevoAlumnoVisible(true);
   };
 
   const abrirModalNuevaInscripcion = async () => {
-    router.push('/(modals)/nueva-inscripcion');
+    setFormNuevaInscripcion({ estudiante_id: '', taller_id: '' });
+    
+    // Cargar listas para los selects
+    try {
+      const [alumnosData, talleresData] = await Promise.all([
+        alumnosApi.listar(),
+        talleresApi.listar(),
+      ]);
+      setListaAlumnos(alumnosData.map((a: any) => ({ label: a.nombre, value: String(a.id) })));
+      setListaTalleres(talleresData.map((t: any) => ({ label: t.nombre, value: String(t.id) })));
+    } catch (error) {
+      console.error('Error cargando listas:', error);
+    }
+    
+    setModalNuevaInscripcionVisible(true);
   };
 
   const abrirModalNuevoTaller = () => {
-    router.push('/(modals)/nuevo-taller');
+    setFormNuevoTaller({ nombre: '', descripcion: '' });
+    setModalNuevoTallerVisible(true);
+  };
+
+  // Funciones para manejar formularios
+  const crearNuevoAlumno = async () => {
+    if (!formNuevoAlumno.nombre) {
+      Alert.alert('Error', 'El nombre es obligatorio');
+      return;
+    }
+
+    try {
+      await alumnosApi.crear({
+        nombre: formNuevoAlumno.nombre,
+        edad: parseInt(formNuevoAlumno.edad) || undefined,
+        contacto: formNuevoAlumno.contacto || undefined,
+      });
+      Alert.alert('Éxito', 'Alumno creado correctamente');
+      setModalNuevoAlumnoVisible(false);
+      await cargar(); // Recargar datos del dashboard
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const crearNuevaInscripcion = async () => {
+    if (!formNuevaInscripcion.estudiante_id || !formNuevaInscripcion.taller_id) {
+      Alert.alert('Error', 'Todos los campos son obligatorios');
+      return;
+    }
+
+    try {
+      await inscripcionesApi.crear({
+        estudiante_id: parseInt(formNuevaInscripcion.estudiante_id),
+        taller_id: parseInt(formNuevaInscripcion.taller_id),
+      });
+      Alert.alert('Éxito', 'Inscripción creada correctamente');
+      setModalNuevaInscripcionVisible(false);
+      await cargar(); // Recargar datos del dashboard
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const crearNuevoTaller = async () => {
+    if (!formNuevoTaller.nombre) {
+      Alert.alert('Error', 'El nombre es obligatorio');
+      return;
+    }
+
+    try {
+      await talleresApi.crear({
+        nombre: formNuevoTaller.nombre,
+        descripcion: formNuevoTaller.descripcion || undefined,
+      });
+      Alert.alert('Éxito', 'Taller creado correctamente');
+      setModalNuevoTallerVisible(false);
+      await cargar(); // Recargar datos del dashboard
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
   };
   if (loading) {
     return (
@@ -276,7 +374,8 @@ export default function DashboardScreen({ navigation }: any) {
     // Acciones rápidas específicas para admin
     actions.push({ key: 'ver_asistencias', icon: 'eye-outline', title: 'Ver asistencias', onPress: () => router.push('/asistencia') });
     actions.push({ key: 'nuevo_taller', icon: 'book-outline', title: 'Nuevo taller', onPress: abrirModalNuevoTaller });
-    actions.push({ key: 'export_csv', icon: 'download-outline', title: 'Exportar CSV', onPress: () => router.push('/(modals)/exportar') });
+    // TODO: Implementar funcionalidad de exportar
+    // actions.push({ key: 'export_csv', icon: 'download-outline', title: 'Exportar CSV', onPress: () => router.push('/(modals)/exportar') });
   }
 
   return (
@@ -434,7 +533,138 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
 
         </ScrollView>
-        {/* Modales migrados a rutas en app/(modals) */}
+
+        {/* Modales */}
+        <Modal
+          visible={modalNuevoAlumnoVisible}
+          onClose={() => setModalNuevoAlumnoVisible(false)}
+          title="Nuevo Alumno"
+          footer={
+            <>
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={() => setModalNuevoAlumnoVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalFooterButtonText, { color: '#2563EB' }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <View style={styles.footerDivider} />
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={crearNuevoAlumno}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalFooterButtonText, { color: '#059669' }]}>Crear</Text>
+              </TouchableOpacity>
+            </>
+          }
+        >
+          <Input
+            label="Nombre"
+            required
+            value={formNuevoAlumno.nombre}
+            onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, nombre: text })}
+            placeholder="Nombre completo"
+          />
+          <Input
+            label="Edad"
+            value={formNuevoAlumno.edad}
+            onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, edad: text })}
+            placeholder="Edad (opcional)"
+            keyboardType="numeric"
+          />
+          <Input
+            label="Contacto"
+            value={formNuevoAlumno.contacto}
+            onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, contacto: text })}
+            placeholder="Teléfono o email (opcional)"
+          />
+        </Modal>
+
+        <Modal
+          visible={modalNuevaInscripcionVisible}
+          onClose={() => setModalNuevaInscripcionVisible(false)}
+          title="Nueva Inscripción"
+          footer={
+            <>
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={() => setModalNuevaInscripcionVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalFooterButtonText, { color: '#2563EB' }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <View style={styles.footerDivider} />
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={crearNuevaInscripcion}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalFooterButtonText, { color: '#059669' }]}>Crear</Text>
+              </TouchableOpacity>
+            </>
+          }
+        >
+          <View style={sharedStyles.inputContainer}>
+            <Text style={sharedStyles.label}>Estudiante *</Text>
+            <Select
+              label=""
+              value={formNuevaInscripcion.estudiante_id}
+              onValueChange={(value) => setFormNuevaInscripcion({ ...formNuevaInscripcion, estudiante_id: String(value) })}
+              items={listaAlumnos}
+            />
+          </View>
+          <View style={sharedStyles.inputContainer}>
+            <Text style={sharedStyles.label}>Taller *</Text>
+            <Select
+              label=""
+              value={formNuevaInscripcion.taller_id}
+              onValueChange={(value) => setFormNuevaInscripcion({ ...formNuevaInscripcion, taller_id: String(value) })}
+              items={listaTalleres}
+            />
+          </View>
+        </Modal>
+
+        <Modal
+          visible={modalNuevoTallerVisible}
+          onClose={() => setModalNuevoTallerVisible(false)}
+          title="Nuevo Taller"
+          footer={
+            <>
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={() => setModalNuevoTallerVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalFooterButtonText, { color: '#2563EB' }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <View style={styles.footerDivider} />
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={crearNuevoTaller}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalFooterButtonText, { color: '#059669' }]}>Crear</Text>
+              </TouchableOpacity>
+            </>
+          }
+        >
+          <Input
+            label="Nombre"
+            required
+            value={formNuevoTaller.nombre}
+            onChangeText={(text) => setFormNuevoTaller({ ...formNuevoTaller, nombre: text })}
+            placeholder="Nombre del taller"
+          />
+          <Input
+            label="Descripción"
+            value={formNuevoTaller.descripcion}
+            onChangeText={(text) => setFormNuevoTaller({ ...formNuevoTaller, descripcion: text })}
+            placeholder="Descripción del taller (opcional)"
+            multiline
+            numberOfLines={3}
+          />
+        </Modal>
       </View>
     </Container>
   );

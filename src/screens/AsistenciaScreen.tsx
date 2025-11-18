@@ -17,7 +17,6 @@ import { asistenciaApi } from '../api/asistencia';
 import { clasesApi } from '../api/clases';
 import { Asistencia, Clase } from '../types';
 import { EmptyState } from '../components/EmptyState';
-import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { useAuth } from '../contexts/AuthContext';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
@@ -221,12 +220,6 @@ const AsistenciaScreen = () => {
         <>
           <View style={{ paddingHorizontal: 16, paddingBottom: 8, paddingTop: 12, backgroundColor: colors.background.secondary }}>
             <View style={{ marginBottom: spacing.md }}>
-              <ProgressBar 
-                current={asistencias.filter(a => a.presente).length} 
-                total={asistencias.length} 
-                height={10}
-                showLabel={false}
-              />
               <Text style={{ fontSize: typography.sizes.lg, fontWeight: '600', color: colors.text.primary, marginTop: spacing.sm }}>
                 {`${asistencias.filter(a => a.presente).length}/${asistencias.length} presentes`}
               </Text>
