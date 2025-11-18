@@ -117,16 +117,17 @@ export const sharedStyles = StyleSheet.create({
         fontSize: typography.sizes.sm,
     },
 
-    // Modales
+    // Modales - Estilo minimalista mejorado (inspirado en Expo Router web modals)
     modalOverlay: {
         flex: 1,
-        backgroundColor: colors.overlay,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Overlay más sutil (40% en lugar de 50%)
         justifyContent: 'flex-end',
     },
     webModalOverlay: {
         justifyContent: 'center',
         alignItems: 'center',
         padding: spacing.xl,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Consistente con mobile
     },
     modalSafeArea: {
         maxHeight: '90%',
@@ -135,40 +136,56 @@ export const sharedStyles = StyleSheet.create({
         maxHeight: undefined,
     },
     modalContent: {
-        backgroundColor: colors.background.primary,
-        borderTopLeftRadius: borderRadius.xl,
-        borderTopRightRadius: borderRadius.xl,
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 12, // Aumentado de 8 a 12 para mejor apariencia
+        borderTopRightRadius: 12,
         maxHeight: '100%',
-        ...shadows.lg,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        overflow: 'hidden',
     },
     webModalContent: {
-        borderRadius: borderRadius.lg,
+        borderRadius: 12, // Aumentado de 8 a 12
         width: 600,
         maxWidth: '90%',
-        maxHeight: '90%',
-        ...shadows.lg,
+        maxHeight: '90%', // Mantener compatible con React Native types
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        // Sombras mejoradas (inspiradas en drop-shadow de Expo)
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        elevation: 8,
     },
     modalHeader: {
-        padding: spacing.lg,
+        padding: 16,
+        paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: colors.border.light,
+        borderBottomColor: '#F3F4F6',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 56, // Altura mínima para mejor toque en móvil
     },
     modalTitle: {
-        fontSize: typography.sizes.xl,
-        fontWeight: typography.weights.semibold,
-        color: colors.text.primary,
+        fontSize: 17,
+        fontWeight: '600',
+        color: '#111827',
         textAlign: 'center',
+        letterSpacing: -0.3, // Tipografía mejorada
     },
     modalBody: {
-        padding: spacing.lg,
-        maxHeight: Platform.OS === 'web' ? 400 : undefined,
+        padding: 16,
     },
     modalFooter: {
         flexDirection: 'row',
-        padding: spacing.lg,
-        gap: spacing.md,
         borderTopWidth: 1,
-        borderTopColor: colors.border.light,
+        borderTopColor: '#F3F4F6',
+        backgroundColor: '#FAFBFC',
+        padding: 0,
+        gap: 0,
+        minHeight: 56, // Altura mínima consistente con header
     },
     modalButton: {
         flex: 1,

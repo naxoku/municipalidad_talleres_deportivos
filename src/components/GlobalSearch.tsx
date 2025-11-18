@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Modal, TextInput, TouchableOpacity, Text, FlatList, ActivityIndicator, Platform, StyleSheet, Animated, Easing, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { API_URL } from '../api/config';
 import { colors, spacing, typography, shadows } from '../theme/colors';
 import SearchBar from './SearchBar';
@@ -8,6 +9,7 @@ import SearchBar from './SearchBar';
 type Props = { navigation?: any; inline?: boolean };
 
 export default function GlobalSearch({ navigation, inline = false }: Props) {
+  const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -202,15 +204,14 @@ export default function GlobalSearch({ navigation, inline = false }: Props) {
     setVisible(false);
     setQuery('');
     setResults([]);
-    if (!navigation) return;
 
-    // Route based on tipo
+    // Route based on tipo using Expo Router
     if (item.tipo === 'Estudiante') {
-      navigation.navigate('Estudiantes', { estudianteId: item.id });
+      router.push(`/alumnos?estudianteId=${item.id}`);
     } else if (item.tipo === 'Profesor') {
-      navigation.navigate('Profesores', { profesorId: item.id });
+      router.push(`/profesores?profesorId=${item.id}`);
     } else if (item.tipo === 'Taller') {
-      navigation.navigate('Talleres', { tallerId: item.id });
+      router.push(`/talleres?tallerId=${item.id}`);
     }
   };
 
@@ -291,7 +292,7 @@ export default function GlobalSearch({ navigation, inline = false }: Props) {
                         return (
                           <View key={tipo}>
                             <View style={styles.sectionHeader}>
-                              <Text style={styles.sectionHeaderText}>{tipo === 'Estudiante' ? 'Estudiantes' : tipo === 'Profesor' ? 'Profesores' : 'Talleres'}</Text>
+                              <Text style={styles.sectionHeaderText}>{tipo === 'Estudiante' ? 'Alumnos' : tipo === 'Profesor' ? 'Profesores' : 'Talleres'}</Text>
                             </View>
                             {list.map((item: any) => (
                               <TouchableOpacity key={`${item.tipo}-${item.id}`} onPress={() => onSelect(item)} style={styles.resultItem}>
@@ -353,7 +354,7 @@ export default function GlobalSearch({ navigation, inline = false }: Props) {
                             return (
                               <View key={tipo}>
                                 <View style={styles.sectionHeader}>
-                                  <Text style={styles.sectionHeaderText}>{tipo === 'Estudiante' ? 'Estudiantes' : tipo === 'Profesor' ? 'Profesores' : 'Talleres'}</Text>
+                                  <Text style={styles.sectionHeaderText}>{tipo === 'Estudiante' ? 'Alumnos' : tipo === 'Profesor' ? 'Profesores' : 'Talleres'}</Text>
                                 </View>
                                 {list.map((item: any) => (
                                   <TouchableOpacity key={`${item.tipo}-${item.id}`} onPress={() => onSelect(item)} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f2f2f2' }}>

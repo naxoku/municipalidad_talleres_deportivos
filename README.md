@@ -69,18 +69,18 @@ export const API_URL = 'http://localhost/talleres_backend';
 
 ---
 
-### 👨‍🎓 Estudiantes
-**Archivo**: `src/api/estudiantes.ts`  
-**Ruta Base**: `/api/estudiantes.php`
+### 👨‍🎓 Alumnos
+**Archivo**: `src/api/Alumnos.ts`  
+**Ruta Base**: `/api/Alumnos.php`
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `?accion=listar` | Listar todos los estudiantes |
+| GET | `?accion=listar` | Listar todos los Alumnos |
 | POST | `?accion=crear` | Crear nuevo estudiante |
 | PUT | `?accion=actualizar` | Actualizar estudiante |
 | DELETE | `?accion=eliminar` | Eliminar estudiante |
 
-**Pantalla**: `EstudiantesScreen.tsx`  
+**Pantalla**: `AlumnosScreen.tsx`  
 **Campos**: nombre, fecha_nacimiento, contacto
 
 ---
@@ -130,7 +130,7 @@ export const API_URL = 'http://localhost/talleres_backend';
 
 **Pantalla**: `InscripcionesScreen.tsx`  
 **Campos**: estudiante_id, taller_id, fecha_inscripcion  
-**Relaciones**: Con Estudiantes y Talleres (FK)
+**Relaciones**: Con Alumnos y Talleres (FK)
 
 ---
 
@@ -161,7 +161,7 @@ export const API_URL = 'http://localhost/talleres_backend';
 
 **Pantalla**: `AsistenciaScreen.tsx`  
 **Campos**: clase_id, estudiante_id, presente  
-**Relaciones**: Con Clases y Estudiantes (FK)
+**Relaciones**: Con Clases y Alumnos (FK)
 
 ---
 

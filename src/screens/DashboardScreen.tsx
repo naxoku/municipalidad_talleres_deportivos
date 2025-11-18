@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity, Alert, Platform, RefreshControl, StyleSheet, Modal } from 'react-native';
+import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity, Alert, Platform, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL, handleApiResponse, getHeaders } from '../api/config';
 import MetricCard from '../components/MetricCard';
@@ -13,21 +13,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, colors } from '../theme/colors';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
+import Modal from '../components/Modal';
 import { Select } from '../components/Select';
-import { estudiantesApi } from '../api/estudiantes';
+import { alumnosApi } from '../api/alumnos';
 import { talleresApi } from '../api/talleres';
 import { inscripcionesApi } from '../api/inscripciones';
 import { asistenciaApi } from '../api/asistencia';
 import { useAuth } from '../contexts/AuthContext';
-
-
+import { useRouter } from 'expo-router';
 
 export default function DashboardScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<any>({
     total_talleres: 0,
-    total_estudiantes: 0,
+    total_alumnos: 0,
     total_profesores: 0,
     clases_hoy: [],
     asistencia_semanal: [],
@@ -58,10 +58,10 @@ export default function DashboardScreen({ navigation }: any) {
       const now = new Date();
       const day = now.getDay();
       const diffToMonday = ((day + 6) % 7);
-      
+
       const monday = new Date(now);
       monday.setDate(now.getDate() - diffToMonday);
-      
+
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
 
@@ -165,20 +165,24 @@ export default function DashboardScreen({ navigation }: any) {
     setRefreshing(false);
   };
 
-  // Quick-action modal states
-  const [showNewStudentModal, setShowNewStudentModal] = useState(false);
-  const [studentForm, setStudentForm] = useState({ nombre: '', email: '', telefono: '' });
-  const [showNewInscriptionModal, setShowNewInscriptionModal] = useState(false);
-  const [inscriptionForm, setInscriptionForm] = useState({ estudianteId: '', tallerId: '' });
-  const [estudiantesList, setEstudiantesList] = useState<any[]>([]);
-  const [talleresList, setTalleresList] = useState<any[]>([]);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [showNewTallerModal, setShowNewTallerModal] = useState(false);
-  const [tallerForm, setTallerForm] = useState({ nombre: '', descripcion: '' });
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportLoading, setExportLoading] = useState(false);
-  const [estudianteSearch, setEstudianteSearch] = useState('');
-  const [tallerSearch, setTallerSearch] = useState('');
+  const getClasesForToday = (d: any) => {
+    if (!d) return [];
+    if (Array.isArray(d.clases_semana) && d.clases_semana.length > 0) return d.clases_semana;
+    const talleres = d.talleres || d.talleres_list || [];
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const result: any[] = [];
+    talleres.forEach((t: any) => {
+      const horarios = t.horarios || t.horario || t.horas || [];
+      horarios.forEach((h: any) => {
+        if (h && h.fecha && String(h.fecha).startsWith(todayStr)) {
+          result.push({ ...h, taller_nombre: t.nombre || t.taller_nombre || '' });
+        }
+      });
+    });
+    return result;
+  };
+
+  const router = useRouter();
 
   useEffect(() => {
     (async () => {
@@ -188,146 +192,16 @@ export default function DashboardScreen({ navigation }: any) {
   }, []);
 
   const abrirModalNuevoEstudiante = () => {
-    setStudentForm({ nombre: '', email: '', telefono: '' });
-    setShowNewStudentModal(true);
-  };
-
-  const submitNuevoEstudiante = async () => {
-    if (!studentForm.nombre) { Alert.alert('Nombre requerido'); return; }
-    try {
-      setActionLoading(true);
-      // API expects Estudiante shape (nombre, edad?, contacto?)
-      const contacto = studentForm.telefono || studentForm.email || '';
-      const resp = await estudiantesApi.crear({ nombre: studentForm.nombre, contacto });
-      if (resp.status === 'success') {
-        Alert.alert('Éxito', 'Estudiante creado');
-        setShowNewStudentModal(false);
-        await cargar();
-      } else {
-        Alert.alert('Error', resp.mensaje || 'No se pudo crear');
-      }
-    } catch (e: any) {
-      Alert.alert('Error', e.message || String(e));
-    } finally { setActionLoading(false); }
+    router.push('/(modals)/nuevo-alumno');
   };
 
   const abrirModalNuevaInscripcion = async () => {
-    setInscriptionForm({ estudianteId: '', tallerId: '' });
-    try {
-      setActionLoading(true);
-      const [ests, talls] = await Promise.all([estudiantesApi.listar(), talleresApi.listar()]);
-      setEstudiantesList(ests || []);
-      setTalleresList(talls || []);
-      setShowNewInscriptionModal(true);
-    } catch (e) {
-      console.error(e);
-      Alert.alert('Error cargando datos');
-    } finally { setActionLoading(false); }
-  };
-
-  const submitNuevaInscripcion = async () => {
-    if (!inscriptionForm.estudianteId || !inscriptionForm.tallerId) { Alert.alert('Selecciona estudiante y taller'); return; }
-    try {
-      setActionLoading(true);
-      const resp = await inscripcionesApi.crear({ estudiante_id: Number(inscriptionForm.estudianteId), taller_id: Number(inscriptionForm.tallerId) });
-      if (resp.status === 'success') {
-        Alert.alert('Éxito', 'Inscripción creada');
-        setShowNewInscriptionModal(false);
-        await cargar();
-      } else {
-        Alert.alert('Error', resp.mensaje || 'No se pudo crear la inscripción');
-      }
-    } catch (e: any) {
-      Alert.alert('Error', e.message || String(e));
-    } finally { setActionLoading(false); }
+    router.push('/(modals)/nueva-inscripcion');
   };
 
   const abrirModalNuevoTaller = () => {
-    setTallerForm({ nombre: '', descripcion: '' });
-    setShowNewTallerModal(true);
+    router.push('/(modals)/nuevo-taller');
   };
-
-  const submitNuevoTaller = async () => {
-    if (!tallerForm.nombre) { Alert.alert('Nombre requerido'); return; }
-    try {
-      setActionLoading(true);
-      const resp = await talleresApi.crear({ nombre: tallerForm.nombre, descripcion: tallerForm.descripcion });
-      if (resp.status === 'success') {
-        Alert.alert('Éxito', 'Taller creado');
-        setShowNewTallerModal(false);
-        await cargar();
-      } else {
-        Alert.alert('Error', resp.mensaje || 'No se pudo crear el taller');
-      }
-    } catch (e: any) {
-      Alert.alert('Error', e.message || String(e));
-    } finally { setActionLoading(false); }
-  };
-
-  const getClasesForToday = (d: any) => {
-    if (Array.isArray(d.clases_hoy) && d.clases_hoy.length > 0) return d.clases_hoy;
-
-    const talleres = d.talleres || d.talleres_list || [];
-    if (!Array.isArray(talleres) || talleres.length === 0) return [];
-
-    const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
-    const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-    const todayName = dayNames[today.getDay()];
-    const dayNum = today.getDay();
-
-    const clases: any[] = [];
-
-    talleres.forEach((t: any) => {
-      const horarios = t.horarios || t.horario || t.horas || [];
-      if (!Array.isArray(horarios)) return;
-
-      horarios.forEach((h: any) => {
-        let match = false;
-
-        if (h.fecha) {
-          try {
-            if (new Date(h.fecha).toISOString().slice(0, 10) === todayStr) match = true;
-          } catch (e) {}
-        }
-
-        if (!match && (h.dia_semana || h.dia || h.weekday || h.diaSemana)) {
-          const v = h.dia_semana ?? h.dia ?? h.weekday ?? h.diaSemana;
-          const num = parseInt(String(v));
-          if (!isNaN(num)) {
-            if (num === dayNum || num === dayNum + 1 || (num === 7 && dayNum === 0)) match = true;
-          } else {
-            const name = String(v).toLowerCase();
-            if (name.includes(todayName) || (todayName === 'miércoles' && name.includes('miercoles'))) match = true;
-          }
-        }
-
-        if (!match && Array.isArray(h.dias)) {
-          const lower = h.dias.map((x: any) => String(x).toLowerCase());
-          if (lower.includes(todayName) || lower.includes(String(dayNum))) match = true;
-        }
-
-        if (!match && Array.isArray(h.dias_semana)) {
-          const lower = h.dias_semana.map((x: any) => String(x).toLowerCase());
-          if (lower.includes(todayName) || lower.includes(String(dayNum))) match = true;
-        }
-
-        if (match) {
-          clases.push({
-            id: `${t.id ?? t.taller_id ?? t.key ?? Math.random()}` + (h.id ? `-${h.id}` : ''),
-            taller_nombre: t.nombre || t.taller_nombre || t.title || 'Taller',
-            hora_inicio: h.hora_inicio || h.hora || h.start_time || h.horaInicio || '',
-            hora_fin: h.hora_fin || h.hora_fin_hasta || h.end_time || h.horaFin || '',
-            presentes: h.presentes ?? h.asistentes_presentes ?? 0,
-            total_asistentes: h.total_asistentes ?? h.cupo ?? h.capacity ?? 0,
-          });
-        }
-      });
-    });
-
-    return clases;
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, padding: spacing.md, backgroundColor: '#F8FAFB' }}>
@@ -377,32 +251,32 @@ export default function DashboardScreen({ navigation }: any) {
     .sort((a: any, b: any) => (a.__start as Date).getTime() - (b.__start as Date).getTime())
     .slice(0, 3);
 
-  // Prepare quick actions and badges
+  // Preparar acciones rápidas y badges
   const clasesHoyCount = getClasesForToday(data).length;
   const talleresArray = data.talleres || data.talleres_list || [];
   const lowCapacityCount = (Array.isArray(talleresArray) ? talleresArray.filter((t: any) => {
-    const total = Number(t.total_estudiantes || t.total_asistentes || 0);
+    const total = Number(t.total_alumnos || t.total_asistentes || 0);
     const max = Number(t.cupos_maximos || t.cupos_max || t.cupo || 30);
     if (!max) return false;
     return (total / max) >= 0.8;
   }).length : 0);
 
   const actions: any[] = [
-    { key: 'clases_hoy', icon: 'calendar-outline', title: 'Clases Hoy', badge: clasesHoyCount, onPress: () => navigation.navigate('Horarios') },
-    { key: 'nuevo_estudiante', icon: 'person-add-outline', title: 'Nuevo Estudiante', onPress: abrirModalNuevoEstudiante },
-    { key: 'nueva_inscripcion', icon: 'add-circle-outline', title: 'Nueva Inscripción', onPress: abrirModalNuevaInscripcion },
+    { key: 'clases_hoy', icon: 'calendar-outline', title: 'Clases de hoy', badge: clasesHoyCount, onPress: () => router.push('/horarios') },
+    { key: 'nuevo_estudiante', icon: 'person-add-outline', title: 'Nuevo estudiante', onPress: abrirModalNuevoEstudiante },
+    { key: 'nueva_inscripcion', icon: 'add-circle-outline', title: 'Nueva inscripción', onPress: abrirModalNuevaInscripcion },
   ];
 
   // Talleres críticos / alta demanda
   if (lowCapacityCount > 0) {
-    actions.splice(1, 0, { key: 'talleres_criticos', icon: 'warning-outline', title: 'Talleres Críticos', badge: lowCapacityCount, onPress: () => navigation.navigate('Talleres', { filter: 'low_capacity' }) });
+    actions.splice(1, 0, { key: 'talleres_criticos', icon: 'warning-outline', title: 'Talleres críticos', badge: lowCapacityCount, onPress: () => router.push('/talleres?filter=low_capacity') });
   }
 
   if (isAdmin) {
-    // Admin-specific quick actions
-    actions.push({ key: 'ver_asistencias', icon: 'eye-outline', title: 'Ver Asistencias', onPress: () => navigation.navigate('Asistencia') });
-    actions.push({ key: 'nuevo_taller', icon: 'book-outline', title: 'Nuevo Taller', onPress: abrirModalNuevoTaller });
-    actions.push({ key: 'export_csv', icon: 'download-outline', title: 'Exportar CSV', onPress: () => setShowExportModal(true) });
+    // Acciones rápidas específicas para admin
+    actions.push({ key: 'ver_asistencias', icon: 'eye-outline', title: 'Ver asistencias', onPress: () => router.push('/asistencia') });
+    actions.push({ key: 'nuevo_taller', icon: 'book-outline', title: 'Nuevo taller', onPress: abrirModalNuevoTaller });
+    actions.push({ key: 'export_csv', icon: 'download-outline', title: 'Exportar CSV', onPress: () => router.push('/(modals)/exportar') });
   }
 
   return (
@@ -414,7 +288,7 @@ export default function DashboardScreen({ navigation }: any) {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
           }
         >
-          {/* Header minimalista */}
+          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Dashboard</Text>
             <Text style={styles.headerDate}>
@@ -422,16 +296,16 @@ export default function DashboardScreen({ navigation }: any) {
             </Text>
           </View>
 
-          {/* KPI Cards minimalistas */}
+          {/* Cards KPI */}
           <View style={styles.metricsGrid}>
             {(() => {
               const clasesHoy = getClasesForToday(data);
               const totalClases = data.total_clases || (Array.isArray(data.clases_semana) ? data.clases_semana.length : clasesSemana.length);
-              const metrics = [
-                { key: 'talleres', title: 'Talleres', value: data.total_talleres || 0, icon: 'book-outline', onPress: () => navigation.navigate('Talleres') },
-                { key: 'estudiantes', title: 'Estudiantes', value: data.total_estudiantes || 0, icon: 'people-outline', onPress: () => navigation.navigate('Estudiantes') },
-                { key: 'profesores', title: 'Profesores', value: data.total_profesores || 0, icon: 'person-outline', onPress: () => navigation.navigate('Profesores') },
-                { key: 'clases_totales', title: 'Clases Totales', value: totalClases || 0, icon: 'calendar-outline', onPress: () => navigation.navigate('Horarios') },
+                const metrics = [
+                { key: 'talleres', title: 'Talleres', value: data.total_talleres || 0, icon: 'book-outline', onPress: () => router.push('/talleres') },
+                { key: 'Alumnos', title: 'Alumnos', value: data.total_alumnos || 0, icon: 'people-outline', onPress: () => router.push('/alumnos') },
+                { key: 'profesores', title: 'Profesores', value: data.total_profesores || 0, icon: 'person-outline', onPress: () => router.push('/profesores') },
+                { key: 'clases_totales', title: 'Clases totales', value: totalClases || 0, icon: 'calendar-outline', onPress: () => router.push('/horarios') },
               ];
 
               return metrics.map((m) => (
@@ -453,7 +327,7 @@ export default function DashboardScreen({ navigation }: any) {
             })()}
           </View>
 
-          {/* Quick Actions minimalistas */}
+          {/* Acciones rápidas */}
           <View style={styles.quickActionsSection}>
             <Text style={styles.sectionTitle}>Acciones rápidas</Text>
             <View style={styles.quickActionsGrid}>
@@ -479,17 +353,18 @@ export default function DashboardScreen({ navigation }: any) {
           {/* Clases actuales y próximas */}
           <View style={styles.classesSection}>
             <Text style={styles.sectionTitle}>Clases de hoy</Text>
+            <Text style={styles.subsectionTitle}>Clases en curso</Text>
 
             {/* Current classes */}
             {clasesActuales && clasesActuales.length > 0 ? (
               <View style={styles.currentClassesContainer}>
                 {clasesActuales.map((c: any) => (
                   <TouchableOpacity
-                    key={c.id}
-                    style={styles.currentClassCard}
-                    onPress={() => navigation.navigate('Horarios')}
-                    activeOpacity={0.7}
-                  >
+                      key={c.id}
+                      style={styles.currentClassCard}
+                      onPress={() => router.push('/horarios')}
+                      activeOpacity={0.7}
+                    >
                     <View style={styles.currentClassBadge}>
                       <Text style={styles.currentClassBadgeText}>EN CURSO</Text>
                     </View>
@@ -523,7 +398,7 @@ export default function DashboardScreen({ navigation }: any) {
               </View>
             )}
 
-            {/* Upcoming classes */}
+            {/* Próximas clases */}
             {clasesProximas && clasesProximas.length > 0 && (
               <View style={styles.upcomingSection}>
                 <Text style={styles.subsectionTitle}>Próximas clases</Text>
@@ -531,7 +406,7 @@ export default function DashboardScreen({ navigation }: any) {
                   <TouchableOpacity
                     key={c.id}
                     style={styles.upcomingClassCard}
-                    onPress={() => navigation.navigate('Horarios')}
+                    onPress={() => router.push('/horarios')}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.upcomingClassTime}>
@@ -559,227 +434,8 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
 
         </ScrollView>
-
-        {/* New Student Modal */}
-        <Modal
-          visible={showNewStudentModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowNewStudentModal(false)}
-        >
-          <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-            <SafeAreaView
-              style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]}
-              edges={isWeb ? [] : ['bottom']}
-            >
-              <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent, { maxHeight: isWeb ? 700 : '85%', width: isWeb ? 760 : undefined }]}>
-                <View style={sharedStyles.modalHeader}>
-                  <Text style={sharedStyles.modalTitle}>Nuevo Estudiante</Text>
-                </View>
-
-                <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
-                  <Input
-                    label="Nombre"
-                    required
-                    value={studentForm.nombre}
-                    onChangeText={(text) => setStudentForm({ ...studentForm, nombre: text })}
-                    placeholder="Nombre del estudiante"
-                  />
-
-                  <Input
-                    label="Teléfono"
-                    value={studentForm.telefono}
-                    onChangeText={(text) => setStudentForm({ ...studentForm, telefono: text })}
-                    placeholder="Teléfono"
-                  />
-
-                  <Input
-                    label="Email"
-                    value={studentForm.email}
-                    onChangeText={(text) => setStudentForm({ ...studentForm, email: text })}
-                    placeholder="Correo electrónico"
-                  />
-                </ScrollView>
-
-                <View style={sharedStyles.modalFooter}>
-                  <Button
-                    title="Cancelar"
-                    variant="secondary"
-                    onPress={() => setShowNewStudentModal(false)}
-                    style={sharedStyles.modalButton}
-                  />
-                  <Button
-                    title="Crear"
-                    variant="success"
-                    onPress={submitNuevoEstudiante}
-                    loading={actionLoading}
-                    style={sharedStyles.modalButton}
-                  />
-                </View>
-              </View>
-            </SafeAreaView>
-          </View>
-        </Modal>
-
-        {/* New Taller Modal */}
-        <Modal
-          visible={showNewTallerModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowNewTallerModal(false)}
-        >
-          <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-            <SafeAreaView
-              style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]}
-              edges={isWeb ? [] : ['bottom']}
-            >
-              <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent, { maxHeight: isWeb ? 700 : '85%', width: isWeb ? 760 : undefined }]}>
-                <View style={sharedStyles.modalHeader}>
-                  <Text style={sharedStyles.modalTitle}>Nuevo Taller</Text>
-                </View>
-
-                <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
-                  <Input
-                    label="Nombre"
-                    required
-                    value={tallerForm.nombre}
-                    onChangeText={(text) => setTallerForm({ ...tallerForm, nombre: text })}
-                    placeholder="Nombre del taller"
-                  />
-
-                  <Input
-                    label="Descripción"
-                    value={tallerForm.descripcion}
-                    onChangeText={(text) => setTallerForm({ ...tallerForm, descripcion: text })}
-                    placeholder="Descripción (opcional)"
-                    multiline
-                    numberOfLines={3}
-                  />
-                </ScrollView>
-
-                <View style={sharedStyles.modalFooter}>
-                  <Button
-                    title="Cancelar"
-                    variant="secondary"
-                    onPress={() => setShowNewTallerModal(false)}
-                    style={sharedStyles.modalButton}
-                  />
-                  <Button
-                    title="Crear Taller"
-                    variant="success"
-                    onPress={submitNuevoTaller}
-                    loading={actionLoading}
-                    style={sharedStyles.modalButton}
-                  />
-                </View>
-              </View>
-            </SafeAreaView>
-          </View>
-        </Modal>
-
-        {/* New Inscription Modal */}
-        <Modal
-          visible={showNewInscriptionModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowNewInscriptionModal(false)}
-        >
-          <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-            <SafeAreaView
-              style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]}
-              edges={isWeb ? [] : ['bottom']}
-            >
-              <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent, { maxHeight: isWeb ? 700 : '85%', width: isWeb ? 760 : undefined }]}>
-                <View style={sharedStyles.modalHeader}>
-                  <Text style={sharedStyles.modalTitle}>Nueva Inscripción</Text>
-                </View>
-
-                <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
-                  <View style={sharedStyles.inputContainer}>
-                    <Text style={sharedStyles.label}>Estudiante</Text>
-                      <Select
-                        label="Estudiante"
-                        value={inscriptionForm.estudianteId || ''}
-                        onValueChange={(v: any) => setInscriptionForm({ ...inscriptionForm, estudianteId: String(v) })}
-                        items={(estudiantesList || []).map((e: any) => ({ label: e.nombre, value: e.id }))}
-                      />
-                  </View>
-
-                  <View style={sharedStyles.inputContainer}>
-                    <Text style={sharedStyles.label}>Taller</Text>
-                    <Select
-                      label="Taller"
-                      value={inscriptionForm.tallerId || ''}
-                      onValueChange={(v: any) => setInscriptionForm({ ...inscriptionForm, tallerId: String(v) })}
-                      items={(talleresList || []).map((t: any) => ({ label: t.nombre, value: t.id }))}
-                    />
-                  </View>
-                </ScrollView>
-
-                <View style={sharedStyles.modalFooter}>
-                  <Button
-                    title="Cancelar"
-                    variant="secondary"
-                    onPress={() => setShowNewInscriptionModal(false)}
-                    style={sharedStyles.modalButton}
-                  />
-                  <Button
-                    title="Crear Inscripción"
-                    variant="success"
-                    onPress={submitNuevaInscripcion}
-                    loading={actionLoading}
-                    style={sharedStyles.modalButton}
-                  />
-                </View>
-              </View>
-            </SafeAreaView>
-          </View>
-        </Modal>
-
+        {/* Modales migrados a rutas en app/(modals) */}
       </View>
-
-      {/* Export Modal (admin) */}
-      <Modal
-        visible={showExportModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowExportModal(false)}
-      >
-        <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-          <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
-            <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent, { maxHeight: isWeb ? 700 : '85%', width: isWeb ? 760 : undefined }]}>
-              <View style={sharedStyles.modalHeader}>
-                <Text style={sharedStyles.modalTitle}>Exportar CSV</Text>
-              </View>
-
-              <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
-                <Text style={{ marginBottom: 8 }}>Elige el conjunto de datos a exportar:</Text>
-                {['estudiantes','inscripciones','clases','talleres'].map((ds) => (
-                  <TouchableOpacity key={ds} style={[sharedStyles.pickerItem, { marginBottom: 8 }]} onPress={async () => {
-                    try {
-                      setExportLoading(true);
-                      const url = `${API_URL}/api/reportes.php?action=exportar_csv&dataset=${ds}`;
-                      if (Platform.OS === 'web') {
-                        window.open(url, '_blank');
-                      } else {
-                        Alert.alert('Exportar', `Se generó el CSV. URL: ${url}`);
-                      }
-                    } catch (e) {
-                      Alert.alert('Error', 'No se pudo generar el archivo');
-                    } finally { setExportLoading(false); setShowExportModal(false); }
-                  }}>
-                    <Text style={sharedStyles.pickerItemText}>{ds}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <View style={sharedStyles.modalFooter}>
-                <Button title="Cerrar" variant="secondary" onPress={() => setShowExportModal(false)} style={sharedStyles.modalButton} />
-              </View>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
     </Container>
   );
 }
@@ -802,7 +458,7 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  // Metrics
+  // Métricas
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -845,7 +501,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Quick Actions
+  // Acciones rápidas
   quickActionsSection: {
     marginBottom: 24,
   },
@@ -880,7 +536,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Classes Section
+  // Sección de clases
   classesSection: {
     marginBottom: 24,
   },
@@ -892,7 +548,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 
-  // Current Classes
+  // Clases en curso
   currentClassesContainer: {
     gap: 12,
   },
@@ -955,7 +611,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Upcoming Classes
+  // Próximas clases
   upcomingSection: {
     marginTop: 8,
   },
@@ -1010,5 +666,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9CA3AF',
     fontWeight: '500',
+  },
+
+  // Modal footer buttons - estilo quick actions
+  modalFooterButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+  },
+  modalFooterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  footerDivider: {
+    width: 1,
+    backgroundColor: '#E5E7EB',
   },
 });

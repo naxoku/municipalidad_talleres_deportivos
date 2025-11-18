@@ -24,7 +24,7 @@ interface TallerStats {
   id: number;
   nombre: string;
   asistencia_promedio: number;
-  total_estudiantes: number;
+  total_Alumnos: number;
   total_clases: number;
   tendencia: 'up' | 'down' | 'stable';
 }
@@ -141,8 +141,8 @@ export default function ReportesScreen({ navigation, route }: any) {
             <View style={styles.metricsGrid}>
               <View style={styles.metricCard}>
                 <Ionicons name="people" size={32} color={colors.primary} />
-                <Text style={styles.metricValue}>{stats?.total_estudiantes || 0}</Text>
-                <Text style={styles.metricLabel}>Estudiantes Activos</Text>
+                <Text style={styles.metricValue}>{stats?.total_Alumnos || 0}</Text>
+                <Text style={styles.metricLabel}>Alumnos Activos</Text>
               </View>
               <View style={styles.metricCard}>
                 <Ionicons name="calendar" size={32} color={colors.blue.main} />
@@ -164,8 +164,8 @@ export default function ReportesScreen({ navigation, route }: any) {
 
           {/* Top performers */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🏆 Top Estudiantes</Text>
-            {stats?.top_estudiantes?.map((estudiante: any, index: number) => (
+            <Text style={styles.sectionTitle}>🏆 Top Alumnos</Text>
+            {stats?.top_Alumnos?.map((estudiante: any, index: number) => (
               <View key={estudiante.id} style={styles.rankCard}>
                 <View style={styles.rankBadge}>
                   <Text style={styles.rankText}>#{index + 1}</Text>
@@ -210,7 +210,7 @@ export default function ReportesScreen({ navigation, route }: any) {
                 <View style={styles.tallerStats}>
                   <View style={styles.tallerStat}>
                     <Ionicons name="people" size={16} color={colors.text.secondary} />
-                    <Text style={styles.tallerStatText}>{taller.total_estudiantes} estudiantes</Text>
+                    <Text style={styles.tallerStatText}>{taller.total_Alumnos} Alumnos</Text>
                   </View>
                   <View style={styles.tallerStat}>
                     <Ionicons name="calendar" size={16} color={colors.text.secondary} />

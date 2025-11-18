@@ -8,7 +8,6 @@ import {
   Alert,
   StyleSheet,
   ScrollView,
-  Modal,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,20 +23,23 @@ import { EmptyState } from '../components/EmptyState';
 import { Badge } from '../components/Badge';
 import { ProgressBar } from '../components/ProgressBar';
 import { useResponsive } from '../hooks/useResponsive';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../theme/colors';
 import { sharedStyles } from '../theme/sharedStyles';
+import Modal from '../components/Modal';
 import { formatTimeHHMM } from '../utils/time';
 import HeaderWithSearch from '../components/HeaderWithSearch';
 
 interface TallerEnriquecido extends Taller {
   horario?: string;
-  total_estudiantes?: number;
+  total_Alumnos?: number;
   cupos_maximos?: number;
   asistencia_promedio?: number;
 }
 
 const TalleresScreen = ({ navigation }: any) => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [talleres, setTalleres] = useState<TallerEnriquecido[]>([]);
   const [profesores, setProfesores] = useState<Profesor[]>([]);
@@ -87,10 +89,10 @@ const TalleresScreen = ({ navigation }: any) => {
                 .join(', ')
             : '';
 
-          let total_estudiantes = 0;
+          let total_Alumnos = 0;
           try {
             const inscripciones = await inscripcionesApi.listar();
-            total_estudiantes = inscripciones.filter((i) => i.taller_id === t.id).length;
+            total_Alumnos = inscripciones.filter((i) => i.taller_id === t.id).length;
           } catch (e) {
             console.error('Error loading inscriptions:', e);
           }
@@ -98,7 +100,7 @@ const TalleresScreen = ({ navigation }: any) => {
           return {
             ...t,
             horario: horarioStr,
-            total_estudiantes,
+            total_Alumnos,
             cupos_maximos: 30,
             asistencia_promedio: Math.floor(Math.random() * 30) + 70,
           };
@@ -178,7 +180,7 @@ const TalleresScreen = ({ navigation }: any) => {
   const eliminarTaller = (taller: Taller) => {
     Alert.alert(
       'Confirmar eliminación',
-      `¿Estás seguro de eliminar el taller "${taller.nombre}"?\n\n⚠️ Esto eliminará:\n• Todas las clases asociadas\n• Las inscripciones de estudiantes\n• El historial de asistencia`,
+      `¿Estás seguro de eliminar el taller "${taller.nombre}"?\n\n⚠️ Esto eliminará:\n• Todas las clases asociadas\n• Las inscripciones de Alumnos\n• El historial de asistencia`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -207,14 +209,14 @@ const TalleresScreen = ({ navigation }: any) => {
   };
 
   const renderTaller = ({ item }: { item: TallerEnriquecido }) => {
-    const occupancyStatus = getOccupancyStatus(item.total_estudiantes || 0, item.cupos_maximos || 30);
-    const occupancyPercentage = Math.round(((item.total_estudiantes || 0) / (item.cupos_maximos || 30)) * 100);
+    const occupancyStatus = getOccupancyStatus(item.total_Alumnos || 0, item.cupos_maximos || 30);
+    const occupancyPercentage = Math.round(((item.total_Alumnos || 0) / (item.cupos_maximos || 30)) * 100);
 
     return (
       <TouchableOpacity 
         style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}
         activeOpacity={0.95}
-        onPress={() => navigation.navigate('Estudiantes', { tallerId: item.id })}
+        onPress={() => router.push(`/alumnos?tallerId=${item.id}`)}
       >
         {/* Header con título */}
         <View style={styles.cardHeader}>
@@ -262,7 +264,7 @@ const TalleresScreen = ({ navigation }: any) => {
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Cupos</Text>
             <Text style={[styles.infoValue, styles.cuposValue]}>
-              {item.total_estudiantes || 0}/{item.cupos_maximos || 30}
+              {item.total_Alumnos || 0}/{item.cupos_maximos || 30}
               <Text style={styles.percentageText}> ({occupancyPercentage}%)</Text>
             </Text>
           </View>
@@ -287,10 +289,10 @@ const TalleresScreen = ({ navigation }: any) => {
               // Mostrar un modal rápido con detalles del taller
               Alert.alert(
                 item.nombre,
-                `${item.descripcion || 'Sin descripción'}\n\nProfesor(es): ${item.profesores && item.profesores.length > 0 ? item.profesores.map((p: any) => p.nombre).join(', ') : '—'}\nHorario: ${item.horario || '—'}\nUbicación: ${item.ubicacion || '—'}\nCupos: ${item.total_estudiantes || 0}/${item.cupos_maximos || 30}\nAsistencia: ${item.asistencia_promedio || 0}%`,
+                `${item.descripcion || 'Sin descripción'}\n\nProfesor(es): ${item.profesores && item.profesores.length > 0 ? item.profesores.map((p: any) => p.nombre).join(', ') : '—'}\nHorario: ${item.horario || '—'}\nUbicación: ${item.ubicacion || '—'}\nCupos: ${item.total_Alumnos || 0}/${item.cupos_maximos || 30}\nAsistencia: ${item.asistencia_promedio || 0}%`,
                 [
                   { text: 'Cerrar', style: 'cancel' },
-                  { text: 'Ver clases', onPress: () => navigation.navigate('Clases', { tallerId: item.id }) },
+                  { text: 'Ver clases', onPress: () => router.push(`/clases?tallerId=${item.id}`) },
                 ]
               );
             }}
@@ -306,7 +308,7 @@ const TalleresScreen = ({ navigation }: any) => {
             style={styles.quickActionButton}
             onPress={(e) => {
               e.stopPropagation();
-              navigation.navigate('Clases', { tallerId: item.id });
+              router.push(`/clases?tallerId=${item.id}`);
             }}
             activeOpacity={0.7}
           >
@@ -320,12 +322,12 @@ const TalleresScreen = ({ navigation }: any) => {
             style={styles.quickActionButton}
             onPress={(e) => {
               e.stopPropagation();
-              navigation.navigate('Estudiantes', { tallerId: item.id });
+              router.push(`/alumnos?tallerId=${item.id}`);
             }}
             activeOpacity={0.7}
           >
             <Ionicons name="people-outline" size={18} color="#64748B" />
-            <Text style={styles.quickActionText}>Estudiantes</Text>
+            <Text style={styles.quickActionText}>Alumnos</Text>
           </TouchableOpacity>
 
           {isAdmin && (
@@ -364,7 +366,7 @@ const TalleresScreen = ({ navigation }: any) => {
 
   const renderTableRow = ({ item, index }: { item: TallerEnriquecido; index: number }) => {
     const asistenciaPromedio = item.asistencia_promedio || 0;
-    const isFull = (item.total_estudiantes || 0) >= (item.cupos_maximos || 30);
+    const isFull = (item.total_Alumnos || 0) >= (item.cupos_maximos || 30);
 
     return (
       <View style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven, isWeb && styles.tableRowWeb]}>
@@ -388,7 +390,7 @@ const TalleresScreen = ({ navigation }: any) => {
 
         <View style={[styles.tableCellCupos, styles.tableCellCenter, isWeb && styles.tableCellCuposWeb]}>
           <View style={styles.tableBadge}>
-            <Text style={styles.tableBadgeText}>{item.total_estudiantes || 0}/{item.cupos_maximos || 30}</Text>
+            <Text style={styles.tableBadgeText}>{item.total_Alumnos || 0}/{item.cupos_maximos || 30}</Text>
           </View>
         </View>
 
@@ -420,7 +422,7 @@ const TalleresScreen = ({ navigation }: any) => {
             style={styles.tableActionButton}
             onPress={() => Alert.alert(
               item.nombre,
-              `${item.descripcion || 'Sin descripción'}\n\nProfesor(es): ${item.profesores && item.profesores.length > 0 ? item.profesores.map((p: any) => p.nombre).join(', ') : '—'}\nHorario: ${item.horario || '—'}\nUbicación: ${item.ubicacion || '—'}\nCupos: ${item.total_estudiantes || 0}/${item.cupos_maximos || 30}\nAsistencia: ${item.asistencia_promedio || 0}%`
+              `${item.descripcion || 'Sin descripción'}\n\nProfesor(es): ${item.profesores && item.profesores.length > 0 ? item.profesores.map((p: any) => p.nombre).join(', ') : '—'}\nHorario: ${item.horario || '—'}\nUbicación: ${item.ubicacion || '—'}\nCupos: ${item.total_Alumnos || 0}/${item.cupos_maximos || 30}\nAsistencia: ${item.asistencia_promedio || 0}%`
             )}
           >
             <Ionicons name="information-circle" size={18} color="#64748B" />
@@ -428,14 +430,14 @@ const TalleresScreen = ({ navigation }: any) => {
 
           <TouchableOpacity
             style={[styles.tableActionButton, { marginLeft: 8 }]}
-            onPress={() => navigation.navigate('Clases', { tallerId: item.id })}
+            onPress={() => router.push(`/clases?tallerId=${item.id}`)}
           >
             <Ionicons name="calendar" size={18} color="#64748B" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.tableActionButton, { marginLeft: 8 }]}
-            onPress={() => navigation.navigate('Estudiantes', { tallerId: item.id })}
+            onPress={() => router.push(`/alumnos?tallerId=${item.id}`)}
           >
             <Ionicons name="people" size={18} color="#3B82F6" />
           </TouchableOpacity>
@@ -495,8 +497,8 @@ const TalleresScreen = ({ navigation }: any) => {
           vb = vb.toLowerCase();
           break;
         case 'cupos':
-          va = a.total_estudiantes || 0;
-          vb = b.total_estudiantes || 0;
+          va = a.total_Alumnos || 0;
+          vb = b.total_Alumnos || 0;
           break;
         case 'asistencia':
           va = a.asistencia_promedio || 0;
@@ -664,82 +666,78 @@ const TalleresScreen = ({ navigation }: any) => {
       {/* Modal */}
       <Modal
         visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
+        onClose={() => setModalVisible(false)}
+        title={isEditing ? 'Editar Taller' : 'Nuevo Taller'}
+        maxWidth={isWeb ? 600 : undefined}
+        dismissOnBackdropPress={true}
+        footer={(
+          <>
+            <TouchableOpacity
+              style={styles.modalFooterButton}
+              onPress={() => setModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.modalFooterButtonText, { color: '#2563EB' }]}>Cancelar</Text>
+            </TouchableOpacity>
+            <View style={styles.footerDivider} />
+            <TouchableOpacity
+              style={styles.modalFooterButton}
+              onPress={guardarTaller}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#059669" />
+              ) : (
+                <Text style={[styles.modalFooterButtonText, { color: '#059669' }]}>
+                  {isEditing ? 'Actualizar' : 'Crear'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       >
-        <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-          <SafeAreaView
-            style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]}
-            edges={isWeb ? [] : ['bottom']}
-          >
-            <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
-              <View style={sharedStyles.modalHeader}>
-                <Text style={sharedStyles.modalTitle}>{isEditing ? 'Editar Taller' : 'Nuevo Taller'}</Text>
-              </View>
+        <Input
+          label="Nombre"
+          required
+          value={formData.nombre}
+          onChangeText={(text) => setFormData({ ...formData, nombre: text })}
+          placeholder="Nombre del taller"
+        />
 
-              <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
-                <Input
-                  label="Nombre"
-                  required
-                  value={formData.nombre}
-                  onChangeText={(text) => setFormData({ ...formData, nombre: text })}
-                  placeholder="Nombre del taller"
-                />
+        <Input
+          label="Descripción"
+          value={formData.descripcion}
+          onChangeText={(text) => setFormData({ ...formData, descripcion: text })}
+          placeholder="Descripción del taller"
+          multiline
+          numberOfLines={3}
+        />
 
-                <Input
-                  label="Descripción"
-                  value={formData.descripcion}
-                  onChangeText={(text) => setFormData({ ...formData, descripcion: text })}
-                  placeholder="Descripción del taller"
-                  multiline
-                  numberOfLines={3}
-                />
-
-                <View style={sharedStyles.inputContainer}>
-                  <Text style={sharedStyles.label}>Profesores Asignados</Text>
-                  <ScrollView style={sharedStyles.pickerScroll} showsVerticalScrollIndicator={false}>
-                    {profesores.map((profesor) => (
-                      <TouchableOpacity
-                        key={profesor.id}
-                        style={[
-                          sharedStyles.pickerItem,
-                          formData.profesorIds.includes(profesor.id) && sharedStyles.pickerItemSelected,
-                        ]}
-                        onPress={() => {
-                          const newIds = formData.profesorIds.includes(profesor.id)
-                            ? formData.profesorIds.filter((id) => id !== profesor.id)
-                            : [...formData.profesorIds, profesor.id];
-                          setFormData({ ...formData, profesorIds: newIds });
-                        }}
-                      >
-                        <Text style={sharedStyles.pickerItemText}>
-                          {formData.profesorIds.includes(profesor.id) ? '✓ ' : '○ '}
-                          {profesor.nombre}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </ScrollView>
-
-              <View style={sharedStyles.modalFooter}>
-                <Button
-                  title="Cancelar"
-                  variant="secondary"
-                  onPress={() => setModalVisible(false)}
-                  style={sharedStyles.modalButton}
-                />
-                <Button
-                  title={isEditing ? 'Actualizar' : 'Crear'}
-                  variant="success"
-                  onPress={guardarTaller}
-                  loading={loading}
-                  style={sharedStyles.modalButton}
-                />
-              </View>
-            </View>
-          </SafeAreaView>
+        <View style={sharedStyles.inputContainer}>
+          <Text style={sharedStyles.label}>Profesores Asignados</Text>
+          <ScrollView style={sharedStyles.pickerScroll} showsVerticalScrollIndicator={false}>
+            {profesores.map((profesor) => (
+              <TouchableOpacity
+                key={profesor.id}
+                style={[
+                  sharedStyles.pickerItem,
+                  formData.profesorIds.includes(profesor.id) && sharedStyles.pickerItemSelected,
+                ]}
+                onPress={() => {
+                  const newIds = formData.profesorIds.includes(profesor.id)
+                    ? formData.profesorIds.filter((id) => id !== profesor.id)
+                    : [...formData.profesorIds, profesor.id];
+                  setFormData({ ...formData, profesorIds: newIds });
+                }}
+              >
+                <Text style={sharedStyles.pickerItemText}>
+                  {formData.profesorIds.includes(profesor.id) ? '✓ ' : '○ '}
+                  {profesor.nombre}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       </Modal>
     </Container>
@@ -1049,6 +1047,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E8ECF2',
+  },
+
+  // Modal footer buttons - estilo quick actions
+  modalFooterButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+  },
+  modalFooterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  footerDivider: {
+    width: 1,
+    backgroundColor: '#E5E7EB',
   },
 });
 

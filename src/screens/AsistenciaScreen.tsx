@@ -213,7 +213,7 @@ const AsistenciaScreen = () => {
 
       {!loading && !mostrarClases && asistencias.length === 0 && (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-          <EmptyState message="No hay estudiantes inscritos en esta clase" icon={<Ionicons name="people" size={48} color={colors.primary || '#888'} />} />
+          <EmptyState message="No hay Alumnos inscritos en esta clase" icon={<Ionicons name="people" size={48} color={colors.primary || '#888'} />} />
         </View>
       )}
 

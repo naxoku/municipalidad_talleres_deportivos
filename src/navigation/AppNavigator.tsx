@@ -14,7 +14,7 @@ import GlobalSearch from '../components/GlobalSearch';
 import ProfesoresScreen from '../screens/ProfesoresScreen';
 
 import TalleresScreen from '../screens/TalleresScreen';
-import EstudiantesEnhancedScreen from '../screens/EstudiantesEnhancedScreen';
+import AlumnosEnhancedScreen from '../screens/AlumnosEnhancedScreen';
 
 import HorariosScreen from '../screens/HorariosScreen';
 import InscripcionesScreen from '../screens/InscripcionesScreen';
@@ -111,12 +111,12 @@ function DrawerNavigatorContent() {
               title: 'Profesores',
             }}
           />
-          <Drawer.Screen name="Estudiantes" component={EstudiantesEnhancedScreen}
+          <Drawer.Screen name="Alumnos" component={AlumnosEnhancedScreen}
             options={{
               drawerIcon: ({ color, size }) => (
                 <Ionicons name="school" size={size} color={color} />
               ),
-              title: 'Estudiantes',
+              title: 'Alumnos',
             }}
           />
           <Drawer.Screen
@@ -184,13 +184,13 @@ function DrawerNavigatorContent() {
             }}
           />
           <Drawer.Screen
-            name="Estudiantes"
-            component={EstudiantesEnhancedScreen}
+            name="Alumnos"
+            component={AlumnosEnhancedScreen}
             options={{
               drawerIcon: ({ color, size }) => (
                 <Ionicons name="school" size={size} color={color} />
               ),
-              title: 'Estudiantes',
+              title: 'Alumnos',
             }}
           />
           <Drawer.Screen

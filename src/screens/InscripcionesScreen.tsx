@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { inscripcionesApi } from '../api/inscripciones';
-import { estudiantesApi } from '../api/estudiantes';
+import { alumnosApi } from '../api/alumnos';
 import { talleresApi } from '../api/talleres';
 import { Inscripcion, Estudiante, Taller } from '../types';
 import { Button } from '../components/Button';
@@ -24,7 +24,7 @@ import HeaderWithSearch from '../components/HeaderWithSearch';
 
 const InscripcionesScreen = () => {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
-  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
+  const [Alumnos, setAlumnos] = useState<Estudiante[]>([]);
   const [talleres, setTalleres] = useState<Taller[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -36,7 +36,7 @@ const InscripcionesScreen = () => {
 
   useEffect(() => {
     cargarInscripciones();
-    cargarEstudiantes();
+    cargarAlumnos();
     cargarTalleres();
   }, []);
 
@@ -52,12 +52,12 @@ const InscripcionesScreen = () => {
     }
   };
 
-  const cargarEstudiantes = async () => {
+  const cargarAlumnos = async () => {
     try {
-      const data = await estudiantesApi.listar();
-      setEstudiantes(data);
+      const data = await alumnosApi.listar();
+      setAlumnos(data);
     } catch (error: any) {
-      console.error('Error cargando estudiantes:', error);
+      console.error('Error cargando Alumnos:', error);
     }
   };
 
@@ -181,7 +181,7 @@ const InscripcionesScreen = () => {
                   <Text style={styles.label}>Estudiante *</Text>
                   <View style={styles.pickerWrapper}>
                     <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
-                      {estudiantes.map((estudiante) => (
+                      {Alumnos.map((estudiante) => (
                         <TouchableOpacity
                           key={estudiante.id}
                           style={[

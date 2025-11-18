@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { estudiantesApi } from '../api/estudiantes';
+import { alumnosApi } from '../api/alumnos';
 import { inscripcionesApi } from '../api/inscripciones';
 import { Estudiante } from '../types';
 import { EmptyState } from '../components/EmptyState';
@@ -20,6 +20,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'expo-router';
 import { colors, spacing, typography, borderRadius } from '../theme/colors';
 import { sharedStyles } from '../theme/sharedStyles';
 import HeaderWithSearch from '../components/HeaderWithSearch';
@@ -36,9 +37,10 @@ interface EstudianteEnriquecido extends Estudiante {
   total_clases_programadas?: number;
 }
 
-export default function EstudiantesEnhancedScreen({ navigation }: any) {
+export default function AlumnosEnhancedScreen() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [estudiantes, setEstudiantes] = useState<EstudianteEnriquecido[]>([]);
+  const [Alumnos, setAlumnos] = useState<EstudianteEnriquecido[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [filterBy, setFilterBy] = useState<'all' | 'high' | 'low'>('all');
@@ -48,17 +50,17 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
   const isAdmin = userRole === 'administrador';
 
   useEffect(() => {
-    cargarEstudiantes();
+    cargarAlumnos();
   }, []);
 
-  const cargarEstudiantes = async () => {
+  const cargarAlumnos = async () => {
     setLoading(true);
     try {
-      const estudiantesData = await estudiantesApi.listar();
+      const AlumnosData = await alumnosApi.listar();
       const inscripcionesData = await inscripcionesApi.listar();
 
       // Enrich students with their enrollments and attendance
-      const enriched: EstudianteEnriquecido[] = estudiantesData.map((estudiante) => {
+      const enriched: EstudianteEnriquecido[] = AlumnosData.map((estudiante) => {
         const misInscripciones = inscripcionesData.filter(
           (i) => i.estudiante_id === estudiante.id
         );
@@ -87,7 +89,7 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
         };
       });
 
-      setEstudiantes(enriched);
+      setAlumnos(enriched);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -97,7 +99,7 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await cargarEstudiantes();
+    await cargarAlumnos();
     setRefreshing(false);
   };
 
@@ -108,7 +110,7 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
     return { variant: 'error' as const, icon: '⚠️', label: 'Bajo' };
   };
 
-  const filteredEstudiantes = estudiantes
+  const filteredAlumnos = Alumnos
     .filter((e) => {
       const matchesSearch = e.nombre.toLowerCase().includes(searchTerm.toLowerCase());
       if (filterBy === 'high') return matchesSearch && (e.asistencia_global || 0) >= 90;
@@ -216,7 +218,7 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => {
-                /* Navigate to inscriptions */
+                router.push(`/(modals)/nueva-inscripcion?estudianteId=${item.id}`);
               }}
             >
               <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
@@ -225,7 +227,7 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => {
-                /* Navigate to edit */
+                router.push(`/(modals)/nuevo-alumno?estudianteId=${item.id}`);
               }}
             >
               <Ionicons name="create-outline" size={18} color={colors.blue.main} />
@@ -251,7 +253,7 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={{ flex: 1 }}>
-        <HeaderWithSearch title={isAdmin ? 'Estudiantes' : 'Mis Estudiantes'} searchTerm={searchTerm} onSearch={setSearchTerm} />
+        <HeaderWithSearch title={isAdmin ? 'Alumnos' : 'Mis Alumnos'} searchTerm={searchTerm} onSearch={setSearchTerm} />
         <View style={styles.filterButtons}>
             <TouchableOpacity
               style={[styles.filterButton, filterBy === 'all' && styles.filterButtonActive]}
@@ -292,22 +294,22 @@ export default function EstudiantesEnhancedScreen({ navigation }: any) {
           <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />
         )}
 
-        {!loading && filteredEstudiantes.length === 0 && (
+        {!loading && filteredAlumnos.length === 0 && (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
             <EmptyState
               message={
                 searchTerm
-                  ? `No se encontraron estudiantes con "${searchTerm}"`
-                  : 'No hay estudiantes registrados'
+                  ? `No se encontraron Alumnos con "${searchTerm}"`
+                  : 'No hay Alumnos registrados'
               }
               icon={<Ionicons name="person-circle" size={48} color={colors.text.tertiary} />}
             />
           </View>
         )}
 
-        {!loading && filteredEstudiantes.length > 0 && (
+        {!loading && filteredAlumnos.length > 0 && (
           <FlatList
-            data={filteredEstudiantes}
+            data={filteredAlumnos}
             renderItem={renderEstudiante}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}

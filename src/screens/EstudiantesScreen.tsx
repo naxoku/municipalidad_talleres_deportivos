@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { estudiantesApi } from '../api/estudiantes';
+import { alumnosApi } from '../api/alumnos';
 import { Estudiante } from '../types';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
@@ -32,8 +32,8 @@ const spacing = {
   xl: 20,
 };
 
-const EstudiantesScreen = () => {
-  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
+const AlumnosScreen = () => {
+  const [Alumnos, setAlumnos] = useState<Estudiante[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -51,14 +51,14 @@ const EstudiantesScreen = () => {
   const isAdmin = userRole === 'administrador';
 
   useEffect(() => {
-    cargarEstudiantes();
+    cargarAlumnos();
   }, []);
 
-  const cargarEstudiantes = async () => {
+  const cargarAlumnos = async () => {
     setLoading(true);
     try {
-      const data = await estudiantesApi.listar();
-      setEstudiantes(data);
+      const data = await alumnosApi.listar();
+      setAlumnos(data);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -99,14 +99,14 @@ const EstudiantesScreen = () => {
       };
 
       if (isEditing && currentEstudiante) {
-        await estudiantesApi.actualizar({ id: currentEstudiante.id, ...data } as Estudiante);
+        await alumnosApi.actualizar({ id: currentEstudiante.id, ...data } as Estudiante);
         Alert.alert('Éxito', 'Estudiante actualizado correctamente');
       } else {
-        await estudiantesApi.crear(data);
+        await alumnosApi.crear(data);
         Alert.alert('Éxito', 'Estudiante creado correctamente');
       }
       setModalVisible(false);
-      cargarEstudiantes();
+      cargarAlumnos();
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -125,9 +125,9 @@ const EstudiantesScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await estudiantesApi.eliminar(estudiante.id);
+              await alumnosApi.eliminar(estudiante.id);
               Alert.alert('Éxito', 'Estudiante eliminado correctamente');
-              cargarEstudiantes();
+              cargarAlumnos();
             } catch (error: any) {
               Alert.alert('Error', error.message);
             }
@@ -170,19 +170,19 @@ const EstudiantesScreen = () => {
   return (
     <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
       <View style={{ flex: 1 }}>
-        <HeaderWithSearch title={isAdmin ? 'Estudiantes' : 'Mis Estudiantes'} searchTerm={searchTerm} onSearch={setSearchTerm} onAdd={isAdmin ? abrirModalCrear : undefined} />
+        <HeaderWithSearch title={isAdmin ? 'Alumnos' : 'Mis Alumnos'} searchTerm={searchTerm} onSearch={setSearchTerm} onAdd={isAdmin ? abrirModalCrear : undefined} />
 
         {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
 
-        {!loading && estudiantes.length === 0 && (
+        {!loading && Alumnos.length === 0 && (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-            <EmptyState message="No hay estudiantes registrados" icon={<Ionicons name="person-circle" size={48} color={colors.primary || '#888'} />} />
+            <EmptyState message="No hay Alumnos registrados" icon={<Ionicons name="person-circle" size={48} color={colors.primary || '#888'} />} />
           </View>
         )}
 
-        {!loading && estudiantes.length > 0 && (
+        {!loading && Alumnos.length > 0 && (
           <FlatList
-            data={estudiantes}
+            data={Alumnos}
             renderItem={renderEstudiante}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={sharedStyles.listContent}
@@ -256,4 +256,4 @@ const EstudiantesScreen = () => {
 // Estilos locales ya no son necesarios, se usan sharedStyles
 const styles = StyleSheet.create({});
 
-export default EstudiantesScreen;
+export default AlumnosScreen;

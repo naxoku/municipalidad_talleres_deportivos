@@ -1,10 +1,10 @@
 import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
 import { Estudiante, ApiResponse } from '../types';
 
-export const estudiantesApi = {
+export const alumnosApi = {
     listar: async (): Promise<Estudiante[]> => {
         try {
-            const response = await fetch(`${API_URL}/api/estudiantes.php?action=listar`, {
+            const response = await fetch(`${API_URL}/api/Alumnos.php?action=listar`, {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
@@ -17,7 +17,7 @@ export const estudiantesApi = {
 
     obtener: async (id: number): Promise<Estudiante | null> => {
         try {
-            const response = await fetch(`${API_URL}/api/estudiantes.php?action=obtener&id=${id}`, {
+            const response = await fetch(`${API_URL}/api/Alumnos.php?action=obtener&id=${id}`, {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
@@ -30,7 +30,7 @@ export const estudiantesApi = {
 
     crear: async (estudiante: Omit<Estudiante, 'id'>): Promise<ApiResponse<any>> => {
         try {
-            const response = await fetch(`${API_URL}/api/estudiantes.php?action=crear`, {
+            const response = await fetch(`${API_URL}/api/Alumnos.php?action=crear`, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(estudiante),
@@ -44,7 +44,7 @@ export const estudiantesApi = {
 
     actualizar: async (estudiante: Estudiante): Promise<ApiResponse<any>> => {
         try {
-            const response = await fetch(`${API_URL}/api/estudiantes.php?action=actualizar`, {
+            const response = await fetch(`${API_URL}/api/Alumnos.php?action=actualizar`, {
                 method: 'PUT',
                 headers: getHeaders(),
                 body: JSON.stringify(estudiante),
@@ -58,7 +58,7 @@ export const estudiantesApi = {
 
     eliminar: async (id: number): Promise<ApiResponse<any>> => {
         try {
-            const response = await fetch(`${API_URL}/api/estudiantes.php?action=eliminar`, {
+            const response = await fetch(`${API_URL}/api/alumnos.php?action=eliminar`, {
                 method: 'DELETE',
                 headers: getHeaders(),
                 body: JSON.stringify({ id }),
