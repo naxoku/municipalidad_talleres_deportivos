@@ -65,9 +65,16 @@ const HeaderWithSearch: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
           {isAdmin && onAdd && (
-            <TouchableOpacity style={styles.addButton} onPress={onAdd}>
+            <TouchableOpacity
+              style={[styles.addButton, isMobile && styles.addButtonIconOnly]}
+              onPress={onAdd}
+              accessibilityRole="button"
+              accessible={true}
+              accessibilityLabel={`Nuevo ${title}`}
+              accessibilityHint={`Crear ${title.toLowerCase()}`}
+            >
               <Ionicons name="add" size={20} color={colors.text.light} />
-              <Text style={styles.addButtonText}>Nuevo</Text>
+              {!isMobile && <Text style={styles.addButtonText}>Nuevo</Text>}
             </TouchableOpacity>
           )}
         </View>
@@ -144,6 +151,15 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.md,
     alignSelf: 'stretch',
+  }
+  ,
+  addButtonIconOnly: {
+    width: BUTTON_HEIGHT,
+    minHeight: BUTTON_HEIGHT,
+    paddingHorizontal: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
   }
 });
 

@@ -198,161 +198,167 @@ const TalleresScreen = ({ navigation }: any) => {
     );
   };
 
-  const getPopularityLevel = (total: number, max: number): number => {
-    if (max === 0) return 0;
-    return Math.round((total / max) * 10);
+  const getOccupancyStatus = (total: number, max: number): 'low' | 'medium' | 'high' | 'full' => {
+    const percentage = (total / max) * 100;
+    if (percentage >= 100) return 'full';
+    if (percentage >= 80) return 'high';
+    if (percentage >= 50) return 'medium';
+    return 'low';
   };
 
   const renderTaller = ({ item }: { item: TallerEnriquecido }) => {
-    const popularityLevel = getPopularityLevel(item.total_estudiantes || 0, item.cupos_maximos || 30);
-    const isFull = (item.total_estudiantes || 0) >= (item.cupos_maximos || 30);
-    const isPopular = popularityLevel >= 8;
-    const isLowOccupancy = (item.total_estudiantes || 0) < ((item.cupos_maximos || 30) * 0.3);
-    const asistenciaPromedio = item.asistencia_promedio || 0;
+    const occupancyStatus = getOccupancyStatus(item.total_estudiantes || 0, item.cupos_maximos || 30);
+    const occupancyPercentage = Math.round(((item.total_estudiantes || 0) / (item.cupos_maximos || 30)) * 100);
 
     return (
-      <View style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}>
-        {/* Header con título y badges */}
+      <TouchableOpacity 
+        style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}
+        activeOpacity={0.95}
+        onPress={() => navigation.navigate('Estudiantes', { tallerId: item.id })}
+      >
+        {/* Header con título */}
         <View style={styles.cardHeader}>
-          <View style={{ flex: 1, marginRight: isAdmin ? 80 : spacing.sm }}>
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.nombre}
-            </Text>
-            <View style={styles.badgeContainer}>
-              {isFull && (
-                <View style={[styles.miniChip, { backgroundColor: '#FEF2F2' }]}>
-                  <Ionicons name="flame" size={12} color="#EF4444" />
-                  <Text style={[styles.miniChipText, { color: '#EF4444' }]}>Completo</Text>
-                </View>
-              )}
-              {isPopular && !isFull && (
-                <View style={[styles.miniChip, { backgroundColor: '#FEF3C7' }]}>
-                  <Ionicons name="star" size={12} color="#F59E0B" />
-                  <Text style={[styles.miniChipText, { color: '#F59E0B' }]}>Popular</Text>
-                </View>
-              )}
-              {isLowOccupancy && (
-                <View style={[styles.miniChip, { backgroundColor: '#DBEAFE' }]}>
-                  <Ionicons name="information-circle" size={12} color="#3B82F6" />
-                  <Text style={[styles.miniChipText, { color: '#3B82F6' }]}>Cupos disponibles</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* Stats destacadas */}
-        <View style={styles.statsHighlight}>
-          <View style={styles.statBox}>
-            <View style={[styles.iconCircle, { backgroundColor: '#EFF6FF' }]}>
-              <Ionicons name="people" size={28} color="#3B82F6" />
-            </View>
-            <Text style={styles.statBoxValue}>{item.total_estudiantes || 0}</Text>
-            <Text style={styles.statBoxLabel}>de {item.cupos_maximos || 30} cupos</Text>
-          </View>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.nombre}
+          </Text>
           
-          <View style={styles.statBox}>
-            <View style={[styles.iconCircle, { 
-              backgroundColor: asistenciaPromedio >= 90 ? '#F0FDF4' : 
-                             asistenciaPromedio >= 70 ? '#FEF3C7' : '#FEF2F2' 
-            }]}>
-              <Ionicons name="checkmark-done" size={28} color={
-                asistenciaPromedio >= 90 ? '#10B981' : 
-                asistenciaPromedio >= 70 ? '#F59E0B' : '#EF4444'
-              } />
+          {/* Status badge minimalista */}
+          {occupancyStatus === 'full' && (
+            <View style={[styles.statusBadge, styles.statusFull]}>
+              <Text style={styles.statusText}>Completo</Text>
             </View>
-            <Text style={[styles.statBoxValue, { 
-              color: asistenciaPromedio >= 90 ? '#10B981' : 
-                     asistenciaPromedio >= 70 ? '#F59E0B' : '#EF4444'
-            }]}>
-              {asistenciaPromedio}%
-            </Text>
-            <Text style={styles.statBoxLabel}>asistencia</Text>
-          </View>
+          )}
+          {occupancyStatus === 'high' && (
+            <View style={[styles.statusBadge, styles.statusHigh]}>
+              <Text style={styles.statusText}>Alta demanda</Text>
+            </View>
+          )}
         </View>
 
-        {/* Ocupación: se muestra sólo el recuento en los stats (X de Y). Barra eliminada. */}
-
-        {/* Info con iconos */}
-        <View style={styles.infoSection}>
+        {/* Información principal - Grid simple */}
+        <View style={styles.infoGrid}>
+          {/* Profesor */}
           {item.profesores && item.profesores.length > 0 && (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconWrapper}>
-                <Ionicons name="person" size={14} color="#3B82F6" />
-              </View>
-              <Text style={styles.infoText} numberOfLines={1}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Profesor</Text>
+              <Text style={styles.infoValue} numberOfLines={1}>
                 {item.profesores.map((p: any) => p.nombre).join(', ')}
               </Text>
             </View>
           )}
+
+          {/* Horario */}
           {item.horario && (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconWrapper}>
-                <Ionicons name="time" size={14} color="#3B82F6" />
-              </View>
-              <Text style={styles.infoText} numberOfLines={1}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Horario</Text>
+              <Text style={styles.infoValue} numberOfLines={1}>
                 {item.horario.split(', ')[0]}
-                {item.horario.split(', ').length > 1 && ' +' + (item.horario.split(', ').length - 1)}
+                {item.horario.split(', ').length > 1 && ` +${item.horario.split(', ').length - 1}`}
               </Text>
             </View>
           )}
+
+          {/* Cupos */}
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Cupos</Text>
+            <Text style={[styles.infoValue, styles.cuposValue]}>
+              {item.total_estudiantes || 0}/{item.cupos_maximos || 30}
+              <Text style={styles.percentageText}> ({occupancyPercentage}%)</Text>
+            </Text>
+          </View>
+
+          {/* Ubicación */}
           {item.ubicacion && (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconWrapper}>
-                <Ionicons name="location" size={14} color="#10B981" />
-              </View>
-              <Text style={styles.infoText} numberOfLines={1}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Ubicación</Text>
+              <Text style={styles.infoValue} numberOfLines={1}>
                 {item.ubicacion}
               </Text>
             </View>
           )}
         </View>
 
-        {/* Actions */}
-        <View style={styles.cardFooter}>
+        {/* Acciones rápidas */}
+        <View style={styles.quickActions}>
           <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Asistencia', { tallerId: item.id })}
+            style={styles.quickActionButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              // Mostrar un modal rápido con detalles del taller
+              Alert.alert(
+                item.nombre,
+                `${item.descripcion || 'Sin descripción'}\n\nProfesor(es): ${item.profesores && item.profesores.length > 0 ? item.profesores.map((p: any) => p.nombre).join(', ') : '—'}\nHorario: ${item.horario || '—'}\nUbicación: ${item.ubicacion || '—'}\nCupos: ${item.total_estudiantes || 0}/${item.cupos_maximos || 30}\nAsistencia: ${item.asistencia_promedio || 0}%`,
+                [
+                  { text: 'Cerrar', style: 'cancel' },
+                  { text: 'Ver clases', onPress: () => navigation.navigate('Clases', { tallerId: item.id }) },
+                ]
+              );
+            }}
             activeOpacity={0.7}
           >
-            <View style={[styles.actionIconCircle, { backgroundColor: '#F0FDF4' }]}>
-              <Ionicons name="checkbox" size={18} color="#10B981" />
-            </View>
-            <Text style={styles.actionButtonText}>Asistencia</Text>
+            <Ionicons name="information-circle-outline" size={18} color="#64748B" />
+            <Text style={styles.quickActionText}>Detalles</Text>
           </TouchableOpacity>
-          <View style={styles.footerDivider} />
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Estudiantes', { tallerId: item.id })}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.actionIconCircle, { backgroundColor: '#DBEAFE' }]}>
-              <Ionicons name="people" size={18} color="#3B82F6" />
-            </View>
-            <Text style={styles.actionButtonText}>Estudiantes</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Admin actions */}
-        {isAdmin && (
-          <View style={styles.adminActions}>
-            <TouchableOpacity 
-              style={[styles.adminButton, { backgroundColor: '#DBEAFE' }]} 
-              onPress={() => abrirModalEditar(item)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="create-outline" size={16} color="#3B82F6" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.adminButton, { backgroundColor: '#FEF2F2' }]} 
-              onPress={() => eliminarTaller(item)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="trash-outline" size={16} color="#EF4444" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+          <View style={styles.actionDivider} />
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              navigation.navigate('Clases', { tallerId: item.id });
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="calendar-outline" size={18} color="#64748B" />
+            <Text style={styles.quickActionText}>Clases</Text>
+          </TouchableOpacity>
+
+          <View style={styles.actionDivider} />
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              navigation.navigate('Estudiantes', { tallerId: item.id });
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="people-outline" size={18} color="#64748B" />
+            <Text style={styles.quickActionText}>Estudiantes</Text>
+          </TouchableOpacity>
+
+          {isAdmin && (
+            <>
+              <View style={styles.actionDivider} />
+              <TouchableOpacity
+                style={styles.quickActionButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  abrirModalEditar(item);
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="create-outline" size={18} color="#64748B" />
+                <Text style={styles.quickActionText}>Editar</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.actionDivider} />
+              <TouchableOpacity
+                style={styles.quickActionButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  eliminarTaller(item);
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                <Text style={[styles.quickActionText, { color: '#EF4444' }]}>Eliminar</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -412,12 +418,23 @@ const TalleresScreen = ({ navigation }: any) => {
         <View style={[styles.tableCellAcciones, styles.tableCellActions, isWeb && styles.tableCellAccionesWeb]}>
           <TouchableOpacity
             style={styles.tableActionButton}
-            onPress={() => navigation.navigate('Asistencia', { tallerId: item.id })}
+            onPress={() => Alert.alert(
+              item.nombre,
+              `${item.descripcion || 'Sin descripción'}\n\nProfesor(es): ${item.profesores && item.profesores.length > 0 ? item.profesores.map((p: any) => p.nombre).join(', ') : '—'}\nHorario: ${item.horario || '—'}\nUbicación: ${item.ubicacion || '—'}\nCupos: ${item.total_estudiantes || 0}/${item.cupos_maximos || 30}\nAsistencia: ${item.asistencia_promedio || 0}%`
+            )}
           >
-            <Ionicons name="checkbox" size={18} color="#10B981" />
+            <Ionicons name="information-circle" size={18} color="#64748B" />
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={styles.tableActionButton}
+            style={[styles.tableActionButton, { marginLeft: 8 }]}
+            onPress={() => navigation.navigate('Clases', { tallerId: item.id })}
+          >
+            <Ionicons name="calendar" size={18} color="#64748B" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tableActionButton, { marginLeft: 8 }]}
             onPress={() => navigation.navigate('Estudiantes', { tallerId: item.id })}
           >
             <Ionicons name="people" size={18} color="#3B82F6" />
@@ -732,7 +749,7 @@ const TalleresScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#F8FAFB',
   },
   loadingContainer: {
     flex: 1,
@@ -746,173 +763,124 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
 
-  // Cards View
+  // Cards View - Diseño Minimalista
   listContent: {
     padding: 16,
+    paddingBottom: 24,
   },
   gridRow: {
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
+    gap: 16,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    position: 'relative',
+    borderRadius: 8,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E8ECF2',
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
   },
   cardWeb: {
-    width: '48%',
-    maxWidth: '48%',
+    flex: 1,
+    maxWidth: '48.5%',
   },
   cardMobile: {
     width: '100%',
   },
+
+  // Header minimalista
   cardHeader: {
-    padding: 14,
-    paddingBottom: 8,
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 6,
-    lineHeight: 22,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: 24,
+    flex: 1,
+    marginRight: 8,
   },
-  badgeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
-  miniChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 4,
+  statusFull: {
+    backgroundColor: '#FEE2E2',
   },
-  miniChipText: {
+  statusHigh: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusText: {
     fontSize: 11,
     fontWeight: '600',
-  },
-  statsHighlight: {
-    flexDirection: 'row',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  statBoxValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.5,
-  },
-  statBoxLabel: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  /* Progress bar styles removed — occupancy percentage indicators eliminated */
-  infoSection: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 6,
-    backgroundColor: '#F8FAFC',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  infoIconWrapper: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#475569',
-    flex: 1,
-    fontWeight: '500',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#E8ECF2',
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
-  },
-  actionIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  footerDivider: {
-    width: 1,
-    backgroundColor: '#E8ECF2',
-  },
-  adminActions: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    flexDirection: 'row',
-    gap: 6,
-  },
-  adminButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#E8ECF2',
+    color: '#DC2626',
   },
 
-  // Table View
+  // Info Grid - Diseño limpio y organizado
+  infoGrid: {
+    padding: 16,
+    gap: 12,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+    minWidth: 70,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '500',
+    flex: 1,
+  },
+  cuposValue: {
+    fontWeight: '600',
+    color: '#111827',
+  },
+  percentageText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+
+  // Acciones rápidas - Barra inferior limpia
+  quickActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    backgroundColor: '#FAFBFC',
+  },
+  quickActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+  },
+  quickActionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  actionDivider: {
+    width: 1,
+    backgroundColor: '#E5E7EB',
+  },
+
+  // Table View (mantiene el diseño original)
   tableContainer: {
     flex: 1,
     paddingHorizontal: 16,
@@ -1028,7 +996,7 @@ const styles = StyleSheet.create({
   tableCellAcciones: {
     justifyContent: 'center',
     paddingHorizontal: 8,
-    minWidth: 180,
+    minWidth: 140,
   },
   tableCellAccionesWeb: {
     flex: 1.5,
@@ -1060,7 +1028,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
-  /* mini progress bar styles removed — occupancy percentage indicators eliminated */
+  miniChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 4,
+  },
+  miniChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   tableActionButton: {
     width: 32,
     height: 32,
