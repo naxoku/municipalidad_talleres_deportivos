@@ -1,29 +1,65 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
-import { Slot, Link, useSegments } from 'expo-router';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Pressable, Platform, Animated, Dimensions, Easing } from 'react-native';
+import { Slot, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import GlobalSearch from '../../src/components/GlobalSearch';
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { colors, spacing, shadows } from '../../src/theme/colors';
 
-export default function DrawerLayout() {
-  const segments = useSegments();
+export default function DrawerGroupLayout() {
   const { isWeb, isDesktop } = useResponsive();
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
   const isProfesor = userRole === 'profesor';
   const [open, setOpen] = useState(false);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const windowWidth = Dimensions.get('window').width;
+  const drawerWidth = Math.min(360, Math.round(windowWidth * 0.8));
+
+  // animate when `open` changes
+  useEffect(() => {
+    if (open) {
+      // set to visible then animate in
+      Animated.timing(slideAnim, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    } else {
+      // animate out
+      Animated.timing(slideAnim, { toValue: 0, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start();
+    }
+  }, [open, slideAnim]);
+
+  // close on Escape key when on web
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        Animated.timing(slideAnim, { toValue: 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setOpen(false));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, slideAnim]);
+
+  const router = useRouter();
 
   const makeLink = (href: string, label: string, icon?: string) => {
-    const active = segments.join('/').includes(href.replace(/^\//, ''));
     return (
-      <Link key={href} href={href} style={[styles.link, active && styles.linkActive]}>
+      <TouchableOpacity
+        key={href}
+        style={styles.link}
+        onPress={() => {
+          router.push(href);
+          // auto-close for non-desktop (mobile native or web mobile)
+          if (!isDesktop) {
+            Animated.timing(slideAnim, { toValue: 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setOpen(false));
+          }
+        }}
+      >
         <View style={styles.linkContent}>
-          {icon && <Ionicons name={icon as any} size={18} color={active ? colors.text.light : '#fff'} />}
-          <Text style={[styles.linkText, active && styles.linkTextActive]}>{label}</Text>
+          {icon && <Ionicons name={icon as any} size={18} color={'#fff'} />}
+          <Text style={styles.linkText}>{label}</Text>
         </View>
-      </Link>
+      </TouchableOpacity>
     );
   };
 
@@ -47,51 +83,8 @@ export default function DrawerLayout() {
 
   const links = isAdmin ? adminLinks : isProfesor ? profesorLinks : [{ href: '/talleres', label: 'Talleres', icon: 'book' }];
 
-  return (
-    <View style={styles.container}>
-      {/* Permanent sidebar for desktop/web */}
-      {isWeb && isDesktop ? (
-        <View style={styles.sidebar}>
-          <Text style={styles.brand}>Talleres municipales</Text>
-          <View style={styles.searchWrap}>
-            <GlobalSearch inline />
-          </View>
-          <ScrollView style={styles.links}>
-            {links.map((l) => makeLink(l.href, l.label, l.icon))}
-          </ScrollView>
-        </View>
-      ) : (
-        <View style={styles.topbar}>
-          <TouchableOpacity onPress={() => setOpen(true)} style={styles.menuButton}>
-            <Ionicons name="menu" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.topbarTitle}>Talleres municipales</Text>
-          <View style={{ flex: 1 }} />
-          <GlobalSearch />
-        </View>
-      )}
-
-      {/* Content */}
-      <View style={styles.content}>
-        <Slot />
-      </View>
-
-      {/* Modal drawer for mobile */}
-      <Modal visible={open} animationType="slide" transparent={true} onRequestClose={() => setOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalDrawer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.brand}>Menú</Text>
-              <TouchableOpacity onPress={() => setOpen(false)}>
-                <Ionicons name="close" size={22} color={colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ marginTop: 12 }}>{links.map((l) => makeLink(l.href, l.label, l.icon))}</ScrollView>
-          </View>
-        </View>
-      </Modal>
-    </View>
-  );
+  // This group layout no longer draws the drawer itself; the global DrawerLayout in app/_layout.tsx is now responsible
+  return <Slot />;
 }
 
 const styles = StyleSheet.create({

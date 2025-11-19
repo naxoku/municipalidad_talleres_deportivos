@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Pressable, Platform, Animated, Dimensions, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import GlobalSearch from './GlobalSearch';
 import { useResponsive } from '../hooks/useResponsive';
@@ -13,17 +13,20 @@ export default function DrawerLayout({ children }: { children: React.ReactNode }
   const isAdmin = userRole === 'administrador';
   const isProfesor = userRole === 'profesor';
   const [open, setOpen] = useState(false);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const windowWidth = Dimensions.get('window').width;
+  const drawerWidth = Math.min(360, Math.round(windowWidth * 0.8));
   const router = useRouter();
 
   const makeLink = (href: string, label: string, icon?: string) => {
     return (
-      <TouchableOpacity 
-        key={href} 
+      <TouchableOpacity
+        key={href}
         style={styles.link}
         onPress={() => {
           router.push(href);
-          if (!isWeb || !isDesktop) {
-            setOpen(false); // Cerrar el drawer en móvil
+          if (!isDesktop) {
+            Animated.timing(slideAnim, { toValue: 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setOpen(false));
           }
         }}
       >
@@ -44,7 +47,6 @@ export default function DrawerLayout({ children }: { children: React.ReactNode }
     { href: '/inscripciones', label: 'Inscripciones', icon: 'checkmark-circle' },
     { href: '/asistencia', label: 'Asistencia', icon: 'location' },
     { href: '/reportes', label: 'Reportes', icon: 'bar-chart' },
-    { href: '/design-showcase', label: 'Design Showcase', icon: 'color-palette' },
   ];
 
   const profesorLinks = [
@@ -56,17 +58,34 @@ export default function DrawerLayout({ children }: { children: React.ReactNode }
 
   const links = isAdmin ? adminLinks : isProfesor ? profesorLinks : [{ href: '/talleres', label: 'Talleres', icon: 'book' }];
 
+  useEffect(() => {
+    if (open) {
+      Animated.timing(slideAnim, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    } else {
+      Animated.timing(slideAnim, { toValue: 0, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        Animated.timing(slideAnim, { toValue: 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setOpen(false));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open]);
+
   return (
     <View style={styles.container}>
-      {isWeb && isDesktop ? (
+      {isDesktop ? (
         <View style={styles.sidebar}>
           <Text style={styles.brand}>Talleres municipales</Text>
           <View style={styles.searchWrap}>
             <GlobalSearch inline />
           </View>
-          <ScrollView style={styles.links}>
-            {links.map((l) => makeLink(l.href, l.label, l.icon))}
-          </ScrollView>
+          <ScrollView style={styles.links}>{links.map((l) => makeLink(l.href, l.label, l.icon))}</ScrollView>
         </View>
       ) : (
         <View style={styles.topbar}>
@@ -81,18 +100,18 @@ export default function DrawerLayout({ children }: { children: React.ReactNode }
 
       <View style={styles.content}>{children}</View>
 
-      <Modal visible={open} animationType="slide" transparent={true} onRequestClose={() => setOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalDrawer}>
+      <Modal visible={open} animationType="none" transparent={true} onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => { Animated.timing(slideAnim, { toValue: 0, duration: 230, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setOpen(false)); }} accessibilityLabel="Cerrar menú">
+          <Animated.View style={[ styles.modalDrawer, { width: drawerWidth, transform: [{ translateX: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [ -drawerWidth, 0 ] }) }] } ]} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
               <Text style={styles.brand}>Menú</Text>
-              <TouchableOpacity onPress={() => setOpen(false)}>
+              <TouchableOpacity onPress={() => { Animated.timing(slideAnim, { toValue: 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setOpen(false)); }}>
                 <Ionicons name="close" size={22} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
             <ScrollView style={{ marginTop: 12 }}>{links.map((l) => makeLink(l.href, l.label, l.icon))}</ScrollView>
-          </View>
-        </View>
+          </Animated.View>
+        </Pressable>
       </Modal>
     </View>
   );

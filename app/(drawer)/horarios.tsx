@@ -1,6 +1,7 @@
 import React from 'react';
-import HorariosScreen from '../../src/screens/HorariosScreen';
+import HorariosScreen from '../horarios';
 
 export default function HorariosPage() {
   return <HorariosScreen />;
 }
+

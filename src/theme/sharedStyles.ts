@@ -5,11 +5,10 @@ import { colors, borderRadius, spacing, typography, shadows } from './colors';
 export const BUTTON_HEIGHT = 36;
 
 /**
- * Estilos compartidos para todas las pantallas
- * Diseño minimalista con verde principal y azules de Deportes
- */
+ *  Estilos compartidos para todas las pantallas
+ **/
 export const sharedStyles = StyleSheet.create({
-    // Contenedores principales
+    // Contenedores
     container: {
         flex: 1,
         backgroundColor: colors.background.tertiary,
@@ -70,7 +69,7 @@ export const sharedStyles = StyleSheet.create({
         padding: spacing.md,
     },
 
-    // Tarjetas (Cards)
+    // Tarjetas (cards)
     card: {
         backgroundColor: colors.background.primary,
         borderRadius: borderRadius.lg,
@@ -117,75 +116,74 @@ export const sharedStyles = StyleSheet.create({
         fontSize: typography.sizes.sm,
     },
 
-    // Modales - Estilo minimalista mejorado (inspirado en Expo Router web modals)
-    modalOverlay: {
+    // Estilos de modales 
+    modalOverlay: { // Para móvil
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Overlay más sutil (40% en lugar de 50%)
+        backgroundColor: colors.overlay,
         justifyContent: 'flex-end',
     },
-    webModalOverlay: {
+    webModalOverlay: { // Para web
         justifyContent: 'center',
         alignItems: 'center',
         padding: spacing.xl,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Consistente con mobile
+        backgroundColor: colors.overlay,
     },
     modalSafeArea: {
-        maxHeight: '90%',
+        maxHeight: '100%',
     },
     webModalSafeArea: {
         maxHeight: undefined,
     },
     modalContent: {
-        backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 12, // Aumentado de 8 a 12 para mejor apariencia
-        borderTopRightRadius: 12,
+        backgroundColor: colors.background.primary,
+        borderTopLeftRadius: borderRadius.lg,
+        borderTopRightRadius: borderRadius.lg,
         maxHeight: '100%',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: colors.border.light,
         overflow: 'hidden',
     },
     webModalContent: {
-        borderRadius: 12, // Aumentado de 8 a 12
+        borderRadius: borderRadius.lg,
         width: 600,
         maxWidth: '90%',
-        maxHeight: '90%', // Mantener compatible con React Native types
+        maxHeight: '100%',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        // Sombras mejoradas (inspiradas en drop-shadow de Expo)
-        shadowColor: '#000',
+        borderColor: colors.border.light,
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.12,
         shadowRadius: 16,
         elevation: 8,
     },
     modalHeader: {
-        padding: 16,
-        paddingBottom: 12,
+        padding: spacing.lg,
+        paddingBottom: spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: colors.border.light,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 56, // Altura mínima para mejor toque en móvil
+        minHeight: 56,
     },
     modalTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#111827',
+        fontSize: typography.sizes.lg,
+        fontWeight: typography.weights.semibold,
+        color: colors.text.primary,
         textAlign: 'center',
-        letterSpacing: -0.3, // Tipografía mejorada
+        letterSpacing: -0.3,
     },
     modalBody: {
-        padding: 16,
+        padding: spacing.lg,
     },
     modalFooter: {
         flexDirection: 'row',
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-        backgroundColor: '#FAFBFC',
+        borderTopColor: colors.border.light,
+        backgroundColor: colors.background.secondary,
         padding: 0,
         gap: 0,
-        minHeight: 56, // Altura mínima consistente con header
+        minHeight: 56,
     },
     modalButton: {
         flex: 1,
@@ -207,6 +205,7 @@ export const sharedStyles = StyleSheet.create({
         borderRadius: borderRadius.md,
         backgroundColor: colors.background.primary,
         maxHeight: 200,
+        overflow: 'hidden',
     },
     pickerScroll: {
         maxHeight: 200,
@@ -215,19 +214,25 @@ export const sharedStyles = StyleSheet.create({
         padding: spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: colors.border.light,
+        ...(Platform.OS === 'web' && {
+            cursor: 'pointer' as any,
+            transition: 'background-color 0.15s ease' as any,
+        }),
     },
     pickerItemSelected: {
         backgroundColor: colors.blue.soft,
+        borderRadius: borderRadius.sm,
+        marginHorizontal: spacing.sm,
+        marginVertical: spacing.xs,
     },
     pickerItemText: {
         fontSize: typography.sizes.sm,
+        fontWeight: typography.weights.medium,
         color: colors.text.primary,
     },
 });
 
-/**
- * Colores alternativos para variaciones de tarjetas
- */
+// Colores  de tarjetas
 export const cardAccentColors = [
     colors.blue.main,
     colors.primary,
@@ -235,9 +240,7 @@ export const cardAccentColors = [
     colors.accent.orange,
 ];
 
-/**
- * Obtiene un color de acento para tarjetas basado en el índice
- */
+// Obtiene un color de acento para tarjetas basado en el índice
 export const getCardAccentColor = (index: number): string => {
     return cardAccentColors[index % cardAccentColors.length];
 };

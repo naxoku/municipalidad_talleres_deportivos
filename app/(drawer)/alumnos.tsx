@@ -1,6 +1,7 @@
 import React from 'react';
-import AlumnosScreen from '../../src/screens/AlumnosEnhancedScreen';
+import AlumnosScreen from '../alumnos';
 
 export default function AlumnosPage() {
   return <AlumnosScreen />;
 }
+

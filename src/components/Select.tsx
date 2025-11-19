@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { sharedStyles } from '../theme/sharedStyles';
 import { Picker } from '@react-native-picker/picker';
 import { colors, borderRadius, spacing, typography } from '../theme/colors';
 
@@ -25,15 +26,21 @@ export const Select: React.FC<SelectProps> = ({
       <Text style={styles.label}>
         {label} {required && <Text style={styles.required}>*</Text>}
       </Text>
-      <View style={[styles.pickerContainer, error && styles.pickerError]}>
+      <View style={[sharedStyles.pickerWrapper, styles.pickerContainerOverride, error && styles.pickerError]}>
         <Picker
           selectedValue={value}
           onValueChange={onValueChange}
-          style={styles.picker}
+          style={[
+            styles.picker,
+            Platform.OS === 'web'
+              ? ({ appearance: 'none', outlineWidth: 0, borderWidth: 0, backgroundColor: 'transparent', height: 44, paddingHorizontal: 12, paddingVertical: 6 } as any)
+              : undefined,
+          ]}
+          dropdownIconColor={colors.text.primary as any}
         >
-          <Picker.Item label="Seleccione..." value="" />
+          <Picker.Item label="Seleccione un valor..." value="" />
           {items.map((item) => (
-            <Picker.Item key={item.value} label={item.label} value={item.value} />
+            <Picker.Item key={String(item.value)} label={item.label} value={item.value} />
           ))}
         </Picker>
       </View>
@@ -56,10 +63,11 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   pickerContainer: {
-    borderWidth: 1,
-    borderColor: colors.border.medium,
+    // kept for legacy; actual wrapper uses sharedStyles.pickerWrapper
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderRadius: borderRadius.md,
-    backgroundColor: colors.background.primary,
+    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
   pickerError: {
@@ -67,8 +75,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   picker: {
-    height: Platform.OS === 'ios' ? 180 : 50,
+    height: Platform.OS === 'ios' ? 180 : 48,
     color: colors.text.primary,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'android' ? 8 : 0,
+  },
+  pickerContainerOverride: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   errorText: {
     color: colors.error,

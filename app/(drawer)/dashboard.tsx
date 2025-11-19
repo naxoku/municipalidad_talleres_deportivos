@@ -1,6 +1,7 @@
 import React from 'react';
-import DashboardScreen from '../../src/screens/DashboardScreen';
+import DashboardScreen from '../dashboard';
 
 export default function DashboardPage() {
   return <DashboardScreen />;
 }
+

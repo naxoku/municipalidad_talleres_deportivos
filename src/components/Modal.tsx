@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, StyleSheet, Platform, TouchableWithoutFeedback, KeyboardAvoidingView, ScrollView, Text, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { sharedStyles } from '../theme/sharedStyles';
+import { colors } from '../theme/colors';
 
 type Props = {
   visible: boolean;
@@ -14,18 +15,6 @@ type Props = {
   header?: React.ReactNode;
 };
 
-/**
- * Modal reutilizable con diseño minimalista tipo card
- * Inspirado en las mejores prácticas de Expo Router web modals
- * 
- * Características:
- * - Animación de entrada/salida suave (fade)
- * - Overlay semi-transparente optimizado (40%)
- * - Sombras mejoradas para web
- * - Respeta SafeArea en móviles
- * - Altura máxima del 85vh en web para mejor UX
- * - Footer con botones estilo quick actions de las cards
- */
 export default function ElegantModal({ 
   visible, 
   onClose, 
@@ -142,7 +131,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollView: {
-    maxHeight: Platform.OS === 'web' ? 'calc(85vh - 120px)' as any : undefined, // Inspirado en Expo: mejor viewport usage
+    maxHeight: Platform.OS === 'web' ? 'calc(100vh - 120px)' as any : undefined, // Inspirado en Expo: mejor viewport usage
   },
   scrollContent: {
     flexGrow: 1,
@@ -162,7 +151,7 @@ const styles = StyleSheet.create({
   },
   closeText: {
     fontSize: 22,
-    color: '#6B7280',
+    color: colors.text.secondary,
     fontWeight: '300',
     lineHeight: 22,
   },
