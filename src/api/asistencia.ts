@@ -37,7 +37,6 @@ export const asistenciaApi = {
         }
     },
 
-    // NUEVO: marcar por sesión
     marcarSesion: async (horario_id: number, fecha: string, estudiante_id: number, presente: boolean): Promise<ApiResponse<any>> => {
         try {
             const response = await fetch(`${API_URL}/api/asistencia.php?action=marcar`, {

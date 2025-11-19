@@ -6,10 +6,8 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
-  StyleSheet,
   ScrollView,
   Modal,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { alumnosApi } from '../src/api/alumnos';
@@ -18,7 +16,6 @@ import { Input } from '../src/components/Input';
 import { Button } from '../src/components/Button';
 import { EmptyState } from '../src/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
-import SearchBar from '../src/components/SearchBar';
 import { useResponsive } from '../src/hooks/useResponsive';
 import { useAuth } from '../src/contexts/AuthContext';
 import { sharedStyles } from '../src/theme/sharedStyles';
@@ -44,8 +41,7 @@ const AlumnosScreen = () => {
     contacto: '',
   });
 
-  const { isWeb, isDesktop } = useResponsive();
-  const shouldShowTable = isWeb && isDesktop;
+  const { isWeb } = useResponsive();
   const [searchTerm, setSearchTerm] = useState('');
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
@@ -252,8 +248,5 @@ const AlumnosScreen = () => {
       </Container>
   );
 };
-
-// Estilos locales ya no son necesarios, se usan sharedStyles
-const styles = StyleSheet.create({});
 
 export default AlumnosScreen;

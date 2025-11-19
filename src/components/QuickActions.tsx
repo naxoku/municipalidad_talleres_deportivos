@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, typography, colors } from '../theme/colors';
+import { spacing, colors } from '../theme/colors';
 
 interface Action {
   icon: string;

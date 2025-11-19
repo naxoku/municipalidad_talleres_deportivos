@@ -42,7 +42,7 @@ export default function ElegantModal({
         useNativeDriver: true,
       }).start();
     }
-  }, [visible]);
+  }, [visible, fadeAnim]);
 
   return (
     <Modal

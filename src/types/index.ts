@@ -21,6 +21,7 @@ export interface Taller {
     id: number;
     nombre: string;
     descripcion?: string;
+    activo?: boolean;
     profesores?: { id: number; nombre: string }[];
     // Optional fields populated client-side: ubicacion name and a readable horario string
     ubicacion?: string;
@@ -44,11 +45,17 @@ export interface Horario {
 
 export interface Clase {
     id: number;
+    horario_id: number;
     taller_id: number;
+    fecha_clase: string;
+    descripcion?: string;
     taller_nombre?: string;
-    fecha: string;
-    hora_inicio: string;
-    hora_fin: string;
+    profesor_nombre?: string;
+    dia_semana?: string;
+    hora_inicio?: string;
+    hora_fin?: string;
+    fecha_creacion?: string;
+    ultima_modificacion?: string;
 }
 
 export interface Inscripcion {
@@ -57,18 +64,26 @@ export interface Inscripcion {
     estudiante_nombre?: string;
     taller_id: number;
     taller_nombre?: string;
+    horario_id?: number;
+    horario_descripcion?: string;
     fecha_inscripcion?: string;
 }
 
 export interface Asistencia {
     id: number;
-    // En el esquema actual la asistencia se asocia a `horario_id` + `fecha` en lugar de `clase_id`
-    clase_id?: number;
-    horario_id?: number;
-    fecha?: string;
+    horario_id: number;
+    fecha: string;
     estudiante_id: number;
     estudiante_nombre?: string;
     presente: boolean;
+    fecha_creacion?: string;
+    ultima_modificacion?: string;
+}
+
+export interface Ubicacion {
+    id: number;
+    nombre: string;
+    direccion?: string;
 }
 
 export interface ApiResponse<T> {

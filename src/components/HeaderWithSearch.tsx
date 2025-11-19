@@ -24,7 +24,7 @@ const HeaderWithSearch: React.FC<Props> = ({
   viewMode: externalViewMode,
   onViewModeChange 
 }) => {
-  const { isWeb, isMobile } = useResponsive();
+  const { isMobile } = useResponsive();
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
 

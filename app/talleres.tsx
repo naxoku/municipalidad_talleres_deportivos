@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,14 +18,11 @@ import { profesoresApi } from '../src/api/profesores';
 import { inscripcionesApi } from '../src/api/inscripciones';
 import { Taller, Profesor, Horario } from '../src/types';
 import { Input } from '../src/components/Input';
-import { Button } from '../src/components/Button';
 import { EmptyState } from '../src/components/EmptyState';
-import { Badge } from '../src/components/Badge';
 import { useResponsive } from '../src/hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useToast } from '../src/contexts/ToastContext';
-import { colors, spacing, typography, borderRadius } from '../src/theme/colors';
 import { sharedStyles } from '../src/theme/sharedStyles';
 import Modal from '../src/components/Modal';
 import { formatTimeHHMM } from '../src/utils/time';
@@ -54,19 +51,14 @@ const TalleresScreen = () => {
     descripcion: '',
     profesorIds: [] as number[],
   });
-  const [loadingGuardar, setLoadingGuardar] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const { isWeb, isMobile } = useResponsive();
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
   const { showToast } = useToast();
 
-  useEffect(() => {
-    cargarTalleres();
-    cargarProfesores();
-  }, []);
-
-  const cargarTalleres = async () => {
+  const cargarTalleres = useCallback(async () => {
     setLoading(true);
     try {
       const [talleresData, horariosData] = await Promise.all([
@@ -115,16 +107,21 @@ const TalleresScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
-  const cargarProfesores = async () => {
+  const cargarProfesores = useCallback(async () => {
     try {
       const data = await profesoresApi.listar();
       setProfesores(data);
     } catch (error: any) {
       console.error('Error cargando profesores:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    cargarTalleres();
+    cargarProfesores();
+  }, [cargarTalleres, cargarProfesores]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -156,7 +153,7 @@ const TalleresScreen = () => {
       return;
     }
 
-    setLoadingGuardar(true);
+    setSaving(true);
     try {
       const data = {
         nombre: formData.nombre,
@@ -175,7 +172,7 @@ const TalleresScreen = () => {
     } catch (error: any) {
       showToast(error.message, 'error');
     } finally {
-      setLoadingGuardar(false);
+      setSaving(false);
     }
   };
 
@@ -685,10 +682,10 @@ const TalleresScreen = () => {
               <TouchableOpacity
                 style={styles.modalFooterButton}
                 onPress={guardarTaller}
-                disabled={loading}
+                disabled={saving}
                 activeOpacity={0.7}
               >
-                {loading ? (
+                {saving ? (
                   <ActivityIndicator size="small" color="#64748B" />
                 ) : (
                   <Text style={styles.modalFooterButtonText}>

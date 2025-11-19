@@ -6,10 +6,8 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
-  StyleSheet,
   ScrollView,
   Modal,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { clasesApi } from '../src/api/clases';
@@ -239,7 +237,5 @@ const ClasesScreen = () => {
       </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({});
 
 export default ClasesScreen;

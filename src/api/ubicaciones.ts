@@ -1,10 +1,10 @@
 import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
-import { Estudiante, ApiResponse } from '../types';
+import { Ubicacion, ApiResponse } from '../types';
 
-export const alumnosApi = {
-    listar: async (): Promise<Estudiante[]> => {
+export const ubicacionesApi = {
+    listar: async (): Promise<Ubicacion[]> => {
         try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=listar`, {
+            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=listar`, {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
@@ -15,9 +15,9 @@ export const alumnosApi = {
         }
     },
 
-    obtener: async (id: number): Promise<Estudiante | null> => {
+    obtener: async (id: number): Promise<Ubicacion | null> => {
         try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=obtener&id=${id}`, {
+            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=obtener&id=${id}`, {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
@@ -28,12 +28,12 @@ export const alumnosApi = {
         }
     },
 
-    crear: async (estudiante: Omit<Estudiante, 'id'>): Promise<ApiResponse<any>> => {
+    crear: async (ubicacion: Omit<Ubicacion, 'id'>): Promise<ApiResponse<any>> => {
         try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=crear`, {
+            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=crear`, {
                 method: 'POST',
                 headers: getHeaders(),
-                body: JSON.stringify(estudiante),
+                body: JSON.stringify(ubicacion),
             });
             return await handleApiResponse(response);
         } catch (error) {
@@ -42,12 +42,12 @@ export const alumnosApi = {
         }
     },
 
-    actualizar: async (estudiante: Estudiante): Promise<ApiResponse<any>> => {
+    actualizar: async (ubicacion: Ubicacion): Promise<ApiResponse<any>> => {
         try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=actualizar`, {
+            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=actualizar`, {
                 method: 'PUT',
                 headers: getHeaders(),
-                body: JSON.stringify(estudiante),
+                body: JSON.stringify(ubicacion),
             });
             return await handleApiResponse(response);
         } catch (error) {
@@ -58,7 +58,7 @@ export const alumnosApi = {
 
     eliminar: async (id: number): Promise<ApiResponse<any>> => {
         try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=eliminar`, {
+            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=eliminar`, {
                 method: 'DELETE',
                 headers: getHeaders(),
                 body: JSON.stringify({ id }),

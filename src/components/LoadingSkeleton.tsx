@@ -32,7 +32,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
         }),
       ])
     ).start();
-  }, []);
+  }, [animatedValue]);
 
   const opacity = animatedValue.interpolate({
     inputRange: [0, 1],

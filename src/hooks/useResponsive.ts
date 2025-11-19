@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useWindowDimensions, Platform } from 'react-native';
 
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';

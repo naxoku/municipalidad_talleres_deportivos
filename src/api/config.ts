@@ -1,5 +1,5 @@
 // Configuración de la API
-export const API_URL = 'http://localhost/talleres_backend';
+export const API_URL = 'http://129.1.5.7/talleres_backend';
 
 // Headers comunes para las peticiones
 export const getHeaders = () => ({

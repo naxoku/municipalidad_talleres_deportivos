@@ -20,7 +20,7 @@ function formatDateLabel(dateStr: string) {
   try {
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: '2-digit' });
-  } catch (e) {
+  } catch {
     return dateStr;
   }
 }

@@ -150,11 +150,15 @@ export const sharedStyles = StyleSheet.create({
         maxHeight: '100%',
         borderWidth: 1,
         borderColor: colors.border.light,
-        shadowColor: colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
-        elevation: 8,
+        ...(Platform.OS === 'web' ? {
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+        } : {
+            shadowColor: colors.shadow,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.12,
+            shadowRadius: 16,
+            elevation: 8,
+        }),
     },
     modalHeader: {
         padding: spacing.lg,

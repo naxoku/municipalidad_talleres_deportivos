@@ -4,11 +4,11 @@ import { Clase, ApiResponse } from '../types';
 export const clasesApi = {
     listar: async (): Promise<Clase[]> => {
         try {
-            const response = await fetch(`${API_URL}/api/clases.php?action=listar`, {
+            const response = await fetch(`${API_URL}/api/detalle_clase.php?action=listar`, {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
-            // Normalizar respuesta: si el backend devuelve 'fecha_clase', mapear a 'fecha'
+            // Normalizar respuesta: el backend devuelve 'fecha_clase', mapear a 'fecha' si es necesario
             const raw = data.datos || [];
             return raw.map((r: any) => ({
                 ...r,
@@ -20,9 +20,9 @@ export const clasesApi = {
         }
     },
 
-    crear: async (clase: Omit<Clase, 'id'>): Promise<ApiResponse<any>> => {
+    crear: async (clase: Omit<Clase, 'id' | 'fecha_creacion' | 'ultima_modificacion'>): Promise<ApiResponse<any>> => {
         try {
-            const response = await fetch(`${API_URL}/api/clases.php?action=crear`, {
+            const response = await fetch(`${API_URL}/api/detalle_clase.php?action=crear`, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(clase),
@@ -36,7 +36,7 @@ export const clasesApi = {
 
     eliminar: async (id: number): Promise<ApiResponse<any>> => {
         try {
-            const response = await fetch(`${API_URL}/api/clases.php?action=eliminar`, {
+            const response = await fetch(`${API_URL}/api/detalle_clase.php?action=eliminar`, {
                 method: 'DELETE',
                 headers: getHeaders(),
                 body: JSON.stringify({ id }),

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius, spacing, typography, shadows } from '../theme/colors';
@@ -23,6 +23,23 @@ export const Toast: React.FC<ToastProps> = ({
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-20)).current;
 
+  const dismiss = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: -20,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (onDismiss) onDismiss();
+    });
+  }, [onDismiss, opacity, translateY]);
+
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -45,24 +62,7 @@ export const Toast: React.FC<ToastProps> = ({
         return () => clearTimeout(timer);
       }
     }
-  }, [visible]);
-
-  const dismiss = () => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: -20,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (onDismiss) onDismiss();
-    });
-  };
+  }, [visible, dismiss, duration, onUndo, opacity, translateY]);
 
   const getIcon = () => {
     switch (type) {

@@ -9,7 +9,6 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { profesoresApi } from '../src/api/profesores';
@@ -19,7 +18,6 @@ import { Input } from '../src/components/Input';
 import { Button } from '../src/components/Button';
 import { EmptyState } from '../src/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
-import SearchBar from '../src/components/SearchBar';
 import HeaderWithSearch from '../src/components/HeaderWithSearch';
 import { useResponsive } from '../src/hooks/useResponsive';
 import { sharedStyles } from '../src/theme/sharedStyles';
@@ -45,7 +43,7 @@ const ProfesoresScreen = () => {
     contrasena: '',
   });
 
-  const { isWeb, isDesktop, isMobile } = useResponsive();
+  const { isWeb, isMobile } = useResponsive();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<string | null>(null);

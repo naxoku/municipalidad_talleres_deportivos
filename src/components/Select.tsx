@@ -9,7 +9,7 @@ interface SelectProps {
   required?: boolean;
   value: string | number;
   onValueChange: (value: string | number) => void;
-  items: Array<{ label: string; value: string | number }>;
+  items: { label: string; value: string | number }[];
   error?: string;
 }
 

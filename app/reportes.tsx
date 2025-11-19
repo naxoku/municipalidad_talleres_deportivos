@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,15 +19,6 @@ import { useResponsive } from '../src/hooks/useResponsive';
 import HeaderWithSearch from '../src/components/HeaderWithSearch';
 import { sharedStyles } from '../src/theme/sharedStyles';
 
-interface TallerStats {
-  id: number;
-  nombre: string;
-  asistencia_promedio: number;
-  total_Alumnos: number;
-  total_clases: number;
-  tendencia: 'up' | 'down' | 'stable';
-}
-
 export default function ReportesScreen() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
@@ -35,11 +26,7 @@ export default function ReportesScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const { isWeb } = useResponsive();
 
-  useEffect(() => {
-    cargarEstadisticas();
-  }, [selectedPeriod]);
-
-  const cargarEstadisticas = async () => {
+  const cargarEstadisticas = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/reportes.php?action=estadisticas&period=${selectedPeriod}`);
@@ -53,7 +40,11 @@ export default function ReportesScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    cargarEstadisticas();
+  }, [cargarEstadisticas]);
 
   const exportarReporte = async (formato: 'pdf' | 'excel' | 'csv') => {
     try {
@@ -63,7 +54,7 @@ export default function ReportesScreen() {
       } else {
         Alert.alert('Exportar', `Reporte generado: ${url}`);
       }
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'No se pudo exportar el reporte');
     }
   };

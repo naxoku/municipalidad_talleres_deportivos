@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Modal, TextInput, TouchableOpacity, Text, FlatList, ActivityIndicator, Platform, StyleSheet, Animated, Easing, ScrollView } from 'react-native';
+import { View, Modal, TextInput, TouchableOpacity, Text, ActivityIndicator, StyleSheet, Animated, Easing, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { API_URL } from '../api/config';
@@ -63,12 +63,10 @@ export default function GlobalSearch({ inline = false }: Props) {
       }
       // default: allow if any main-looking field matches
       return normalize(JSON.stringify(it)).indexOf(nq) !== -1;
-    } catch (e) {
+    } catch {
       return true;
     }
   };
-
-  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   const highlightNormalized = (text: string, q: string) => {
     if (!q) return text;
@@ -104,7 +102,6 @@ export default function GlobalSearch({ inline = false }: Props) {
       // fallback: search next using norm search from cursor translated
       if (start === -1) {
         // try to continue by searching in norm starting at map cursor length
-        const normCursor = map[cursor] || 0;
         start = norm.indexOf(nq, start + 1);
         break;
       }
@@ -118,13 +115,13 @@ export default function GlobalSearch({ inline = false }: Props) {
   useEffect(() => {
     if (!inline || query.length === 0) return;
 
-    const handler = (e: MouseEvent) => {
+    const handler = (event: MouseEvent) => {
       try {
         const node = containerRef.current as any;
         if (!node) return;
         // On web, the RN view ref is the DOM node and supports contains
         if (typeof node.contains === 'function') {
-          if (!node.contains(e.target as Node)) {
+          if (!node.contains(event.target as Node)) {
             // close dropdown but keep the typed text
             setOpen(false);
             setResults([]);
@@ -133,14 +130,14 @@ export default function GlobalSearch({ inline = false }: Props) {
         } else if (node._nativeTag) {
           // fallback: try to get element by id if available
           const el = document.getElementById(node._nativeTag as string);
-          if (el && !el.contains(e.target as Node)) {
+          if (el && !el.contains(event.target as Node)) {
             // close dropdown but keep the typed text
             setOpen(false);
             setResults([]);
             setTouched(false);
           }
         }
-      } catch (err) {
+      } catch {
         // ignore
       }
     };
@@ -238,7 +235,7 @@ export default function GlobalSearch({ inline = false }: Props) {
           <Text key={i}>{part}</Text>
         )
       ));
-    } catch (e) {
+    } catch {
       return text;
     }
   };

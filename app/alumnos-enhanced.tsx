@@ -16,7 +16,6 @@ import { inscripcionesApi } from '../src/api/inscripciones';
 import { Estudiante } from '../src/types';
 import { EmptyState } from '../src/components/EmptyState';
 import { Badge } from '../src/components/Badge';
-import SearchBar from '../src/components/SearchBar';
 import { useResponsive } from '../src/hooks/useResponsive';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useRouter } from 'expo-router';
@@ -25,11 +24,11 @@ import { sharedStyles } from '../src/theme/sharedStyles';
 import HeaderWithSearch from '../src/components/HeaderWithSearch';
 
 interface EstudianteEnriquecido extends Estudiante {
-  talleres_inscritos?: Array<{
+  talleres_inscritos?: {
     id: number;
     nombre: string;
     asistencia_porcentaje: number;
-  }>;
+  }[];
   asistencia_global?: number;
   ultima_asistencia?: string;
   total_clases_asistidas?: number;

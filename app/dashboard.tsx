@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity, Alert, Platform, RefreshControl, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { API_URL, handleApiResponse, getHeaders } from '../src/api/config';
-import MetricCard from '../src/components/MetricCard';
-import QuickActions from '../src/components/QuickActions';
+import { API_URL } from '../src/api/config';
 import { Badge } from '../src/components/Badge';
 import { CardSkeleton } from '../src/components/LoadingSkeleton';
 import { useResponsive } from '../src/hooks/useResponsive';
@@ -11,13 +9,11 @@ import { sharedStyles } from '../src/theme/sharedStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, colors } from '../src/theme/colors';
 import { Input } from '../src/components/Input';
-import { Button } from '../src/components/Button';
 import Modal from '../src/components/Modal';
 import { Select } from '../src/components/Select';
 import { alumnosApi } from '../src/api/alumnos';
 import { talleresApi } from '../src/api/talleres';
 import { inscripcionesApi } from '../src/api/inscripciones';
-import { asistenciaApi } from '../src/api/asistencia';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useToast } from '../src/contexts/ToastContext';
 import { useRouter } from 'expo-router';
@@ -32,7 +28,7 @@ export default function DashboardScreen() {
     clases_hoy: [],
     asistencia_semanal: [],
   });
-  const { isWeb, isDesktop, isMobile, width } = useResponsive();
+  const { isWeb, isMobile } = useResponsive();
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
   const { showToast } = useToast();
@@ -347,7 +343,7 @@ export default function DashboardScreen() {
     const hhmm = parts.slice(0, 2).join(':');
     try {
       return new Date(fecha + 'T' + hhmm + ':00');
-    } catch (e) {
+    } catch {
       return null;
     }
   };
@@ -419,7 +415,6 @@ export default function DashboardScreen() {
             {/* Cards KPI */}
             <View style={styles.metricsGrid}>
               {(() => {
-                const clasesHoy = getClasesForToday(data);
                 const totalClases = data.total_clases || (Array.isArray(data.clases_semana) ? data.clases_semana.length : clasesSemana.length);
                   const metrics = [
                   { key: 'talleres', title: 'Talleres', value: data.total_talleres || 0, icon: 'book-outline', onPress: () => router.push('/talleres') },

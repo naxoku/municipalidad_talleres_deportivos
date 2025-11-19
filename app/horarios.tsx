@@ -8,7 +8,6 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
-  Platform,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,14 +19,12 @@ import { Button } from '../src/components/Button';
 import { EmptyState } from '../src/components/EmptyState';
 import { useResponsive } from '../src/hooks/useResponsive';
 import { useAuth } from '../src/contexts/AuthContext';
-import SearchBar from '../src/components/SearchBar';
 import HeaderWithSearch from '../src/components/HeaderWithSearch';
  
 import { sharedStyles } from '../src/theme/sharedStyles';
-import { colors, spacing, typography, borderRadius, shadows } from '../src/theme/colors';
 import { formatTimeHHMM } from '../src/utils/time';
 import { Ionicons } from '@expo/vector-icons';
-import { Dimensions } from 'react-native';
+
 
 const DIAS_SEMANA = [
   { label: 'Lunes', value: 'Lunes' },
@@ -52,7 +49,7 @@ const HorariosScreen = () => {
     hora_fin: '',
   });
 
-  const { isWeb, isDesktop, isMobile } = useResponsive();
+  const { isWeb } = useResponsive();
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const { userRole } = useAuth();

@@ -7,17 +7,13 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Platform,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { asistenciaApi } from '../src/api/asistencia';
 import { clasesApi } from '../src/api/clases';
 import { Asistencia, Clase } from '../src/types';
 import { EmptyState } from '../src/components/EmptyState';
-import { Badge } from '../src/components/Badge';
 import { useAuth } from '../src/contexts/AuthContext';
 import { colors, spacing, typography, borderRadius, shadows } from '../src/theme/colors';
 import { sharedStyles } from '../src/theme/sharedStyles';
