@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,41 +7,62 @@ import {
   Alert,
   StyleSheet,
   ScrollView,
-  Modal,
   RefreshControl,
+  Platform,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { horariosApi } from '../src/api/horarios';
 import { talleresApi } from '../src/api/talleres';
 import { Horario, Taller } from '../src/types';
 import { Input } from '../src/components/Input';
-import { Button } from '../src/components/Button';
+import Modal from '../src/components/Modal';
 import { EmptyState } from '../src/components/EmptyState';
 import { useResponsive } from '../src/hooks/useResponsive';
 import { useAuth } from '../src/contexts/AuthContext';
 import HeaderWithSearch from '../src/components/HeaderWithSearch';
- 
-import { sharedStyles } from '../src/theme/sharedStyles';
-import { formatTimeHHMM } from '../src/utils/time';
+import WeekCalendar, { CalendarEvent } from '../src/components/WeekCalendar'; // Importamos el nuevo calendario
+import { Select } from '../src/components/Select';
+import { useToast } from '../src/contexts/ToastContext';
+import { colors, spacing, borderRadius } from '../src/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { formatTimeHHMM } from '../src/utils/time';
 
+// --- Utilidades Locales ---
+const normalize = (s?: string) => 
+    (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-const DIAS_SEMANA = [
-  { label: 'Lunes', value: 'Lunes' },
-  { label: 'Martes', value: 'Martes' },
-  { label: 'Miércoles', value: 'Miércoles' },
-  { label: 'Jueves', value: 'Jueves' },
-  { label: 'Viernes', value: 'Viernes' },
-  { label: 'Sábado', value: 'Sábado' },
-  { label: 'Domingo', value: 'Domingo' },
+const DIAS_SEMANA_FILTRO = [
+  { label: 'Todos', value: 'todos', short: 'Todos' },
+  { label: 'Lunes', value: 'lunes', short: 'Lun' },
+  { label: 'Martes', value: 'martes', short: 'Mar' },
+  { label: 'Miércoles', value: 'miercoles', short: 'Mié' },
+  { label: 'Jueves', value: 'jueves', short: 'Jue' },
+  { label: 'Viernes', value: 'viernes', short: 'Vie' },
+  { label: 'Sábado', value: 'sabado', short: 'Sáb' },
+  { label: 'Domingo', value: 'domingo', short: 'Dom' },
 ];
 
-const HorariosScreen = () => {
+export default function HorariosScreen() {
+  // 1. Hooks y Estados
+  const { isWeb, isMobile } = useResponsive();
+  const { userRole } = useAuth();
+  const { showToast } = useToast();
+  const isAdmin = userRole === 'administrador';
+
   const [horarios, setHorarios] = useState<Horario[]>([]);
   const [talleres, setTalleres] = useState<Taller[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // View State
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('list'); // 'calendar' = Grid Semanal, 'list' = Tarjetas por día
+  const [selectedDay, setSelectedDay] = useState<string>('todos');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Modal State
   const [modalVisible, setModalVisible] = useState(false);
-  const [viewMode, setViewMode] = useState<'calendar' | 'table'>('calendar');
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     taller_id: '',
     dia_semana: '',
@@ -49,744 +70,466 @@ const HorariosScreen = () => {
     hora_fin: '',
   });
 
-  const { isWeb } = useResponsive();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'administrador';
+  // 2. Carga de Datos
+  const cargarDatos = useCallback(async () => {
+    try {
+      const [dataHorarios, dataTalleres] = await Promise.all([
+        horariosApi.listar(),
+        talleresApi.listar()
+      ]);
+      setHorarios(dataHorarios);
+      setTalleres(dataTalleres);
+    } catch {
+      showToast('Error al cargar los datos', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
 
   useEffect(() => {
-    cargarHorarios();
-    cargarTalleres();
-  }, []);
+    cargarDatos();
+  }, [cargarDatos]);
 
-  const groupedHorarios = useMemo(() => {
-    const map: Record<string, Horario[]> = {};
-    DIAS_SEMANA.forEach((d) => (map[d.value] = []));
-    map['Otros'] = [];
-
-    const normalize = (s?: string) => (s || '').toString().trim().toLowerCase();
-
-    horarios.forEach((h) => {
-      const ds = normalize(h.dia_semana);
-      const match = DIAS_SEMANA.find((d) => normalize(d.value) === ds || normalize(d.label) === ds || ds.startsWith(normalize(d.value).slice(0, 3)));
-      if (match) map[match.value].push(h);
-      else map['Otros'].push(h);
-    });
-
-    Object.keys(map).forEach((k) => {
-      map[k].sort((a, b) => (a.hora_inicio || '').localeCompare(b.hora_inicio || ''));
-    });
-
-    return map;
-  }, [horarios]);
-
-  const cargarHorarios = async () => {
-    setLoading(true);
-    try {
-      const data = await horariosApi.listar();
-      setHorarios(data);
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    } finally {
-      setLoading(false);
-    }
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await cargarDatos();
+    setRefreshing(false);
   };
 
-  const cargarTalleres = async () => {
-    try {
-      const data = await talleresApi.listar();
-      setTalleres(data);
-    } catch (error: any) {
-      console.error('Error cargando talleres:', error);
-    }
-  };
+  // 3. Procesamiento de Datos (Filtrado y Transformación)
+  const filteredHorarios = useMemo(() => {
+    let data = horarios;
 
-  const abrirModal = () => {
-    setFormData({ taller_id: '', dia_semana: '', hora_inicio: '', hora_fin: '' });
-    setModalVisible(true);
-  };
-
-  const crearHorario = async () => {
-    if (!formData.taller_id || !formData.dia_semana || !formData.hora_inicio || !formData.hora_fin) {
-      Alert.alert('Error', 'Todos los campos son obligatorios');
-      return;
+    // Filtro por búsqueda (nombre taller, profesor, día)
+    if (searchTerm) {
+      const q = normalize(searchTerm);
+      data = data.filter(h => 
+        normalize(h.taller_nombre).includes(q) || 
+        normalize(h.profesor_nombre).includes(q) ||
+        normalize(h.dia_semana).includes(q)
+      );
     }
 
-    setLoading(true);
-    try {
-      await horariosApi.crear({
-        taller_id: parseInt(formData.taller_id),
-        dia_semana: formData.dia_semana,
-        hora_inicio: formData.hora_inicio,
-        hora_fin: formData.hora_fin,
-      });
-      Alert.alert('Éxito', 'Horario creado correctamente');
-      setModalVisible(false);
-      cargarHorarios();
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    } finally {
-      setLoading(false);
+    // Filtro por día (solo afecta a la vista de lista)
+    if (viewMode === 'list' && selectedDay !== 'todos') {
+      data = data.filter(h => normalize(h.dia_semana) === selectedDay);
     }
-  };
 
-  const eliminarHorario = (horario: Horario) => {
+    // Ordenamiento por hora
+    return data.sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+  }, [horarios, searchTerm, selectedDay, viewMode]);
+
+  // Transformar para el componente WeekCalendar
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    return filteredHorarios.map(h => ({
+      id: h.id,
+      title: h.taller_nombre,
+      subtitle: h.profesor_nombre || h.ubicacion_nombre,
+      day: h.dia_semana,
+      start: h.hora_inicio,
+      end: h.hora_fin,
+      color: colors.infoLight, // Se podría personalizar por taller
+      // Datos originales para lógica extra
+      ...h 
+    }));
+  }, [filteredHorarios]);
+
+  // 4. Handlers
+  const handleDelete = (horario: Horario) => {
     Alert.alert(
-      'Confirmar eliminación',
-      '¿Estás seguro de eliminar este horario?',
+      'Eliminar Horario',
+      `¿Estás seguro de eliminar el horario de ${horario.taller_nombre}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
+        { 
+          text: 'Eliminar', 
+          style: 'destructive', 
           onPress: async () => {
             try {
               await horariosApi.eliminar(horario.id);
-              Alert.alert('Éxito', 'Horario eliminado correctamente');
-              cargarHorarios();
-            } catch (error: any) {
-              Alert.alert('Error', error.message);
+              showToast('Horario eliminado', 'success');
+              cargarDatos();
+            } catch {
+              showToast('Error al eliminar', 'error');
             }
-          },
-        },
+          } 
+        }
       ]
     );
   };
 
-  const [sortBy, setSortBy] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-
-  const toggleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortBy(column);
-      setSortDir('asc');
+  const handleCreate = async () => {
+    if (!formData.taller_id || !formData.dia_semana || !formData.hora_inicio || !formData.hora_fin) {
+        showToast('Completa todos los campos', 'error');
+        return;
+    }
+    setSaving(true);
+    try {
+        await horariosApi.crear({
+            taller_id: parseInt(formData.taller_id),
+            dia_semana: formData.dia_semana,
+            hora_inicio: formData.hora_inicio,
+            hora_fin: formData.hora_fin
+        });
+        showToast('Horario creado', 'success');
+        setModalVisible(false);
+        cargarDatos();
+    } catch {
+        showToast('Error al crear horario', 'error');
+    } finally {
+        setSaving(false);
     }
   };
 
-  const displayedHorarios = useMemo(() => {
-    let arr = [...horarios];
-    if (searchTerm && searchTerm.trim() !== '') {
-      const q = searchTerm.trim().toLowerCase();
-      arr = arr.filter((h) =>
-        (h.taller_nombre || (`Taller ${h.taller_id}`)).toLowerCase().includes(q) ||
-        (h.profesor_nombre || '').toLowerCase().includes(q) ||
-        (h.dia_semana || '').toLowerCase().includes(q)
-      );
-    }
-
-    if (!sortBy) return arr;
-
-    arr.sort((a, b) => {
-      let va: any = '';
-      let vb: any = '';
-      switch (sortBy) {
-        case 'taller':
-          va = (a.taller_nombre || `Taller ${a.taller_id}`).toString().toLowerCase();
-          vb = (b.taller_nombre || `Taller ${b.taller_id}`).toString().toLowerCase();
-          break;
-        case 'dia':
-          va = (a.dia_semana || '').toString().toLowerCase();
-          vb = (b.dia_semana || '').toString().toLowerCase();
-          break;
-        case 'inicio':
-          va = (a.hora_inicio || '').toString();
-          vb = (b.hora_inicio || '').toString();
-          break;
-        case 'fin':
-          va = (a.hora_fin || '').toString();
-          vb = (b.hora_fin || '').toString();
-          break;
-        case 'profesor':
-          va = (a.profesor_nombre || '').toString().toLowerCase();
-          vb = (b.profesor_nombre || '').toString().toLowerCase();
-          break;
-        case 'ubicacion':
-          va = (a.ubicacion_nombre || '').toString().toLowerCase();
-          vb = (b.ubicacion_nombre || '').toString().toLowerCase();
-          break;
-        default:
-          va = (a.taller_nombre || `Taller ${a.taller_id}`).toString().toLowerCase();
-          vb = (b.taller_nombre || `Taller ${b.taller_id}`).toString().toLowerCase();
-      }
-
-      if (va < vb) return sortDir === 'asc' ? -1 : 1;
-      if (va > vb) return sortDir === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return arr;
-  }, [horarios, sortBy, sortDir, searchTerm]);
-
-  const renderTableView = () => {
-    const renderTableContent = () => (
-      <View style={[styles.table, isWeb ? styles.tableWeb : styles.tableMobile]}>
-        <View style={styles.tableHeader}>
-          <TouchableOpacity
-            style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 2 } : { width: 200 }, styles.tableHeaderButton]}
-            onPress={() => toggleSort('taller')}
-          >
-            <Text style={styles.headerText}>Taller</Text>
-            <Ionicons
-              name={sortBy === 'taller' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
-              size={14}
-              color={sortBy === 'taller' ? '#3B82F6' : '#94A3B8'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1 } : { width: 120 }, styles.tableHeaderButton]}
-            onPress={() => toggleSort('dia')}
-          >
-            <Text style={styles.headerText}>Día</Text>
-            <Ionicons
-              name={sortBy === 'dia' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
-              size={14}
-              color={sortBy === 'dia' ? '#3B82F6' : '#94A3B8'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 0.8 } : { width: 100 }, styles.tableHeaderButton]}
-            onPress={() => toggleSort('inicio')}
-          >
-            <Text style={styles.headerText}>Inicio</Text>
-            <Ionicons
-              name={sortBy === 'inicio' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
-              size={14}
-              color={sortBy === 'inicio' ? '#3B82F6' : '#94A3B8'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 0.8 } : { width: 100 }, styles.tableHeaderButton]}
-            onPress={() => toggleSort('fin')}
-          >
-            <Text style={styles.headerText}>Fin</Text>
-            <Ionicons
-              name={sortBy === 'fin' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
-              size={14}
-              color={sortBy === 'fin' ? '#3B82F6' : '#94A3B8'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1.5 } : { width: 180 }, styles.tableHeaderButton]}
-            onPress={() => toggleSort('profesor')}
-          >
-            <Text style={styles.headerText}>Profesor</Text>
-            <Ionicons
-              name={sortBy === 'profesor' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
-              size={14}
-              color={sortBy === 'profesor' ? '#3B82F6' : '#94A3B8'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1.5 } : { width: 150 }, styles.tableHeaderButton]}
-            onPress={() => toggleSort('ubicacion')}
-          >
-            <Text style={styles.headerText}>Ubicación</Text>
-            <Ionicons
-              name={sortBy === 'ubicacion' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
-              size={14}
-              color={sortBy === 'ubicacion' ? '#3B82F6' : '#94A3B8'}
-            />
-          </TouchableOpacity>
-
-          {isAdmin && (
-            <View style={[styles.tableCell, styles.headerCell, isWeb ? { flex: 1 } : { width: 100 }]}> 
-              <Text style={styles.headerText}>Acciones</Text>
-            </View>
-          )}
-        </View>
-
-        {displayedHorarios.map((horario, index) => (
-          <View 
-            key={horario.id} 
-            style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}
-          >
-            <View style={[styles.tableCell, isWeb ? { flex: 2 } : { width: 200 }]}>
-              <Text style={styles.cellText} numberOfLines={2}>
-                {horario.taller_nombre || `Taller ${horario.taller_id}`}
-              </Text>
-            </View>
-            <View style={[styles.tableCell, isWeb ? { flex: 1 } : { width: 120 }]}>
-              <Text style={styles.cellText}>{horario.dia_semana}</Text>
-            </View>
-            <View style={[styles.tableCell, isWeb ? { flex: 0.8 } : { width: 100 }]}>
-              <Text style={styles.cellText}>{formatTimeHHMM(horario.hora_inicio)}</Text>
-            </View>
-            <View style={[styles.tableCell, isWeb ? { flex: 0.8 } : { width: 100 }]}>
-              <Text style={styles.cellText}>{formatTimeHHMM(horario.hora_fin)}</Text>
-            </View>
-            <View style={[styles.tableCell, isWeb ? { flex: 1.5 } : { width: 180 }]}>
-              <Text style={styles.cellText} numberOfLines={2}>
-                {horario.profesor_nombre || '-'}
-              </Text>
-            </View>
-            <View style={[styles.tableCell, isWeb ? { flex: 1.5 } : { width: 150 }]}>
-              <Text style={styles.cellText} numberOfLines={2}>
-                {horario.ubicacion_nombre || '-'}
-              </Text>
-            </View>
-            {isAdmin && (
-              <View style={[styles.tableCell, isWeb ? { flex: 1 } : { width: 100 }]}>
-                <TouchableOpacity 
-                  style={styles.tableDeleteButton}
-                  onPress={() => eliminarHorario(horario)}
-                >
-                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        ))}
+  // 5. Renderizado
+  const renderListItem = ({ item }: { item: Horario }) => (
+    <View style={styles.card}>
+      {/* Time Block */}
+      <View style={styles.cardTime}>
+        <Text style={styles.cardTimeText}>{formatTimeHHMM(item.hora_inicio)}</Text>
+        <View style={styles.cardTimeLine} />
+        <Text style={styles.cardTimeText}>{formatTimeHHMM(item.hora_fin)}</Text>
       </View>
-    );
 
-    return (
-      <View style={styles.tableContainer}>
-        {isWeb ? (
-          renderTableContent()
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {renderTableContent()}
-          </ScrollView>
+      {/* Info Block */}
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardTitle}>{item.taller_nombre}</Text>
+        {viewMode === 'list' && selectedDay === 'todos' && (
+          <Text style={styles.cardDay}>{item.dia_semana}</Text>
         )}
-      </View>
-    );
-  };
-
-  const renderCalendarView = () => (
-    <View style={styles.calendarWrapper}>
-      {DIAS_SEMANA.map((dia) => {
-        const horariosDelDia = groupedHorarios[dia.value];
-        return (
-          <View key={dia.value} style={styles.dayColumn}>
-            {/* Header del día */}
-            <View style={styles.dayHeader}>
-              <Text style={styles.dayHeaderTitle}>{dia.label}</Text>
-              <Text style={styles.dayHeaderCount}>{horariosDelDia.length}</Text>
-            </View>
-
-            {/* Lista de horarios */}
-            <View style={styles.dayContent}>
-              {horariosDelDia.length === 0 ? (
-                <View style={styles.emptyDay}>
-                  <Text style={styles.emptyDayText}>Sin clases</Text>
+        
+        <View style={styles.cardMetaRow}>
+            {item.profesor_nombre && (
+                <View style={styles.cardMetaItem}>
+                    <Ionicons name="person-outline" size={12} color={colors.text.secondary} />
+                    <Text style={styles.cardMetaText}>{item.profesor_nombre}</Text>
                 </View>
-              ) : (
-                horariosDelDia.map((horario) => (
-                  <View key={horario.id} style={styles.scheduleCard}>
-                    {/* Horario destacado */}
-                    <Text style={styles.timeText}>
-                      {formatTimeHHMM(horario.hora_inicio)} - {formatTimeHHMM(horario.hora_fin)}
-                    </Text>
+            )}
+            {item.ubicacion_nombre && (
+                <View style={styles.cardMetaItem}>
+                    <Ionicons name="location-outline" size={12} color={colors.text.secondary} />
+                    <Text style={styles.cardMetaText}>{item.ubicacion_nombre}</Text>
+                </View>
+            )}
+        </View>
+      </View>
 
-                    {/* Nombre del taller - más prominente */}
-                    <Text style={styles.tallerName} numberOfLines={2}>
-                      {horario.taller_nombre || `Taller ${horario.taller_id}`}
-                    </Text>
-
-                    {/* Info secundaria sin labels */}
-                    <View style={styles.secondaryInfo}>
-                      {horario.profesor_nombre && (
-                        <View style={styles.infoRow}>
-                          <Ionicons name="person-outline" size={14} color="#9CA3AF" />
-                          <Text style={styles.secondaryText} numberOfLines={1}>
-                            {horario.profesor_nombre}
-                          </Text>
-                        </View>
-                      )}
-
-                      {horario.ubicacion_nombre && (
-                        <View style={styles.infoRow}>
-                          <Ionicons name="location-outline" size={14} color="#9CA3AF" />
-                          <Text style={styles.secondaryText} numberOfLines={1}>
-                            {horario.ubicacion_nombre}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Botón eliminar - más discreto */}
-                    {isAdmin && (
-                      <TouchableOpacity 
-                        style={styles.deleteButton}
-                        onPress={() => eliminarHorario(horario)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="close-outline" size={16} color="#9CA3AF" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
-        );
-      })}
+      {/* Actions */}
+      {isAdmin && (
+        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
-  const Container = SafeAreaView;
+  const Container: any = isWeb ? View : SafeAreaView;
 
   return (
-      <Container style={styles.container} edges={['bottom']}>
-        <View style={styles.contentWrapper}>
-          <HeaderWithSearch 
-            title={isAdmin ? 'Horarios' : 'Mis Horarios'} 
-            searchTerm={searchTerm} 
-            onSearch={setSearchTerm} 
-            onAdd={isAdmin ? abrirModal : undefined}
-            viewMode={viewMode === 'calendar' ? 'cards' : 'table'}
-            onViewModeChange={(m) => setViewMode(m === 'cards' ? 'calendar' : 'table')}
-          />
+    <Container style={styles.container} edges={['bottom']}>
+      {/* Header Principal */}
+      <View style={styles.mainHeader}>
+        <HeaderWithSearch
+            title="Horarios"
+            searchTerm={searchTerm}
+            onSearch={setSearchTerm}
+            onAdd={isAdmin ? () => setModalVisible(true) : undefined}
+            // En móvil, forzamos 'cards' (list) visualmente en el header, aunque internamente controlamos con viewMode
+            viewMode={viewMode === 'list' ? 'cards' : 'table'} 
+            onViewModeChange={() => {}} // Deshabilitamos el toggle por defecto del header para usar el custom
+        />
+      </View>
 
-          <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={async () => { 
-                  setRefreshing(true); 
-                  await cargarHorarios(); 
-                  setRefreshing(false); 
-                }} 
-              />
-            }
-          >
-            {loading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#3B82F6" />
-              </View>
-            )}
-
-            {!loading && horarios.length === 0 && (
-              <View style={styles.emptyStateContainer}>
-                <EmptyState 
-                  message="No hay horarios registrados" 
-                  icon={<Ionicons name="time-outline" size={48} color="#94A3B8" />} 
-                />
-              </View>
-            )}
-
-            {!loading && horarios.length > 0 && (
-              viewMode === 'calendar' ? renderCalendarView() : renderTableView()
-            )}
-          </ScrollView>
-        </View>
-
-        {/* Modal */}
-        <Modal
-          visible={modalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setModalVisible(false)}
+      {/* Selector de Vista Personalizado (Tabs) */}
+      <View style={styles.viewSelector}>
+        <TouchableOpacity 
+            style={[styles.viewTab, viewMode === 'list' && styles.viewTabActive]}
+            onPress={() => setViewMode('list')}
         >
-          <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-            <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
-              <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
-                <View style={sharedStyles.modalHeader}>
-                  <Text style={sharedStyles.modalTitle}>Nuevo Horario</Text>
-                </View>
+            <Ionicons name="list" size={16} color={viewMode === 'list' ? colors.primary : colors.text.secondary} />
+            <Text style={[styles.viewTabText, viewMode === 'list' && styles.viewTabTextActive]}>Lista</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+            style={[styles.viewTab, viewMode === 'calendar' && styles.viewTabActive]}
+            onPress={() => setViewMode('calendar')}
+        >
+            <Ionicons name="calendar" size={16} color={viewMode === 'calendar' ? colors.primary : colors.text.secondary} />
+            <Text style={[styles.viewTabText, viewMode === 'calendar' && styles.viewTabTextActive]}>Semanal</Text>
+        </TouchableOpacity>
+      </View>
 
-                <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
-                  <View style={sharedStyles.inputContainer}>
-                    <Text style={sharedStyles.label}>Taller *</Text>
-                    <View style={sharedStyles.pickerWrapper}>
-                      <ScrollView style={sharedStyles.pickerScroll} nestedScrollEnabled>
-                        {talleres.map((taller) => (
-                          <TouchableOpacity
-                            key={taller.id}
-                            style={[
-                              sharedStyles.pickerItem,
-                              formData.taller_id === taller.id.toString() && sharedStyles.pickerItemSelected,
-                            ]}
-                            onPress={() => setFormData({ ...formData, taller_id: taller.id.toString() })}
-                          >
-                            <Text style={sharedStyles.pickerItemText}>{taller.nombre}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
+      {/* Contenido Principal */}
+      <View style={styles.content}>
+        {loading ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+        ) : (
+            <>
+                {/* VISTA 1: LISTA POR DÍA */}
+                {viewMode === 'list' && (
+                    <>
+                        {/* Filtro de Días (Solo visible en modo lista) */}
+                        <View style={styles.dayFilterContainer}>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.md }}>
+                                {DIAS_SEMANA_FILTRO.map(day => (
+                                    <TouchableOpacity
+                                        key={day.value}
+                                        style={[styles.dayChip, selectedDay === day.value && styles.dayChipActive]}
+                                        onPress={() => setSelectedDay(day.value)}
+                                    >
+                                        <Text style={[styles.dayChipText, selectedDay === day.value && styles.dayChipTextActive]}>
+                                            {isMobile ? day.short : day.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+
+                        <FlatList
+                            data={filteredHorarios}
+                            renderItem={renderListItem}
+                            keyExtractor={item => item.id.toString()}
+                            contentContainerStyle={styles.listContainer}
+                            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                            ListEmptyComponent={<EmptyState message="No hay horarios para mostrar" />}
+                        />
+                    </>
+                )}
+
+                {/* VISTA 2: CALENDARIO SEMANAL (GRID) */}
+                {viewMode === 'calendar' && (
+                    <View style={{ flex: 1 }}>
+                        <WeekCalendar 
+                            events={calendarEvents} 
+                            onEventPress={(e) => isAdmin ? handleDelete({ id: e.id, taller_nombre: e.title } as Horario) : null}
+                        />
                     </View>
-                  </View>
+                )}
+            </>
+        )}
+      </View>
 
-                  <View style={sharedStyles.inputContainer}>
-                    <Text style={sharedStyles.label}>Día de la semana *</Text>
-                    <View style={sharedStyles.pickerWrapper}>
-                      <ScrollView style={sharedStyles.pickerScroll} nestedScrollEnabled>
-                        {DIAS_SEMANA.map((dia) => (
-                          <TouchableOpacity
-                            key={dia.value}
-                            style={[
-                              sharedStyles.pickerItem,
-                              formData.dia_semana === dia.value && sharedStyles.pickerItemSelected,
-                            ]}
-                            onPress={() => setFormData({ ...formData, dia_semana: dia.value })}
-                          >
-                            <Text style={sharedStyles.pickerItemText}>{dia.label}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  </View>
+      {/* Modal de Creación */}
+      <Modal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        title="Nuevo Horario"
+        footer={
+            <View style={styles.modalFooter}>
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalBtnCancel}>
+                    <Text style={styles.modalBtnTextCancel}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleCreate} style={styles.modalBtnConfirm} disabled={saving}>
+                    {saving ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.modalBtnTextConfirm}>Guardar</Text>}
+                </TouchableOpacity>
+            </View>
+        }
+      >
+        <Select
+            label="Taller"
+            value={formData.taller_id}
+            onValueChange={v => setFormData({...formData, taller_id: String(v)})}
+            items={talleres.map(t => ({ label: t.nombre, value: String(t.id) }))}
+        />
+        <Select
+            label="Día"
+            value={formData.dia_semana}
+            onValueChange={v => setFormData({...formData, dia_semana: String(v)})}
+            items={DIAS_SEMANA_FILTRO.slice(1).map(d => ({ label: d.label, value: d.label }))} // Usamos label para guardar bonito
+        />
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+            <View style={{ flex: 1 }}>
+                <Input 
+                    label="Inicio (HH:MM)" 
+                    value={formData.hora_inicio} 
+                    onChangeText={t => setFormData({...formData, hora_inicio: t})} 
+                    placeholder="09:00"
+                />
+            </View>
+            <View style={{ flex: 1 }}>
+                <Input 
+                    label="Fin (HH:MM)" 
+                    value={formData.hora_fin} 
+                    onChangeText={t => setFormData({...formData, hora_fin: t})} 
+                    placeholder="10:30"
+                />
+            </View>
+        </View>
+      </Modal>
 
-                  <Input
-                    label="Hora inicio"
-                    required
-                    value={formData.hora_inicio}
-                    onChangeText={(text) => setFormData({ ...formData, hora_inicio: text })}
-                    placeholder="HH:MM (ej: 14:00)"
-                  />
-
-                  <Input
-                    label="Hora fin"
-                    required
-                    value={formData.hora_fin}
-                    onChangeText={(text) => setFormData({ ...formData, hora_fin: text })}
-                    placeholder="HH:MM (ej: 16:00)"
-                  />
-                </ScrollView>
-
-                <View style={sharedStyles.modalFooter}>
-                  <Button
-                    title="Cancelar"
-                    variant="secondary"
-                    onPress={() => setModalVisible(false)}
-                    style={sharedStyles.modalButton}
-                  />
-                  <Button
-                    title="Crear"
-                    variant="success"
-                    onPress={crearHorario}
-                    loading={loading}
-                    style={sharedStyles.modalButton}
-                  />
-                </View>
-              </View>
-            </SafeAreaView>
-          </View>
-        </Modal>
-      </Container>
+    </Container>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFB',
+    backgroundColor: colors.background.tertiary,
   },
-  contentWrapper: {
+  mainHeader: {
+    // Unificamos el espacio del header
+  },
+  content: {
     flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-  loadingContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-  },
-  emptyStateContainer: {
-    paddingVertical: 80,
-    alignItems: 'center',
-    paddingHorizontal: 32,
   },
   
-  // Calendar View - Diseño más limpio y visual
-  calendarWrapper: {
+  // View Selector (Tabs Superiores)
+  viewSelector: {
     flexDirection: 'row',
-    gap: 16,
-    flexWrap: 'nowrap',
-  },
-  dayColumn: {
-    flex: 1,
-    minWidth: 170,
-  },
-  
-  // Day Header sin bordes
-  dayHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-    marginBottom: 12,
-  },
-  dayHeaderTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    letterSpacing: -0.3,
-  },
-  dayHeaderCount: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#9CA3AF',
-  },
-  
-  // Day Content sin padding extra
-  dayContent: {
-    gap: 12,
-  },
-  emptyDay: {
-    paddingVertical: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FAFBFC',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    borderStyle: 'dashed',
-  },
-  emptyDayText: {
-    fontSize: 13,
-    color: '#D1D5DB',
-    fontWeight: '500',
-  },
-  
-  // Schedule Card - ultra limpio
-  scheduleCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: '#3B82F6',
-    borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-    position: 'relative',
+    borderBottomColor: colors.border.light,
   },
-  
-  // Time - prominente
-  timeText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#3B82F6',
-    letterSpacing: 0.2,
-    marginBottom: 8,
-  },
-  
-  // Nombre del taller - destacado
-  tallerName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  
-  // Info secundaria sin labels
-  secondaryInfo: {
-    gap: 6,
-  },
-  infoRow: {
+  viewTab: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 10,
+    marginRight: 20,
     gap: 6,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
-  secondaryText: {
-    fontSize: 13,
-    color: '#6B7280',
+  viewTabActive: {
+    borderBottomColor: colors.primary,
+  },
+  viewTabText: {
+    fontSize: 14,
     fontWeight: '500',
-    flex: 1,
+    color: colors.text.secondary,
   },
-  
-  // Delete Button - icono solo, esquina superior derecha
-  deleteButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  viewTabTextActive: {
+    color: colors.primary,
+    fontWeight: '600',
   },
 
-  // Table View
-  tableContainer: {
-    flex: 1,
+  // Day Filter (Chips)
+  dayFilterContainer: {
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background.tertiary,
   },
-  table: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+  dayChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: colors.background.primary,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border.light,
+    marginRight: 8,
+  },
+  dayChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  dayChipText: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    fontWeight: '500',
+  },
+  dayChipTextActive: {
+    color: '#FFF',
+    fontWeight: '600',
+  },
+
+  // List Container
+  listContainer: {
+    padding: spacing.md,
+    paddingBottom: 40,
+  },
+
+  // Card Styles (Lista)
+  card: {
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    // Sombra sutil
+    ...(Platform.OS === 'web' && { boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }),
   },
-  tableWeb: {
-    width: '100%',
+  cardTime: {
+    width: 80,
+    backgroundColor: colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRightWidth: 1,
+    borderRightColor: colors.border.light,
+    paddingVertical: 12,
   },
-  tableMobile: {
-    minWidth: 720,
+  cardTimeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text.primary,
   },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+  cardTimeLine: {
+    height: 12,
+    width: 1,
+    backgroundColor: colors.border.medium,
+    marginVertical: 2,
   },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  tableRowEven: {
-    backgroundColor: '#FAFBFC',
-  },
-  tableCell: {
+  cardInfo: {
+    flex: 1,
     padding: 12,
     justifyContent: 'center',
   },
-  headerCell: {
-    backgroundColor: '#F8FAFC',
-  },
-  headerText: {
-    fontSize: 12,
+  cardTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  cardDay: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.primary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  cellText: {
-    fontSize: 13,
-    color: '#1F2937',
-    fontWeight: '500',
+  cardMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  tableDeleteButton: {
-    padding: 6,
-    backgroundColor: '#FAFBFC',
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  tableHeaderButton: {
+  cardMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
+  },
+  cardMetaText: {
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  deleteButton: {
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Modal Styles
+  modalFooter: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 12,
+      marginTop: 8,
+  },
+  modalBtnCancel: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+  },
+  modalBtnTextCancel: {
+      color: colors.text.secondary,
+      fontWeight: '500',
+  },
+  modalBtnConfirm: {
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: borderRadius.sm,
+  },
+  modalBtnTextConfirm: {
+      color: '#FFF',
+      fontWeight: '600',
   },
 });
-
-export default HorariosScreen;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,40 +7,41 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  ScrollView,
-  Modal,
-  Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { inscripcionesApi } from '../src/api/inscripciones';
 import { alumnosApi } from '../src/api/alumnos';
 import { talleresApi } from '../src/api/talleres';
 import { Inscripcion, Estudiante, Taller } from '../src/types';
-import { Button } from '../src/components/Button';
 import { EmptyState } from '../src/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
-import { shadows } from '../src/theme/colors';
+import { shadows, colors, spacing, typography, borderRadius } from '../src/theme/colors';
 import HeaderWithSearch from '../src/components/HeaderWithSearch';
+import Modal from '../src/components/Modal'; // Usando ElegantModal
+import { Select } from '../src/components/Select';
+import { useAuth } from '../src/contexts/AuthContext';
+
 
 const InscripcionesScreen = () => {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
   const [Alumnos, setAlumnos] = useState<Estudiante[]>([]);
   const [talleres, setTalleres] = useState<Taller[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [formData, setFormData] = useState({
     estudiante_id: '',
     taller_id: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'administrador';
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    cargarInscripciones();
-    cargarAlumnos();
-    cargarTalleres();
-  }, []);
 
-  const cargarInscripciones = async () => {
+  const cargarInscripciones = useCallback(async () => {
     setLoading(true);
     try {
       const data = await inscripcionesApi.listar();
@@ -50,24 +51,36 @@ const InscripcionesScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const cargarAlumnos = async () => {
+  const cargarAlumnos = useCallback(async () => {
     try {
       const data = await alumnosApi.listar();
       setAlumnos(data);
     } catch (error: any) {
       console.error('Error cargando Alumnos:', error);
     }
-  };
+  }, []);
 
-  const cargarTalleres = async () => {
+  const cargarTalleres = useCallback(async () => {
     try {
       const data = await talleresApi.listar();
       setTalleres(data);
     } catch (error: any) {
       console.error('Error cargando talleres:', error);
     }
+  }, []);
+
+  useEffect(() => {
+    cargarInscripciones();
+    cargarAlumnos();
+    cargarTalleres();
+  }, [cargarInscripciones, cargarAlumnos, cargarTalleres]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await cargarInscripciones();
+    setRefreshing(false);
   };
 
   const abrirModal = () => {
@@ -81,7 +94,7 @@ const InscripcionesScreen = () => {
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     try {
       await inscripcionesApi.crear({
         estudiante_id: parseInt(formData.estudiante_id),
@@ -93,14 +106,14 @@ const InscripcionesScreen = () => {
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const eliminarInscripcion = (inscripcion: Inscripcion) => {
     Alert.alert(
       'Confirmar eliminación',
-      '¿Estás seguro de eliminar esta inscripción?',
+      `¿Estás seguro de eliminar la inscripción de ${inscripcion.estudiante_nombre} al taller ${inscripcion.taller_nombre}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -120,266 +133,235 @@ const InscripcionesScreen = () => {
     );
   };
 
+  const filteredInscripciones = inscripciones.filter((i) =>
+    (i.estudiante_nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.taller_nombre || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const renderInscripcion = ({ item }: { item: Inscripcion }) => (
     <View style={styles.card}>
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>
-          {item.estudiante_nombre || `Estudiante ID: ${item.estudiante_id}`}
-        </Text>
-        <Text style={styles.cardDetail}>
-          Taller: {item.taller_nombre || `ID: ${item.taller_id}`}
-        </Text>
+        
+        <View style={styles.headerRowCard}>
+          <Ionicons name="person-outline" size={20} color={colors.text.primary} />
+          <Text style={styles.cardTitle}>
+            {item.estudiante_nombre || `Estudiante ID: ${item.estudiante_id}`}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Ionicons name="book-outline" size={16} color={colors.text.secondary} />
+          <Text style={styles.cardDetail}>
+            {item.taller_nombre || `Taller ID: ${item.taller_id}`}
+          </Text>
+        </View>
+
         {item.fecha_inscripcion && (
-          <Text style={styles.cardDetail}>Fecha: {item.fecha_inscripcion}</Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={16} color={colors.text.secondary} />
+            <Text style={styles.cardDetail}>
+              Fecha: {item.fecha_inscripcion}
+            </Text>
+          </View>
         )}
       </View>
-      <TouchableOpacity
-        style={[styles.actionButton, styles.deleteButton]}
-        onPress={() => eliminarInscripcion(item)}
-      >
-        <Text style={styles.actionButtonText}>Eliminar</Text>
-      </TouchableOpacity>
+      
+      {isAdmin && (
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => eliminarInscripcion(item)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+            <Text style={[styles.actionButtonText, { color: colors.error }]}>Eliminar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
+  
+  const estudianteItems = useMemo(() => Alumnos.map(e => ({ label: `${e.nombres} ${e.apellidos}`, value: String(e.id) })), [Alumnos]);
+  const tallerItems = useMemo(() => talleres.map(t => ({ label: t.nombre, value: String(t.id) })), [talleres]);
 
   return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
-        <HeaderWithSearch title="Inscripciones" searchTerm={searchTerm} onSearch={setSearchTerm} onAdd={abrirModal} />
+        <HeaderWithSearch 
+          title="Inscripciones" 
+          searchTerm={searchTerm} 
+          onSearch={setSearchTerm} 
+          onAdd={abrirModal} 
+          // Por defecto la vista en Inscripciones es siempre la lista
+          viewMode={'cards'}
+          onViewModeChange={() => {}} 
+        />
 
-      {loading && <ActivityIndicator size="large" color="#0066cc" style={styles.loader} />}
+      {loading && !refreshing && <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />}
 
       {!loading && inscripciones.length === 0 && (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-          <EmptyState message="No hay inscripciones registradas" icon={<Ionicons name="person-add" size={48} color={'#888'} />} />
+        <View style={styles.emptyStateContainer}>
+          <EmptyState 
+            message="No hay inscripciones registradas" 
+            icon={<Ionicons name="person-add" size={48} color={colors.text.tertiary} />} 
+          />
         </View>
       )}
 
-      {!loading && inscripciones.length > 0 && (
+      {!loading && filteredInscripciones.length > 0 && (
         <FlatList
-          data={inscripciones}
+          data={filteredInscripciones}
           renderItem={renderInscripcion}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
 
+      {/* Modal - Usando el ElegantModal */}
       <Modal
         visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
+        onClose={() => setModalVisible(false)}
+        title="Nueva Inscripción"
+        footer={(
+            <>
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={() => setModalVisible(false)}
+                activeOpacity={0.7}
+                disabled={saving}
+              >
+                <Text style={styles.modalFooterButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <View style={styles.footerDivider} />
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={crearInscripcion}
+                disabled={saving}
+                activeOpacity={0.7}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color={colors.text.secondary} />
+                ) : (
+                  <Text style={styles.modalFooterButtonText}>Crear</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
       >
-        <View style={styles.modalOverlay}>
-          <SafeAreaView style={styles.modalSafeArea} edges={['bottom']}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Nueva Inscripción</Text>
-              </View>
+        <Select
+          label="Estudiante"
+          required
+          value={formData.estudiante_id}
+          onValueChange={(value) => setFormData({ ...formData, estudiante_id: String(value) })}
+          items={estudianteItems}
+        />
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Estudiante *</Text>
-                  <View style={styles.pickerWrapper}>
-                    <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
-                      {Alumnos.map((estudiante) => (
-                        <TouchableOpacity
-                          key={estudiante.id}
-                          style={[
-                            styles.pickerItem,
-                            formData.estudiante_id === estudiante.id.toString() && styles.pickerItemSelected,
-                          ]}
-                          onPress={() => setFormData({ ...formData, estudiante_id: estudiante.id.toString() })}
-                        >
-                          <Text style={styles.pickerItemText}>{estudiante.nombre}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Taller *</Text>
-                  <View style={styles.pickerWrapper}>
-                    <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
-                      {talleres.map((taller) => (
-                        <TouchableOpacity
-                          key={taller.id}
-                          style={[
-                            styles.pickerItem,
-                            formData.taller_id === taller.id.toString() && styles.pickerItemSelected,
-                          ]}
-                          onPress={() => setFormData({ ...formData, taller_id: taller.id.toString() })}
-                        >
-                          <Text style={styles.pickerItemText}>{taller.nombre}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                </View>
-              </ScrollView>
-
-              <View style={styles.modalFooter}>
-                <Button
-                  title="Cancelar"
-                  variant="secondary"
-                  onPress={() => setModalVisible(false)}
-                  style={styles.modalButton}
-                />
-                <Button
-                  title="Crear"
-                  variant="success"
-                  onPress={crearInscripcion}
-                  loading={loading}
-                  style={styles.modalButton}
-                />
-              </View>
-            </View>
-          </SafeAreaView>
-        </View>
+        <Select
+          label="Taller"
+          required
+          value={formData.taller_id}
+          onValueChange={(value) => setFormData({ ...formData, taller_id: String(value) })}
+          items={tallerItems}
+        />
       </Modal>
       </SafeAreaView>
   );
-};const styles = StyleSheet.create({
+};
+
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  addButton: {
-    backgroundColor: '#28a745',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
+    backgroundColor: colors.background.tertiary,
   },
   loader: {
-    marginTop: 20,
+    marginTop: spacing.xl,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
   },
   listContent: {
-    padding: 16,
+    padding: spacing.md,
+    paddingBottom: spacing.xxl,
   },
+  
+  // --- Card Styles ---
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    overflow: 'hidden',
     borderLeftWidth: 4,
-    borderLeftColor: '#28a745',
-    ...(shadows.md as any),
+    borderLeftColor: colors.success, // Color verde para éxito/inscrito
+    ...(shadows.sm as any),
   },
   cardContent: {
-    marginBottom: 12,
+    padding: spacing.md,
+    paddingBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  headerRowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.sizes.lg,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   cardDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.sizes.sm,
+    color: colors.text.secondary,
+    fontWeight: '500',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+    backgroundColor: colors.background.secondary,
   },
   actionButton: {
-    paddingVertical: 10,
-    borderRadius: 8,
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  deleteButton: {
-    backgroundColor: '#dc3545',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
   },
   actionButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: typography.sizes.sm,
+    fontWeight: '600',
+    color: colors.text.secondary, // Se sobrescribe con colors.error
   },
-  modalOverlay: {
+
+  // Modal Footer (copiados de HeaderWithSearch para consistencia)
+  modalFooterButton: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalSafeArea: {
-    maxHeight: '90%',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '100%',
-  },
-  modalHeader: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: Platform.OS === 'web' ? 400 : undefined,
-  },
-  modalFooter: {
     flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
   },
-  modalButton: {
-    flex: 1,
+  modalFooterButtonText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.text.secondary,
   },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    maxHeight: 200,
-  },
-  pickerScroll: {
-    maxHeight: 200,
-  },
-  pickerItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  pickerItemSelected: {
-    backgroundColor: '#e3f2fd',
-  },
-  pickerItemText: {
-    fontSize: 14,
-    color: '#333',
+  footerDivider: {
+    width: 1,
+    backgroundColor: colors.border.light,
   },
 });
 

@@ -12,9 +12,25 @@ export interface Profesor {
 
 export interface Estudiante {
     id: number;
-    nombre: string;
+    nombres: string;
+    apellidos: string;
+    rut?: string;
+    inscripcion?: string;
+    sexo?: string;
+    fecha_nacimiento?: string;
+    telefono?: string;
+    correo_electronico?: string;
+    direccion?: string;
+    curso?: string;
+    colegio?: string;
+    tutor_nombre?: string;
+    tutor_rut?: string;
+    tutor_telefono?: string;
+    tutor_correo?: string;
+    profesion?: string;
+    notificaciones_movil?: boolean;
+    autorizo_imagenes?: boolean;
     edad?: number;
-    contacto?: string;
 }
 
 export interface Taller {

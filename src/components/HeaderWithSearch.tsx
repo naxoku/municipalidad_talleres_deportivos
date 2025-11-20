@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import SearchBar from './SearchBar';
+import { SearchBar } from './SearchBar';
 import { useAuth } from '../contexts/AuthContext';
 import { useResponsive } from '../hooks/useResponsive';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme/colors';
@@ -12,8 +12,8 @@ interface Props {
   searchTerm?: string;
   onSearch?: (v: string) => void;
   onAdd?: (() => void) | undefined;
-  viewMode?: 'cards' | 'table';
-  onViewModeChange?: (mode: 'cards' | 'table') => void;
+  viewMode?: 'cards' | 'table' | 'calendar' | 'dayView';
+  onViewModeChange?: (mode: 'cards' | 'table' | 'calendar' | 'dayView') => void;
 }
 
 const HeaderWithSearch: React.FC<Props> = ({ 
@@ -28,7 +28,7 @@ const HeaderWithSearch: React.FC<Props> = ({
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
 
-  const [internalViewMode, setInternalViewMode] = React.useState<'cards' | 'table'>('cards');
+  const [internalViewMode, setInternalViewMode] = React.useState<'cards' | 'table' | 'calendar' | 'dayView'>('cards');
   
   // Use external viewMode if provided, otherwise use internal state
   const viewMode = externalViewMode !== undefined ? externalViewMode : internalViewMode;

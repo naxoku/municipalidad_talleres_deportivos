@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,33 +6,32 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
-  StyleSheet,
   ScrollView,
-  Modal,
+  StyleSheet,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { profesoresApi } from '../src/api/profesores';
 import { talleresApi } from '../src/api/talleres';
 import { Profesor } from '../src/types';
 import { Input } from '../src/components/Input';
-import { Button } from '../src/components/Button';
 import { EmptyState } from '../src/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import HeaderWithSearch from '../src/components/HeaderWithSearch';
+import Modal from '../src/components/Modal'; // Usando ElegantModal
 import { useResponsive } from '../src/hooks/useResponsive';
-import { sharedStyles } from '../src/theme/sharedStyles';
+import { useToast } from '../src/contexts/ToastContext';
 
-const colors = {
-  primary: '#0066cc',
-};
 
-const spacing = {
-  xl: 20,
-};
+// Extender el tipo Profesor para incluir los talleres asociados (traídos manualmente)
+interface ProfesorEnriquecido extends Profesor {
+    talleres?: string[];
+}
 
 const ProfesoresScreen = () => {
-  const [profesores, setProfesores] = useState<Profesor[]>([]);
+  const [profesores, setProfesores] = useState<ProfesorEnriquecido[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProfesor, setCurrentProfesor] = useState<Profesor | null>(null);
@@ -46,8 +45,10 @@ const ProfesoresScreen = () => {
   const { isWeb, isMobile } = useResponsive();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [saving, setSaving] = useState(false);
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const { showToast } = useToast();
 
   const toggleSort = (column: string) => {
     if (sortBy === column) {
@@ -58,15 +59,13 @@ const ProfesoresScreen = () => {
     }
   };
 
-  useEffect(() => {
-    cargarProfesores();
-  }, []);
-
-  const cargarProfesores = async () => {
+  const cargarProfesores = useCallback(async () => {
     setLoading(true);
     try {
+      // Cargar profesores y talleres en paralelo
       const [profesData, talleresData] = await Promise.all([profesoresApi.listar(), talleresApi.listar()]);
 
+      // Mapear talleres a cada profesor
       const profTalleresMap: Record<number, string[]> = {};
       talleresData.forEach((t) => {
         if (!t.profesores || !Array.isArray(t.profesores)) return;
@@ -82,13 +81,24 @@ const ProfesoresScreen = () => {
         talleres: profTalleresMap[prof.id] || [],
       }));
 
-      setProfesores(merged as any);
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
+      setProfesores(merged as ProfesorEnriquecido[]);
+    } catch {
+      showToast('Error cargando profesores', 'error');
     } finally {
       setLoading(false);
     }
+  }, [showToast]);
+
+  useEffect(() => {
+    cargarProfesores();
+  }, [cargarProfesores]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await cargarProfesores();
+    setRefreshing(false);
   };
+
 
   const abrirModalCrear = () => {
     setIsEditing(false);
@@ -111,16 +121,16 @@ const ProfesoresScreen = () => {
 
   const guardarProfesor = async () => {
     if (!formData.nombre || !formData.especialidad || !formData.email) {
-      Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
+      showToast('Por favor completa todos los campos obligatorios', 'error');
       return;
     }
 
     if (!isEditing && !formData.contrasena) {
-      Alert.alert('Error', 'La contraseña es obligatoria para crear un profesor');
+      showToast('La contraseña es obligatoria para crear un profesor', 'error');
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     try {
       if (isEditing && currentProfesor) {
         await profesoresApi.actualizar({
@@ -128,25 +138,25 @@ const ProfesoresScreen = () => {
           nombre: formData.nombre,
           especialidad: formData.especialidad,
           email: formData.email,
-        });
-        Alert.alert('Éxito', 'Profesor actualizado correctamente');
+        } as Profesor);
+        showToast('Profesor actualizado correctamente', 'success');
       } else {
         await profesoresApi.crear(formData as any);
-        Alert.alert('Éxito', 'Profesor creado correctamente');
+        showToast('Profesor creado correctamente', 'success');
       }
       setModalVisible(false);
       cargarProfesores();
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showToast(error.message, 'error');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const eliminarProfesor = (profesor: Profesor) => {
+  const eliminarProfesor = (profesor: ProfesorEnriquecido) => {
     Alert.alert(
       'Confirmar eliminación',
-      `¿Estás seguro de eliminar a ${profesor.nombre}?`,
+      `¿Estás seguro de eliminar a ${profesor.nombre}? Esta acción es irreversible y desvinculará sus talleres.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -155,10 +165,10 @@ const ProfesoresScreen = () => {
           onPress: async () => {
             try {
               await profesoresApi.eliminar(profesor.id);
-              Alert.alert('Éxito', 'Profesor eliminado correctamente');
+              showToast('Profesor eliminado correctamente', 'success');
               cargarProfesores();
             } catch (error: any) {
-              Alert.alert('Error', error.message);
+              showToast(error.message, 'error');
             }
           },
         },
@@ -166,100 +176,18 @@ const ProfesoresScreen = () => {
     );
   };
 
-  const renderProfesor = ({ item }: { item: Profesor }) => {
-    const talleres = (item as any).talleres || [];
-    const email = (item as any).email || (item as any).profesor_email || '-';
-    const telefono = item.telefono || '-';
-    
-    return (
-      <View style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}>
-        {/* Header con nombre y especialidad */}
-        <View style={styles.cardHeader}>
-          <View style={styles.headerContent}>
-            <Text style={styles.profesorName}>{item.nombre}</Text>
-            {item.especialidad && (
-              <View style={styles.especialidadBadge}>
-                <Text style={styles.especialidadText}>{item.especialidad}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Grid de información */}
-        <View style={styles.infoGrid}>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue} numberOfLines={1}>{email}</Text>
-          </View>
-          
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Teléfono</Text>
-            <Text style={styles.infoValue}>{telefono}</Text>
-          </View>
-
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Talleres</Text>
-            <Text style={styles.infoValue}>
-              {talleres.length > 0 ? `${talleres.length} asignado${talleres.length > 1 ? 's' : ''}` : 'Sin asignar'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Lista de talleres si existen */}
-        {talleres.length > 0 && (
-          <View style={styles.talleresSection}>
-            <Text style={styles.talleresSectionTitle}>Talleres asignados:</Text>
-            <View style={styles.talleresChips}>
-              {talleres.slice(0, 3).map((taller: string, index: number) => (
-                <View key={index} style={styles.tallerChip}>
-                  <Text style={styles.tallerChipText} numberOfLines={1}>{taller}</Text>
-                </View>
-              ))}
-              {talleres.length > 3 && (
-                <View style={[styles.tallerChip, styles.tallerChipMore]}>
-                  <Text style={styles.tallerChipText}>+{talleres.length - 3}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Acciones */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => abrirModalEditar(item)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="create-outline" size={18} color="#64748B" />
-            <Text style={styles.quickActionText}>Editar</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.actionDivider} />
-          
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => eliminarProfesor(item)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="trash-outline" size={18} color="#EF4444" />
-            <Text style={[styles.quickActionText, { color: '#EF4444' }]}>Eliminar</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
-
   const filteredProfesores = profesores.filter((p) =>
     p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.especialidad && p.especialidad.toLowerCase().includes(searchTerm.toLowerCase()))
+    (p.especialidad && p.especialidad.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (p.talleres && p.talleres.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())))
   );
 
-  const displayedProfesores = React.useMemo(() => {
+  const displayedProfesores = useMemo(() => {
     const arr = [...filteredProfesores];
     if (!sortBy) return arr;
 
-    arr.sort((a: Profesor, b: Profesor) => {
+    arr.sort((a, b) => {
       let va: any = '';
       let vb: any = '';
       switch (sortBy) {
@@ -272,33 +200,171 @@ const ProfesoresScreen = () => {
           vb = (b.especialidad || '').toLowerCase();
           break;
         case 'email':
-          va = ((a as any).email || '').toLowerCase();
-          vb = ((b as any).email || '').toLowerCase();
+          va = (a.email || '').toLowerCase();
+          vb = (b.email || '').toLowerCase();
           break;
         case 'telefono':
           va = (a.telefono || '').toLowerCase();
           vb = (b.telefono || '').toLowerCase();
           break;
         case 'talleres':
-          va = (((a as any).talleres || []).join(', ') || '').toLowerCase();
-          vb = (((b as any).talleres || []).join(', ') || '').toLowerCase();
+          va = (a.talleres || []).length;
+          vb = (b.talleres || []).length;
           break;
         default:
           va = (a.nombre || '').toLowerCase();
           vb = (b.nombre || '').toLowerCase();
       }
 
-      if (va < vb) return sortDir === 'asc' ? -1 : 1;
-      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      if (typeof va === 'string' && typeof vb === 'string') {
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      } else if (typeof va === 'number' && typeof vb === 'number') {
+        return sortDir === 'asc' ? va - vb : vb - va;
+      }
       return 0;
     });
 
     return arr;
   }, [filteredProfesores, sortBy, sortDir]);
 
+  const renderProfesorCard = ({ item }: { item: ProfesorEnriquecido }) => {
+    const talleres = item.talleres || [];
+    const email = item.email || '-';
+    const telefono = item.telefono || '-';
+    
+    return (
+      <View style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}>
+        {/* Header con título */}
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.nombre}
+          </Text>
+          
+          {/* Badge de especialidad */}
+          {item.especialidad && (
+            <View style={styles.especialidadBadge}>
+              <Text style={styles.especialidadText}>{item.especialidad}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Información principal - Grid simple */}
+        <View style={styles.infoGrid}>
+          {/* Email */}
+          {email !== '-' && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoValue} numberOfLines={1}>
+                {email}
+              </Text>
+            </View>
+          )}
+
+          {/* Teléfono */}
+          {telefono !== '-' && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Teléfono</Text>
+              <Text style={styles.infoValue} numberOfLines={1}>
+                {telefono}
+              </Text>
+            </View>
+          )}
+
+          {/* Talleres */}
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Talleres</Text>
+            <Text style={[styles.infoValue, styles.cuposValue]}>
+              {talleres.length > 0 ? (
+                `${talleres.length} asignado${talleres.length !== 1 ? 's' : ''}`
+              ) : (
+                'Sin asignar'
+              )}
+            </Text>
+          </View>
+        </View>
+
+        {/* Acciones rápidas */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              abrirModalEditar(item);
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="create-outline" size={18} color="#64748B" />
+            <Text style={styles.quickActionText}>Editar</Text>
+          </TouchableOpacity>
+
+          <View style={styles.actionDivider} />
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              eliminarProfesor(item);
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="trash-outline" size={18} color="#EF4444" />
+            <Text style={[styles.quickActionText, { color: '#EF4444' }]}>Eliminar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderProfesoresTableRow = ({ item, index }: { item: ProfesorEnriquecido; index: number }) => (
+    <View 
+      key={item.id} 
+      style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven, isWeb && styles.tableWeb]}
+    >
+      <View style={[styles.tableCellNombre, isWeb && styles.tableCellNombreWeb]}>
+        <Text style={styles.tableCellText} numberOfLines={2}>{item.nombre}</Text>
+        {item.especialidad && (
+             <Text style={[styles.tableCellText, styles.tableSubText]} numberOfLines={1}>
+                {item.especialidad}
+             </Text>
+        )}
+      </View>
+
+      <View style={[styles.tableCellEmail, isWeb && styles.tableCellEmailWeb]}>
+        <Text style={styles.tableCellText} numberOfLines={1}>{item.email || '-'}</Text>
+      </View>
+
+      <View style={[styles.tableCellTelefono, styles.tableCellCenter, isWeb && styles.tableCellTelefonoWeb]}>
+        <Text style={styles.tableCellText}>{item.telefono || '-'}</Text>
+      </View>
+
+      <View style={[styles.tableCellTalleres, styles.tableCellCenter, isWeb && styles.tableCellTalleresWeb]}>
+        <View style={styles.tableBadge}>
+            <Text style={styles.tableBadgeText}>{item.talleres?.length || 0}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.tableCellAcciones, styles.tableCellActions, isWeb && styles.tableCellAccionesWeb]}>
+        <TouchableOpacity
+          style={styles.tableActionButton}
+          onPress={() => abrirModalEditar(item)}
+        >
+          <Ionicons name="create-outline" size={18} color="#3B82F6" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tableActionButton]}
+          onPress={() => eliminarProfesor(item)}
+        >
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const renderProfesoresTable = () => (
     <View style={[styles.table, isWeb && styles.tableWeb]}>
-      <View style={[styles.tableHeader, isWeb && styles.tableHeaderWeb]}>
+      <View style={[styles.tableHeader, isWeb && styles.tableHeader]}>
         <TouchableOpacity
           style={[styles.tableCellNombre, isWeb && styles.tableCellNombreWeb, styles.tableHeaderButton]}
           onPress={() => toggleSort('nombre')}
@@ -312,19 +378,7 @@ const ProfesoresScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tableCellEspecialidad, isWeb && styles.tableCellEspecialidadWeb, styles.tableHeaderButton]}
-          onPress={() => toggleSort('especialidad')}
-        >
-          <Text style={styles.tableHeaderButtonText}>Especialidad</Text>
-          <Ionicons
-            name={sortBy === 'especialidad' ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'caret-down'}
-            size={14}
-            color={sortBy === 'especialidad' ? '#3B82F6' : '#94A3B8'}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tableCellEmail, styles.tableCellCenter, isWeb && styles.tableCellEmailWeb, styles.tableHeaderButton]}
+          style={[styles.tableCellEmail, isWeb && styles.tableCellEmailWeb, styles.tableHeaderButton]}
           onPress={() => toggleSort('email')}
         >
           <Text style={styles.tableHeaderButtonText}>Email</Text>
@@ -348,7 +402,7 @@ const ProfesoresScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tableCellTalleres, isWeb && styles.tableCellTalleresWeb, styles.tableHeaderButton]}
+          style={[styles.tableCellTalleres, styles.tableCellCenter, isWeb && styles.tableCellTalleresWeb, styles.tableHeaderButton]}
           onPress={() => toggleSort('talleres')}
         >
           <Text style={styles.tableHeaderButtonText}>Talleres</Text>
@@ -360,66 +414,22 @@ const ProfesoresScreen = () => {
         </TouchableOpacity>
 
         <View style={[styles.tableCellAcciones, styles.tableCellCenter, isWeb && styles.tableCellAccionesWeb]}>
-          <Text style={styles.tableHeaderText}>Acciones</Text>
+          <Text style={styles.tableHeaderButtonText}>Acciones</Text>
         </View>
       </View>
 
       {displayedProfesores.map((item, index) => (
-        <View key={item.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven, isWeb && styles.tableRowWeb]}>
-          <View style={[styles.tableCellNombre, isWeb && styles.tableCellNombreWeb]}>
-            <Text style={styles.tableCellText} numberOfLines={2}>{item.nombre}</Text>
-          </View>
-
-          <View style={[styles.tableCellEspecialidad, isWeb && styles.tableCellEspecialidadWeb]}>
-            <Text style={styles.tableCellText}>{item.especialidad || '-'}</Text>
-          </View>
-
-          <View style={[styles.tableCellEmail, styles.tableCellCenter, isWeb && styles.tableCellEmailWeb]}>
-            <Text style={styles.tableCellText} numberOfLines={1}>{(item as any).email || '-'}</Text>
-          </View>
-
-          <View style={[styles.tableCellTelefono, styles.tableCellCenter, isWeb && styles.tableCellTelefonoWeb]}>
-            <Text style={styles.tableCellText}>{item.telefono || '-'}</Text>
-          </View>
-
-          <View style={[styles.tableCellTalleres, isWeb && styles.tableCellTalleresWeb]}>
-            <Text style={styles.tableCellText} numberOfLines={2}>{((item as any).talleres || []).slice(0, 3).join(', ') || '-'}</Text>
-          </View>
-
-          <View style={[styles.tableCellAcciones, styles.tableCellActions, isWeb && styles.tableCellAccionesWeb]}>
-            <TouchableOpacity
-              style={styles.tableActionButton}
-              onPress={() => Alert.alert(
-                item.nombre,
-                `Email: ${(item as any).email || '-'}\nTel: ${item.telefono || '-'}\nTalleres: ${(item as any).talleres && (item as any).talleres.length ? (item as any).talleres.join(', ') : '-'}`
-              )}
-            >
-              <Ionicons name="information-circle" size={16} color="#64748B" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.tableActionButton, { marginLeft: 8 }]}
-              onPress={() => abrirModalEditar(item)}
-            >
-              <Ionicons name="create-outline" size={16} color="#3B82F6" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.tableActionButton, { marginLeft: 8 }]}
-              onPress={() => eliminarProfesor(item)}
-            >
-              <Ionicons name="trash-outline" size={16} color="#EF4444" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <React.Fragment key={item.id}>
+          {renderProfesoresTableRow({ item, index })}
+        </React.Fragment>
       ))}
     </View>
   );
 
-  const Container = isWeb ? View : SafeAreaView;
+  const Container: any = isWeb ? View : SafeAreaView;
 
   return (
-      <Container style={sharedStyles.container} edges={isWeb ? undefined : ['bottom']}>
+      <Container style={styles.container} edges={isWeb ? undefined : ['bottom']}>
         <View style={{ flex: 1 }}>
           <HeaderWithSearch
             title="Profesores"
@@ -427,146 +437,178 @@ const ProfesoresScreen = () => {
             onSearch={setSearchTerm}
             onAdd={abrirModalCrear}
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={(mode) => {
+              if (mode === 'cards' || mode === 'table') {
+                setViewMode(mode);
+              }
+            }}
           />
-
-          {isWeb ? (
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
-              <View style={{ paddingBottom: spacing.xl }}>
-                {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
-
-                {!loading && profesores.length === 0 && (
-                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-                    <EmptyState message="No hay profesores registrados" icon={<Ionicons name="person" size={48} color={colors.primary || '#888'} />} />
-                  </View>
-                )}
-
-                {!loading && profesores.length > 0 && (
-                  viewMode === 'cards' ? (
-                    <FlatList
-                      data={filteredProfesores}
-                      renderItem={renderProfesor}
-                      keyExtractor={(item) => item.id.toString()}
-                      numColumns={isMobile ? 1 : 2}
-                      key={isMobile ? 'list' : 'grid'}
-                      columnWrapperStyle={isMobile ? undefined : styles.gridRow}
-                      contentContainerStyle={styles.listContent}
-                      scrollEnabled={false}
-                    />
-                  ) : (
-                    <ScrollView style={styles.tableContainer} contentContainerStyle={styles.tableScrollContent} nestedScrollEnabled>
-                      {isWeb ? (
-                        renderProfesoresTable()
-                      ) : (
-                        <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={[styles.tableHorizontalContent, styles.tableHorizontalMinWidth]}>
-                          {renderProfesoresTable()}
-                        </ScrollView>
-                      )}
-                    </ScrollView>
-                  )
-                )}
-              </View>
-            </ScrollView>
-          ) : (
-            <>
-              {loading && <ActivityIndicator size="large" color={colors.primary} style={sharedStyles.loader} />}
+          
+          <ScrollView 
+            style={{ flex: 1 }} 
+            showsVerticalScrollIndicator={true}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
+            }
+          >
+            <View style={{ flex: 1 }}>
+              {loading && !refreshing && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#3B82F6" />
+                </View>
+              )}
 
               {!loading && profesores.length === 0 && (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-                  <EmptyState message="No hay profesores registrados" icon={<Ionicons name="person" size={48} color={colors.primary || '#888'} />} />
+                <View style={styles.emptyStateContainer}>
+                  <EmptyState message="No hay profesores registrados" icon={<Ionicons name="people-outline" size={48} color="#94A3B8" />} />
                 </View>
               )}
 
               {!loading && profesores.length > 0 && (
-                <FlatList
-                  data={filteredProfesores}
-                  renderItem={renderProfesor}
-                  keyExtractor={(item) => item.id.toString()}
-                  contentContainerStyle={styles.listContent}
-                />
+                viewMode === 'cards' ? (
+                  <FlatList
+                    data={displayedProfesores}
+                    renderItem={renderProfesorCard}
+                    keyExtractor={(item) => item.id.toString()}
+                    numColumns={isMobile ? 1 : 2}
+                    key={isMobile ? 'list' : 'grid'}
+                    columnWrapperStyle={isMobile ? undefined : styles.gridRow}
+                    contentContainerStyle={styles.listContent}
+                    scrollEnabled={false}
+                  />
+                ) : (
+                  <ScrollView style={styles.tableContainer} contentContainerStyle={styles.tableScrollContent} nestedScrollEnabled>
+                    {isWeb ? (
+                      renderProfesoresTable()
+                    ) : (
+                      <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={[styles.tableHorizontalContent, styles.tableHorizontalMinWidth]}>
+                        {renderProfesoresTable()}
+                      </ScrollView>
+                    )}
+                  </ScrollView>
+                )
               )}
-            </>
-          )}
+            </View>
+          </ScrollView>
         </View>
 
+        {/* Modal - Usando el ElegantModal */}
         <Modal
           visible={modalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={[sharedStyles.modalOverlay, isWeb && sharedStyles.webModalOverlay]}>
-            <SafeAreaView style={[sharedStyles.modalSafeArea, isWeb && sharedStyles.webModalSafeArea]} edges={isWeb ? [] : ['bottom']}>
-              <View style={[sharedStyles.modalContent, isWeb && sharedStyles.webModalContent]}>
-                <View style={sharedStyles.modalHeader}>
-                  <Text style={sharedStyles.modalTitle}>
-                    {isEditing ? 'Editar Profesor' : 'Nuevo Profesor'}
+          onClose={() => setModalVisible(false)}
+          title={isEditing ? 'Editar Profesor' : 'Nuevo Profesor'}
+          maxWidth={isWeb ? 600 : undefined}
+          footer={(
+            <>
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={() => setModalVisible(false)}
+                activeOpacity={0.7}
+                disabled={saving}
+              >
+                <Text style={styles.modalFooterButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <View style={styles.footerDivider} />
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={guardarProfesor}
+                disabled={saving}
+                activeOpacity={0.7}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#64748B" />
+                ) : (
+                  <Text style={styles.modalFooterButtonText}>
+                    {isEditing ? 'Actualizar' : 'Crear'}
                   </Text>
-                </View>
-
-                <ScrollView style={sharedStyles.modalBody} showsVerticalScrollIndicator={false}>
-                  <Input
-                    label="Nombre"
-                    required
-                    value={formData.nombre}
-                    onChangeText={(text) => setFormData({ ...formData, nombre: text })}
-                    placeholder="Nombre completo"
-                  />
-
-                  <Input
-                    label="Especialidad"
-                    required
-                    value={formData.especialidad}
-                    onChangeText={(text) => setFormData({ ...formData, especialidad: text })}
-                    placeholder="Ej: Educación Física, Danza"
-                  />
-
-                  <Input
-                    label="Email"
-                    required
-                    value={formData.email}
-                    onChangeText={(text) => setFormData({ ...formData, email: text })}
-                    placeholder="correo@ejemplo.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-
-                  {!isEditing && (
-                    <Input
-                      label="Contraseña"
-                      required
-                      value={formData.contrasena}
-                      onChangeText={(text) => setFormData({ ...formData, contrasena: text })}
-                      placeholder="Contraseña"
-                      secureTextEntry
-                    />
-                  )}
-                </ScrollView>
-
-                <View style={sharedStyles.modalFooter}>
-                  <Button
-                    title="Cancelar"
-                    variant="secondary"
-                    onPress={() => setModalVisible(false)}
-                    style={sharedStyles.modalButton}
-                  />
-                  <Button
-                    title={isEditing ? 'Actualizar' : 'Crear'}
-                    variant="success"
-                    onPress={guardarProfesor}
-                    loading={loading}
-                    style={sharedStyles.modalButton}
-                  />
-                </View>
-              </View>
-            </SafeAreaView>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        >
+          <View style={styles.modalIntro}>
+            <Text style={styles.modalIntroText}>
+              {isEditing
+                ? 'Modifica la información del profesor. Los cambios se aplicarán inmediatamente.'
+                : 'Registra un nuevo profesor en el sistema. El profesor podrá acceder con su email y contraseña.'
+              }
+            </Text>
           </View>
+
+          <Input
+            label="Nombre Completo"
+            required
+            value={formData.nombre}
+            onChangeText={(text) => setFormData({ ...formData, nombre: text })}
+            placeholder="Ej: María González, Juan Carlos Rodríguez"
+            maxLength={100}
+          />
+
+          <Input
+            label="Especialidad"
+            required
+            value={formData.especialidad}
+            onChangeText={(text) => setFormData({ ...formData, especialidad: text })}
+            placeholder="Ej: Educación Física, Danza Moderna, Natación, Fútbol"
+            maxLength={50}
+          />
+
+          <Input
+            label="Correo Electrónico"
+            required
+            value={formData.email}
+            onChangeText={(text) => setFormData({ ...formData, email: text })}
+            placeholder="profesor@municipalidad.cl"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            maxLength={100}
+          />
+
+          {!isEditing && (
+            <>
+              <Input
+                label="Contraseña de Acceso"
+                required
+                value={formData.contrasena}
+                onChangeText={(text) => setFormData({ ...formData, contrasena: text })}
+                placeholder="Mínimo 8 caracteres, incluir números y letras"
+                secureTextEntry
+                maxLength={50}
+              />
+              <View style={styles.passwordHelper}>
+                <Text style={styles.passwordHelperText}>
+                  🔒 La contraseña debe tener al menos 8 caracteres e incluir números y letras mayúsculas/minúsculas.
+                </Text>
+              </View>
+            </>
+          )}
+
+          {isEditing && (
+            <View style={styles.editNote}>
+              <Text style={styles.editNoteText}>
+                📝 Para cambiar la contraseña, contacta al administrador del sistema.
+              </Text>
+            </View>
+          )}
         </Modal>
       </Container>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFB',
+  },
+  loadingContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+  },
+  emptyStateContainer: {
+    paddingVertical: 80,
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
   listContent: {
     padding: 16,
     paddingBottom: 24,
@@ -576,7 +618,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // Card minimalista
+  // Cards View - Diseño Minimalista
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
@@ -593,36 +635,37 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // Header limpio
+  // Header minimalista
   cardHeader: {
     padding: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
-  headerContent: {
-    gap: 8,
-  },
-  profesorName: {
+  cardTitle: {
     fontSize: 17,
     fontWeight: '600',
     color: '#111827',
     lineHeight: 24,
+    flex: 1,
+    marginRight: 8,
   },
   especialidadBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#F3F4F6',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 4,
+    backgroundColor: '#DBEAFE',
   },
   especialidadText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#1E40AF',
   },
 
-  // Info Grid
+  // Info Grid - Diseño limpio y organizado
   infoGrid: {
     padding: 16,
     gap: 12,
@@ -644,45 +687,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
-
-  // Sección de talleres
-  talleresSection: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 8,
-  },
-  talleresSectionTitle: {
-    fontSize: 12,
-    color: '#6B7280',
+  cuposValue: {
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  talleresChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  tallerChip: {
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-    maxWidth: '100%',
-  },
-  tallerChipMore: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
-  },
-  tallerChipText: {
-    fontSize: 12,
-    color: '#3B82F6',
-    fontWeight: '600',
+    color: '#111827',
   },
 
-  // Acciones rápidas
+  // Acciones rápidas - Barra inferior limpia
   quickActions: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -706,7 +716,8 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: '#E5E7EB',
   },
-  // Table View styles
+  
+  // Table View (mantiene el diseño original)
   tableContainer: {
     flex: 1,
     paddingHorizontal: 16,
@@ -729,7 +740,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tableWeb: {
-    width: '100%'
+    width: '100%',
   },
   tableHeader: {
     flexDirection: 'row',
@@ -739,63 +750,35 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 10,
   },
-  tableHeaderWeb: {
-    width: '100%'
-  },
-  tableHeaderText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E293B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tableHeaderButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  tableHeaderButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E293B',
-    textTransform: 'uppercase',
-  },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     paddingVertical: 10,
     paddingHorizontal: 10,
-    minHeight: 56,
-  },
-  tableRowWeb: {
-    width: '100%'
+    minHeight: 60,
   },
   tableRowEven: {
-    backgroundColor: '#FAFBFC'
+    backgroundColor: '#FAFBFC',
   },
   tableCellNombre: {
     justifyContent: 'center',
     paddingHorizontal: 8,
-    minWidth: 200,
+    minWidth: 160,
   },
   tableCellNombreWeb: {
     flex: 2,
     minWidth: 0,
   },
-  tableCellEspecialidad: {
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    minWidth: 140,
-  },
-  tableCellEspecialidadWeb: {
-    flex: 1.5,
-    minWidth: 0,
+  tableSubText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   tableCellEmail: {
     justifyContent: 'center',
     paddingHorizontal: 8,
-    minWidth: 160,
+    minWidth: 180,
   },
   tableCellEmailWeb: {
     flex: 2,
@@ -813,19 +796,19 @@ const styles = StyleSheet.create({
   tableCellTalleres: {
     justifyContent: 'center',
     paddingHorizontal: 8,
-    minWidth: 180,
+    minWidth: 150,
   },
   tableCellTalleresWeb: {
-    flex: 2,
+    flex: 1.5,
     minWidth: 0,
   },
   tableCellAcciones: {
     justifyContent: 'center',
     paddingHorizontal: 8,
-    minWidth: 140,
+    minWidth: 100,
   },
   tableCellAccionesWeb: {
-    flex: 1.5,
+    flex: 1,
     minWidth: 0,
   },
   tableCellCenter: {
@@ -837,20 +820,103 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  tableHeaderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tableHeaderButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E293B',
+    textTransform: 'uppercase',
+  },
   tableCellText: {
     fontSize: 13,
     color: '#475569',
     fontWeight: '500',
   },
   tableActionButton: {
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: 6,
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E8ECF2',
+  },
+  tableBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  tableBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+
+  // Modal footer buttons - estilo quick actions
+  modalFooterButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+  },
+  modalFooterButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  footerDivider: {
+    width: 1,
+    backgroundColor: '#E5E7EB',
+  },
+
+  // Modal content improvements
+  modalIntro: {
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalIntroText: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+  },
+  passwordHelper: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  passwordHelperText: {
+    fontSize: 12,
+    color: '#92400E',
+    lineHeight: 16,
+  },
+  editNote: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#F0F9FF',
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: '#0EA5E9',
+  },
+  editNoteText: {
+    fontSize: 12,
+    color: '#0C4A6E',
+    lineHeight: 16,
   },
 });
 

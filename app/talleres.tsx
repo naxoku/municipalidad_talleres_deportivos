@@ -212,11 +212,7 @@ const TalleresScreen = () => {
     const occupancyPercentage = Math.round(((item.total_Alumnos || 0) / (item.cupos_maximos || 30)) * 100);
 
     return (
-      <TouchableOpacity 
-        style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}
-        activeOpacity={0.95}
-        onPress={() => router.push(`/alumnos?tallerId=${item.id}`)}
-      >
+      <View style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}>
         {/* Header con título */}
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle} numberOfLines={2}>
@@ -287,8 +283,13 @@ const TalleresScreen = () => {
               e.stopPropagation();
               // Mostrar un modal rápido con detalles del taller
               Alert.alert(
-                item.nombre,
-                `${item.descripcion || 'Sin descripción'}\n\nProfesor(es): ${item.profesores && item.profesores.length > 0 ? item.profesores.map((p: any) => p.nombre).join(', ') : '—'}\nHorario: ${item.horario || '—'}\nUbicación: ${item.ubicacion || '—'}\nCupos: ${item.total_Alumnos || 0}/${item.cupos_maximos || 30}\nAsistencia: ${item.asistencia_promedio || 0}%`,
+                `🏆 ${item.nombre}`,
+                `📝 ${item.descripcion || 'Sin descripción disponible'}\n\n` +
+                `👨‍🏫 Profesor(es): ${item.profesores && item.profesores.length > 0 ? item.profesores.map((p: any) => p.nombre).join(', ') : 'No asignado'}\n\n` +
+                `🕒 Horario: ${item.horario || 'No definido'}\n\n` +
+                `📍 Ubicación: ${item.ubicacion || 'Por definir'}\n\n` +
+                `👥 Inscritos: ${item.total_Alumnos || 0} de ${item.cupos_maximos || 30} cupos\n\n` +
+                `📊 Asistencia promedio: ${item.asistencia_promedio || 0}%`,
                 [
                   { text: 'Cerrar', style: 'cancel' },
                   { text: 'Ver clases', onPress: () => router.push(`/clases?tallerId=${item.id}`) },
@@ -359,7 +360,7 @@ const TalleresScreen = () => {
             </>
           )}
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -607,7 +608,11 @@ const TalleresScreen = () => {
             onSearch={setSearchTerm}
             onAdd={isAdmin ? abrirModalCrear : undefined}
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={(mode) => {
+              if (mode === 'cards' || mode === 'table') {
+                setViewMode(mode);
+              }
+            }}
           />
 
           {loading && !refreshing && (
@@ -666,7 +671,7 @@ const TalleresScreen = () => {
         <Modal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
-          title={isEditing ? 'Editar Taller' : 'Nuevo Taller'}
+          title={isEditing ? `Editar Taller: ${currentTaller?.nombre}` : 'Crear Nuevo Taller'}
           maxWidth={isWeb ? 600 : undefined}
           dismissOnBackdropPress={true}
           footer={(
@@ -689,53 +694,78 @@ const TalleresScreen = () => {
                   <ActivityIndicator size="small" color="#64748B" />
                 ) : (
                   <Text style={styles.modalFooterButtonText}>
-                    {isEditing ? 'Actualizar' : 'Crear'}
+                    {isEditing ? 'Guardar Cambios' : 'Crear Taller'}
                   </Text>
                 )}
               </TouchableOpacity>
             </>
           )}
         >
+          <View style={styles.modalIntro}>
+            <Text style={styles.modalIntroText}>
+              {isEditing
+                ? 'Modifica la información del taller. Los cambios se aplicarán inmediatamente.'
+                : 'Crea un nuevo taller deportivo. Completa toda la información necesaria para que los alumnos puedan inscribirse.'
+              }
+            </Text>
+          </View>
+
           <Input
-            label="Nombre"
+            label="Nombre del Taller"
             required
             value={formData.nombre}
             onChangeText={(text) => setFormData({ ...formData, nombre: text })}
-            placeholder="Nombre del taller"
+            placeholder="Ej: Fútbol Infantil, Danza Moderna, Natación Avanzada"
+            maxLength={100}
           />
 
           <Input
             label="Descripción"
             value={formData.descripcion}
             onChangeText={(text) => setFormData({ ...formData, descripcion: text })}
-            placeholder="Descripción del taller"
+            placeholder="Describe brevemente el contenido del taller, objetivos y requisitos para los participantes"
             multiline
             numberOfLines={3}
+            maxLength={500}
           />
 
           <View style={sharedStyles.inputContainer}>
             <Text style={sharedStyles.label}>Profesores Asignados</Text>
+            <Text style={styles.helperText}>
+              Selecciona uno o más profesores que impartirán este taller. Si no hay profesores disponibles, primero debes crearlos.
+            </Text>
             <ScrollView style={sharedStyles.pickerScroll} showsVerticalScrollIndicator={false}>
-              {profesores.map((profesor) => (
-                <TouchableOpacity
-                  key={profesor.id}
-                  style={[
-                    sharedStyles.pickerItem,
-                    formData.profesorIds.includes(profesor.id) && sharedStyles.pickerItemSelected,
-                  ]}
-                  onPress={() => {
-                    const newIds = formData.profesorIds.includes(profesor.id)
-                      ? formData.profesorIds.filter((id) => id !== profesor.id)
-                      : [...formData.profesorIds, profesor.id];
-                    setFormData({ ...formData, profesorIds: newIds });
-                  }}
-                >
-                  <Text style={sharedStyles.pickerItemText}>
-                    {formData.profesorIds.includes(profesor.id) ? '✓ ' : '○ '}
-                    {profesor.nombre}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {profesores.length === 0 ? (
+                <View style={styles.emptyPicker}>
+                  <Ionicons name="person-outline" size={24} color="#94A3B8" />
+                  <Text style={styles.emptyPickerText}>No hay profesores registrados</Text>
+                  <Text style={styles.emptyPickerSubtext}>Crea profesores primero para poder asignarlos</Text>
+                </View>
+              ) : (
+                profesores.map((profesor) => (
+                  <TouchableOpacity
+                    key={profesor.id}
+                    style={[
+                      sharedStyles.pickerItem,
+                      formData.profesorIds.includes(profesor.id) && sharedStyles.pickerItemSelected,
+                    ]}
+                    onPress={() => {
+                      const newIds = formData.profesorIds.includes(profesor.id)
+                        ? formData.profesorIds.filter((id) => id !== profesor.id)
+                        : [...formData.profesorIds, profesor.id];
+                      setFormData({ ...formData, profesorIds: newIds });
+                    }}
+                  >
+                    <Text style={sharedStyles.pickerItemText}>
+                      {formData.profesorIds.includes(profesor.id) ? '✓ ' : '○ '}
+                      {profesor.nombre}
+                      {profesor.especialidad && (
+                        <Text style={styles.profesorEspecialidad}> - {profesor.especialidad}</Text>
+                      )}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
           </View>
         </Modal>
@@ -1065,6 +1095,47 @@ const styles = StyleSheet.create({
   footerDivider: {
     width: 1,
     backgroundColor: '#E5E7EB',
+  },
+
+  // Modal content improvements
+  modalIntro: {
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalIntroText: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  emptyPicker: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+  emptyPickerText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  emptyPickerSubtext: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  profesorEspecialidad: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
   },
 });
 

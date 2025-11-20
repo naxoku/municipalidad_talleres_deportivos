@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity, RefreshControl, StyleSheet } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity, RefreshControl, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL } from '../src/api/config';
 import { Badge } from '../src/components/Badge';
@@ -7,9 +7,9 @@ import { CardSkeleton } from '../src/components/LoadingSkeleton';
 import { useResponsive } from '../src/hooks/useResponsive';
 import { sharedStyles } from '../src/theme/sharedStyles';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, typography, colors } from '../src/theme/colors';
+import { spacing, typography, colors, borderRadius } from '../src/theme/colors'; // Aseguramos importar todas las constantes
 import { Input } from '../src/components/Input';
-import Modal from '../src/components/Modal';
+import Modal from '../src/components/Modal'; // Usando ElegantModal (el mejorado)
 import { Select } from '../src/components/Select';
 import { alumnosApi } from '../src/api/alumnos';
 import { talleresApi } from '../src/api/talleres';
@@ -18,6 +18,22 @@ import { useAuth } from '../src/contexts/AuthContext';
 import { useToast } from '../src/contexts/ToastContext';
 import { useRouter } from 'expo-router';
 
+// Replicamos la función de formato de hora para usarla localmente
+const formatTimeHHMM = (timeString: string | undefined): string => {
+  if (!timeString) return '-';
+  try {
+    // Intenta formatear HH:MM (o HH:MM:SS) a un formato de 12h o 24h limpio
+    const parts = timeString.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+  } catch {
+    // Fallback si el formato es inválido
+  }
+  return timeString;
+};
+
+
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,13 +41,15 @@ export default function DashboardScreen() {
     total_talleres: 0,
     total_alumnos: 0,
     total_profesores: 0,
-    clases_hoy: [],
+    clases_hoy: [], // Esto se llenará con la lógica de abajo si la API principal falla
     asistencia_semanal: [],
   });
+
   const { isWeb, isMobile } = useResponsive();
   const { userRole } = useAuth();
   const isAdmin = userRole === 'administrador';
   const { showToast } = useToast();
+  const router = useRouter();
 
   // Estados para modales
   const [modalNuevoAlumnoVisible, setModalNuevoAlumnoVisible] = useState(false);
@@ -44,7 +62,7 @@ export default function DashboardScreen() {
 
   // Estados para formularios
   const [formNuevoAlumno, setFormNuevoAlumno] = useState({
-    nombre: '',
+    nombres: '',
     edad: '',
     contacto: '',
   });
@@ -63,9 +81,25 @@ export default function DashboardScreen() {
   const [loadingNuevoTaller, setLoadingNuevoTaller] = useState(false);
   const [loadingListas, setLoadingListas] = useState(false);
 
+  const parseDateTime = (fecha: string | undefined, time: string | undefined) => {
+    if (!fecha || !time) return null;
+    const t = String(time).trim();
+    const parts = t.split(':');
+    if (parts.length < 2) return null;
+    const hhmm = parts.slice(0, 2).join(':');
+    try {
+      // Intentamos crear una fecha en la zona horaria local o de la API
+      // Nota: Si la API no usa ISO 8601 ni incluye Z, la interpretación puede variar.
+      return new Date(fecha + 'T' + hhmm + ':00');
+    } catch {
+      return null;
+    }
+  };
+
   const cargar = async () => {
     setLoading(true);
     try {
+      // Tu lógica de fetch de métricas (manteniendo la API original)
       const res = await fetch(`${API_URL}/api/dashboard.php`);
       const json = await res.json();
       if (json.status === 'success') {
@@ -82,6 +116,7 @@ export default function DashboardScreen() {
 
   const cargarClasesSemana = async () => {
     try {
+      // --- Cálculo de la semana y mapeo de días (Lógica Original) ---
       const now = new Date();
       const day = now.getDay();
       const diffToMonday = ((day + 6) % 7);
@@ -107,7 +142,7 @@ export default function DashboardScreen() {
           talleresMap[String(t.id)] = t;
         });
       }
-
+      
       const normalize = (s: string) => String(s || '').toLowerCase()
         .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
         .replace(/ü/g, 'u').replace(/ñ/g, 'n').trim();
@@ -127,8 +162,6 @@ export default function DashboardScreen() {
         if (!dateMap[name]) dateMap[name] = [];
         dateMap[name].push(iso);
       }
-
-      const synthesized: any[] = [];
 
       const resolveDays = (raw: any) => {
         if (raw === null || raw === undefined) return [];
@@ -155,12 +188,13 @@ export default function DashboardScreen() {
         return Array.from(new Set(res));
       };
 
+      const synthesized: any[] = [];
       horarios.forEach((h: any) => {
         const raw = h.dia_semana ?? h.dia ?? '';
         const dias = resolveDays(raw);
         if (!dias || dias.length === 0) return;
         dias.forEach((diaName: string) => {
-          const dates = dateMap[diaName] || [];
+          const dates = dateMap[normalize(diaName)] || []; // Usamos normalize aquí también
           dates.forEach((fecha) => {
             synthesized.push({
               id: `horario-${h.id}-${fecha}`,
@@ -189,37 +223,59 @@ export default function DashboardScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await cargar();
+    await cargarClasesSemana();
     setRefreshing(false);
   };
 
-  const getClasesForToday = (d: any) => {
-    if (!d) return [];
-    if (Array.isArray(d.clases_semana) && d.clases_semana.length > 0) return d.clases_semana;
-    const talleres = d.talleres || d.talleres_list || [];
+  const getClasesForToday = useCallback(() => {
+    // Preferimos usar clases_semana si está disponible (procesada en cargarClasesSemana)
+    const allClases = data.clases_semana || []; 
     const todayStr = new Date().toISOString().slice(0, 10);
-    const result: any[] = [];
-    talleres.forEach((t: any) => {
-      const horarios = t.horarios || t.horario || t.horas || [];
-      horarios.forEach((h: any) => {
-        if (h && h.fecha && String(h.fecha).startsWith(todayStr)) {
-          result.push({ ...h, taller_nombre: t.nombre || t.taller_nombre || '' });
-        }
+    
+    // Filtrar por clases que realmente caen hoy
+    return allClases.filter((c: any) => c.fecha === todayStr)
+      .map((c: any) => {
+        const start = parseDateTime(c.fecha, c.hora_inicio);
+        const end = parseDateTime(c.fecha, c.hora_fin);
+        return { 
+          ...c, 
+          __start: start, 
+          __end: end,
+          hora_inicio_f: formatTimeHHMM(c.hora_inicio),
+          hora_fin_f: formatTimeHHMM(c.hora_fin),
+        };
       });
-    });
-    return result;
-  };
-
-  const router = useRouter();
+  }, [data.clases_semana]);
 
   useEffect(() => {
     (async () => {
-      await cargar();
-      await cargarClasesSemana();
+      // Carga paralela inicial
+      await Promise.all([cargar(), cargarClasesSemana()]);
     })();
   }, []);
+  
+  // --- Procesamiento de Clases (Optimizado con useMemo) ---
+  const { clasesActuales, clasesProximas } = useMemo(() => {
+    const now = new Date();
+    const todayClases = getClasesForToday();
+
+    const actual = todayClases.filter((c: any) => {
+      if (!c.__start || !c.__end) return false;
+      return c.__start <= now && now < c.__end;
+    });
+
+    const proximas = todayClases
+      .filter((c: any) => c.__start && c.__start > now)
+      .sort((a: any, b: any) => (a.__start as Date).getTime() - (b.__start as Date).getTime())
+      .slice(0, 3); // Limitar a las 3 próximas
+
+    return { clasesActuales: actual, clasesProximas: proximas };
+  }, [getClasesForToday]);
+  
+  // --- Funciones de Modales (Mantienen la lógica original) ---
 
   const abrirModalNuevoEstudiante = () => {
-    setFormNuevoAlumno({ nombre: '', edad: '', contacto: '' });
+    setFormNuevoAlumno({ nombres: '', edad: '', contacto: '' });
     setModalNuevoAlumnoVisible(true);
   };
 
@@ -227,7 +283,6 @@ export default function DashboardScreen() {
     setFormNuevaInscripcion({ estudiante_id: '', taller_id: '' });
     setLoadingListas(true);
     
-    // Cargar listas para los selects
     try {
       const [alumnosData, talleresData] = await Promise.all([
         alumnosApi.listar(),
@@ -250,9 +305,8 @@ export default function DashboardScreen() {
     setModalNuevoTallerVisible(true);
   };
 
-  // Funciones para manejar formularios
   const crearNuevoAlumno = async () => {
-    if (!formNuevoAlumno.nombre) {
+    if (!formNuevoAlumno.nombres) {
       showToast('El nombre es obligatorio', 'error');
       return;
     }
@@ -260,13 +314,14 @@ export default function DashboardScreen() {
     setLoadingNuevoAlumno(true);
     try {
       await alumnosApi.crear({
-        nombre: formNuevoAlumno.nombre,
+        nombres: formNuevoAlumno.nombres,
+        apellidos: '',
         edad: parseInt(formNuevoAlumno.edad) || undefined,
-        contacto: formNuevoAlumno.contacto || undefined,
+        telefono: formNuevoAlumno.contacto || undefined,
       });
       showToast('Alumno creado correctamente', 'success');
       setModalNuevoAlumnoVisible(false);
-      await cargar(); // Recargar datos del dashboard
+      await cargar();
     } catch (error: any) {
       showToast(error.message, 'error');
     } finally {
@@ -288,7 +343,7 @@ export default function DashboardScreen() {
       });
       showToast('Inscripción creada correctamente', 'success');
       setModalNuevaInscripcionVisible(false);
-      await cargar(); // Recargar datos del dashboard
+      await cargar();
     } catch (error: any) {
       showToast(error.message, 'error');
     } finally {
@@ -310,64 +365,16 @@ export default function DashboardScreen() {
       });
       showToast('Taller creado correctamente', 'success');
       setModalNuevoTallerVisible(false);
-      await cargar(); // Recargar datos del dashboard
+      await cargar();
     } catch (error: any) {
       showToast(error.message, 'error');
     } finally {
       setLoadingNuevoTaller(false);
     }
   };
-  if (loading) {
-    return (
-      <SafeAreaView style={{ flex: 1, padding: spacing.md, backgroundColor: '#F8FAFB' }}>
-        <Text style={{ fontSize: typography.sizes.xxl, fontWeight: '700', marginBottom: spacing.lg }}>
-          Dashboard
-        </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.md }}>
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const Container: any = isWeb ? View : SafeAreaView;
-
-  const parseDateTime = (fecha: string | undefined, time: string | undefined) => {
-    if (!fecha || !time) return null;
-    const t = String(time).trim();
-    const parts = t.split(':');
-    if (parts.length < 2) return null;
-    const hhmm = parts.slice(0, 2).join(':');
-    try {
-      return new Date(fecha + 'T' + hhmm + ':00');
-    } catch {
-      return null;
-    }
-  };
-
-  const clasesSemana = (data.clases_semana || []).map((c: any) => {
-    const start = parseDateTime(c.fecha, c.hora_inicio);
-    const end = parseDateTime(c.fecha, c.hora_fin);
-    return { ...c, __start: start, __end: end };
-  });
-
-  const now = new Date();
-  
-  const clasesActuales = clasesSemana.filter((c: any) => {
-    if (!c.__start || !c.__end) return false;
-    return c.__start <= now && now < c.__end;
-  });
-
-  const clasesProximas = clasesSemana
-    .filter((c: any) => c.__start && c.__start > now)
-    .sort((a: any, b: any) => (a.__start as Date).getTime() - (b.__start as Date).getTime())
-    .slice(0, 3);
 
   // Preparar acciones rápidas y badges
-  const clasesHoyCount = getClasesForToday(data).length;
+  const clasesHoyCount = clasesActuales.length + clasesProximas.length;
   const talleresArray = data.talleres || data.talleres_list || [];
   const lowCapacityCount = (Array.isArray(talleresArray) ? talleresArray.filter((t: any) => {
     const total = Number(t.total_alumnos || t.total_asistentes || 0);
@@ -382,352 +389,369 @@ export default function DashboardScreen() {
     { key: 'nueva_inscripcion', icon: 'add-circle-outline', title: 'Nueva inscripción', onPress: abrirModalNuevaInscripcion },
   ];
 
-  // Talleres críticos / alta demanda
   if (lowCapacityCount > 0) {
     actions.splice(1, 0, { key: 'talleres_criticos', icon: 'warning-outline', title: 'Talleres críticos', badge: lowCapacityCount, onPress: () => router.push('/talleres?filter=low_capacity') });
   }
 
   if (isAdmin) {
-    // Acciones rápidas específicas para admin
     actions.push({ key: 'ver_asistencias', icon: 'eye-outline', title: 'Ver asistencias', onPress: () => router.push('/asistencia') });
     actions.push({ key: 'nuevo_taller', icon: 'book-outline', title: 'Nuevo taller', onPress: abrirModalNuevoTaller });
-    // TODO: Implementar funcionalidad de exportar
-    // actions.push({ key: 'export_csv', icon: 'download-outline', title: 'Exportar CSV', onPress: () => router.push('/(modals)/exportar') });
   }
 
-  return (
-      <Container style={[sharedStyles.container, { backgroundColor: '#F8FAFB' }]} edges={isWeb ? undefined : ['bottom']}>
-        <View style={{ flex: 1 }}>
-          <ScrollView 
-            contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
-            }
-          >
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Dashboard</Text>
-              <Text style={styles.headerDate}>
-                {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, padding: spacing.md, backgroundColor: colors.background.tertiary }}>
+        <Text style={{ fontSize: typography.sizes.xxl, fontWeight: '700', marginBottom: spacing.lg, color: colors.text.primary }}>
+          Dashboard
+        </Text>
+        <View style={styles.metricsGrid}>
+          <CardSkeleton count={4} isWeb={isWeb} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const Container: any = isWeb ? View : SafeAreaView;
+  const totalClasesSemana = data.clases_semana?.length || 0;
+  
+  // --- Componente de Tarjeta de Clase (Estilo minimalista unificado) ---
+  const renderClassCard = (clase: any, status: 'current' | 'upcoming') => {
+    const accentColor = status === 'current' ? colors.success : colors.info;
+    const accentSoft = status === 'current' ? colors.successLight : colors.infoLight;
+    const accentDark = status === 'current' ? colors.success : colors.blue.dark;
+
+    return (
+      <TouchableOpacity
+        key={clase.id}
+        style={[styles.classCard, { borderLeftColor: accentColor }]}
+        onPress={() => router.push('/horarios')}
+        activeOpacity={0.7}
+      >
+        {/* Bloque de Tiempo */}
+        <View style={[styles.cardTimeBlock, { backgroundColor: accentSoft }]}>
+          <Text style={[styles.cardTimeText, { color: accentDark }]}>{formatTimeHHMM(clase.hora_inicio)}</Text>
+          <Text style={[styles.cardTimeDivider, { color: accentColor }]}>-</Text>
+          <Text style={[styles.cardTimeText, { color: accentDark }]}>{formatTimeHHMM(clase.hora_fin)}</Text>
+        </View>
+
+        {/* Información Principal */}
+        <View style={styles.cardInfo}>
+
+          <Text style={styles.cardTallerName} numberOfLines={1}>{clase.taller_nombre}</Text>
+
+          {clase.profesor_nombre && (
+            <View style={styles.cardDetailRow}>
+              <Ionicons name="person-outline" size={14} color={colors.text.secondary} />
+              <Text style={styles.cardDetailText} numberOfLines={1}>
+                {clase.profesor_nombre}
               </Text>
             </View>
+          )}
 
-            {/* Cards KPI */}
-            <View style={styles.metricsGrid}>
-              {(() => {
-                const totalClases = data.total_clases || (Array.isArray(data.clases_semana) ? data.clases_semana.length : clasesSemana.length);
-                  const metrics = [
-                  { key: 'talleres', title: 'Talleres', value: data.total_talleres || 0, icon: 'book-outline', onPress: () => router.push('/talleres') },
-                  { key: 'Alumnos', title: 'Alumnos', value: data.total_alumnos || 0, icon: 'people-outline', onPress: () => router.push('/alumnos') },
-                  { key: 'profesores', title: 'Profesores', value: data.total_profesores || 0, icon: 'person-outline', onPress: () => router.push('/profesores') },
-                  { key: 'clases_totales', title: 'Clases totales', value: totalClases || 0, icon: 'calendar-outline', onPress: () => router.push('/horarios') },
-                ];
-
-                return metrics.map((m) => (
-                  <TouchableOpacity 
-                    key={m.key} 
-                    style={[styles.metricCard, isMobile && { flex: 1, minWidth: '48%' }]}
-                    onPress={m.onPress}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.metricIcon}>
-                      <Ionicons name={m.icon as any} size={20} color="#6B7280" />
-                    </View>
-                    <View style={styles.metricContent}>
-                      <Text style={styles.metricValue}>{m.value}</Text>
-                      <Text style={styles.metricLabel}>{m.title}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ));
-              })()}
+          {clase.ubicacion_nombre && (
+            <View style={styles.cardDetailRow}>
+              <Ionicons name="location-outline" size={14} color={colors.text.secondary} />
+              <Text style={styles.cardDetailText} numberOfLines={1}>
+                {clase.ubicacion_nombre}
+              </Text>
             </View>
-
-            {/* Acciones rápidas */}
-            <View style={styles.quickActionsSection}>
-              <Text style={styles.sectionTitle}>Acciones rápidas</Text>
-              <View style={styles.quickActionsGrid}>
-                {actions.map((action) => (
-                  <TouchableOpacity
-                    key={action.key}
-                    style={styles.quickActionButton}
-                    onPress={action.onPress}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={action.icon as any} size={18} color="#6B7280" />
-                    <Text style={styles.quickActionText}>{action.title}</Text>
-                    {action.badge > 0 && (
-                      <View style={{ marginLeft: 8 }}>
-                        <Badge label={String(action.badge)} variant={action.badge > 0 ? 'info' : 'default'} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Clases actuales y próximas */}
-            <View style={styles.classesSection}>
-              <Text style={styles.sectionTitle}>Clases de hoy</Text>
-              <Text style={styles.subsectionTitle}>Clases en curso</Text>
-
-              {/* Current classes */}
-              {clasesActuales && clasesActuales.length > 0 ? (
-                <View style={styles.currentClassesContainer}>
-                  {clasesActuales.map((c: any) => (
-                    <TouchableOpacity
-                        key={c.id}
-                        style={styles.currentClassCard}
-                        onPress={() => router.push('/horarios')}
-                        activeOpacity={0.7}
-                      >
-                      <View style={styles.currentClassBadge}>
-                        <Text style={styles.currentClassBadgeText}>EN CURSO</Text>
-                      </View>
-                      
-                      <Text style={styles.classTime}>
-                        {c.hora_inicio} - {c.hora_fin}
-                      </Text>
-                      
-                      <Text style={styles.className}>{c.taller_nombre}</Text>
-                      
-                      <View style={styles.classInfo}>
-                        {c.profesor_nombre && (
-                          <View style={styles.classInfoRow}>
-                            <Ionicons name="person-outline" size={14} color="#9CA3AF" />
-                            <Text style={styles.classInfoText}>{c.profesor_nombre}</Text>
-                          </View>
-                        )}
-                        {c.ubicacion_nombre && (
-                          <View style={styles.classInfoRow}>
-                            <Ionicons name="location-outline" size={14} color="#9CA3AF" />
-                            <Text style={styles.classInfoText}>{c.ubicacion_nombre}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No hay clases en este momento</Text>
-                </View>
-              )}
-
-              {/* Próximas clases */}
-              {clasesProximas && clasesProximas.length > 0 && (
-                <View style={styles.upcomingSection}>
-                  <Text style={styles.subsectionTitle}>Próximas clases</Text>
-                  {clasesProximas.map((c: any) => (
-                    <TouchableOpacity
-                      key={c.id}
-                      style={styles.upcomingClassCard}
-                      onPress={() => router.push('/horarios')}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.upcomingClassTime}>
-                        {c.hora_inicio} - {c.hora_fin}
-                      </Text>
-                      
-                      <Text style={styles.upcomingClassName}>{c.taller_nombre}</Text>
-                      
-                      <View style={styles.upcomingClassInfo}>
-                        {c.profesor_nombre && (
-                          <Text style={styles.upcomingInfoText}>
-                            <Ionicons name="person-outline" size={12} color="#9CA3AF" /> {c.profesor_nombre}
-                          </Text>
-                        )}
-                        {c.ubicacion_nombre && (
-                          <Text style={styles.upcomingInfoText}>
-                            <Ionicons name="location-outline" size={12} color="#9CA3AF" /> {c.ubicacion_nombre}
-                          </Text>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-
-          </ScrollView>
-
-          {/* Modales */}
-          <Modal
-            visible={modalNuevoAlumnoVisible}
-            onClose={() => setModalNuevoAlumnoVisible(false)}
-            title="Nuevo Alumno"
-            footer={
-              <>
-                <TouchableOpacity
-                  style={styles.modalFooterButton}
-                  onPress={() => setModalNuevoAlumnoVisible(false)}
-                  activeOpacity={0.7}
-                  disabled={loadingNuevoAlumno}
-                >
-                  <Text style={styles.modalFooterButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-                <View style={styles.footerDivider} />
-                <TouchableOpacity
-                  style={styles.modalFooterButton}
-                  onPress={crearNuevoAlumno}
-                  activeOpacity={0.7}
-                  disabled={loadingNuevoAlumno}
-                >
-                  {loadingNuevoAlumno ? (
-                    <ActivityIndicator size="small" color={colors.text.secondary} />
-                  ) : (
-                    <Text style={styles.modalFooterButtonText}>Crear</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            }
-          >
-            <Input
-              label="Nombre"
-              required
-              value={formNuevoAlumno.nombre}
-              onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, nombre: text })}
-              placeholder="Nombre completo"
-            />
-            <Input
-              label="Edad"
-              value={formNuevoAlumno.edad}
-              onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, edad: text })}
-              placeholder="Edad (opcional)"
-              keyboardType="numeric"
-            />
-            <Input
-              label="Contacto"
-              value={formNuevoAlumno.contacto}
-              onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, contacto: text })}
-              placeholder="Teléfono o email (opcional)"
-            />
-          </Modal>
-
-          <Modal
-            visible={modalNuevaInscripcionVisible}
-            onClose={() => setModalNuevaInscripcionVisible(false)}
-            title="Nueva Inscripción"
-            footer={
-              <>
-                <TouchableOpacity
-                  style={styles.modalFooterButton}
-                  onPress={() => setModalNuevaInscripcionVisible(false)}
-                  activeOpacity={0.7}
-                  disabled={loadingNuevaInscripcion || loadingListas}
-                >
-                  <Text style={styles.modalFooterButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-                <View style={styles.footerDivider} />
-                <TouchableOpacity
-                  style={styles.modalFooterButton}
-                  onPress={crearNuevaInscripcion}
-                  activeOpacity={0.7}
-                  disabled={loadingNuevaInscripcion || loadingListas}
-                >
-                  {loadingNuevaInscripcion ? (
-                    <ActivityIndicator size="small" color={colors.text.secondary} />
-                  ) : (
-                    <Text style={styles.modalFooterButtonText}>Crear</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            }
-          >
-            {loadingListas ? (
-              <View style={{ alignItems: 'center', padding: spacing.lg }}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={{ marginTop: spacing.md, color: colors.text.secondary }}>Cargando listas...</Text>
-              </View>
-            ) : (
-              <>
-                <View style={sharedStyles.inputContainer}>
-                  <Text style={sharedStyles.label}>Estudiante *</Text>
-                  <Select
-                    label=""
-                    value={formNuevaInscripcion.estudiante_id}
-                    onValueChange={(value) => setFormNuevaInscripcion({ ...formNuevaInscripcion, estudiante_id: String(value) })}
-                    items={listaAlumnos}
-                  />
-                </View>
-                <View style={sharedStyles.inputContainer}>
-                  <Text style={sharedStyles.label}>Taller *</Text>
-                  <Select
-                    label=""
-                    value={formNuevaInscripcion.taller_id}
-                    onValueChange={(value) => setFormNuevaInscripcion({ ...formNuevaInscripcion, taller_id: String(value) })}
-                    items={listaTalleres}
-                  />
-                </View>
-              </>
-            )}
-          </Modal>
-
-          <Modal
-            visible={modalNuevoTallerVisible}
-            onClose={() => setModalNuevoTallerVisible(false)}
-            title="Nuevo Taller"
-            footer={
-              <>
-                <TouchableOpacity
-                  style={styles.modalFooterButton}
-                  onPress={() => setModalNuevoTallerVisible(false)}
-                  activeOpacity={0.7}
-                  disabled={loadingNuevoTaller}
-                >
-                  <Text style={styles.modalFooterButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-                <View style={styles.footerDivider} />
-                <TouchableOpacity
-                  style={styles.modalFooterButton}
-                  onPress={crearNuevoTaller}
-                  activeOpacity={0.7}
-                  disabled={loadingNuevoTaller}
-                >
-                  {loadingNuevoTaller ? (
-                    <ActivityIndicator size="small" color={colors.text.secondary} />
-                  ) : (
-                    <Text style={styles.modalFooterButtonText}>Crear</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            }
-          >
-            <Input
-              label="Nombre"
-              required
-              value={formNuevoTaller.nombre}
-              onChangeText={(text) => setFormNuevoTaller({ ...formNuevoTaller, nombre: text })}
-              placeholder="Nombre del taller"
-            />
-            <Input
-              label="Descripción"
-              value={formNuevoTaller.descripcion}
-              onChangeText={(text) => setFormNuevoTaller({ ...formNuevoTaller, descripcion: text })}
-              placeholder="Descripción del taller (opcional)"
-              multiline
-              numberOfLines={3}
-            />
-          </Modal>
+          )}
         </View>
-      </Container>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <Container style={[sharedStyles.container, { backgroundColor: colors.background.tertiary }]} edges={isWeb ? undefined : ['bottom']}>
+      <View style={{ flex: 1 }}>
+        <ScrollView 
+          contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xxl * 1.5 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+          }
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Dashboard</Text>
+            <Text style={styles.headerDate}>
+              {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </Text>
+          </View>
+
+          {/* Cards KPI (Usando el estilo unificado) */}
+          <View style={styles.metricsGrid}>
+            {(() => {
+              const metrics = [
+                { key: 'talleres', title: 'Talleres', value: data.total_talleres || 0, icon: 'book-outline', accent: colors.warning, onPress: () => router.push('/talleres') },
+                { key: 'Alumnos', title: 'Alumnos', value: data.total_alumnos || 0, icon: 'people-outline', accent: colors.primary, onPress: () => router.push('/alumnos') },
+                { key: 'profesores', title: 'Profesores', value: data.total_profesores || 0, icon: 'person-outline', accent: colors.success, onPress: () => router.push('/profesores') },
+                { key: 'clases_totales', title: 'Clases Semana', value: totalClasesSemana || 0, icon: 'calendar-outline', accent: colors.info, onPress: () => router.push('/horarios') },
+              ];
+
+              return metrics.map((m) => (
+                <TouchableOpacity 
+                  key={m.key} 
+                  style={[styles.metricCard, { borderLeftColor: m.accent, flex: 1, minWidth: isMobile ? '48%' : '23%' }]}
+                  onPress={m.onPress}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.metricIcon, { backgroundColor: m.accent + '20' }]}>
+                    <Ionicons name={m.icon as any} size={20} color={m.accent} />
+                  </View>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>{m.value}</Text>
+                    <Text style={styles.metricLabel}>{m.title}</Text>
+                  </View>
+                </TouchableOpacity>
+              ));
+            })()}
+          </View>
+
+          {/* Acciones rápidas */}
+          <View style={styles.quickActionsSection}>
+            <Text style={styles.sectionTitle}>Acciones rápidas</Text>
+            <View style={styles.quickActionsGrid}>
+              {actions.map((action) => (
+                <TouchableOpacity
+                  key={action.key}
+                  style={styles.quickActionButton}
+                  onPress={action.onPress}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={action.icon as any} size={18} color={colors.text.secondary} />
+                  <Text style={styles.quickActionText}>{action.title}</Text>
+                  {action.badge > 0 && (
+                    <View style={{ marginLeft: spacing.xs }}>
+                      <Badge label={String(action.badge)} variant={action.key === 'talleres_criticos' ? 'error' : 'info'} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Clases actuales y próximas */}
+          <Text style={styles.sectionTitle}>Clases de hoy</Text>
+          
+          {/* Clases en curso */}
+          {clasesActuales && clasesActuales.length > 0 && (
+            <>
+              <Text style={styles.subsectionTitle}>Clases en curso ({clasesActuales.length})</Text>
+              <View style={styles.currentClassesContainer}>
+                {clasesActuales.map((c: any) => renderClassCard(c, 'current'))}
+              </View>
+            </>
+          )}
+
+          {/* No hay clases en curso actualmente */}
+          {clasesActuales.length === 0 && clasesProximas.length > 0 && (
+            <View style={styles.noCurrentClasses}>
+              <Ionicons name="time-outline" size={24} color={colors.info} style={{ marginBottom: spacing.xs }} />
+              <Text style={styles.noCurrentClassesText}>No hay clases en curso en este momento</Text>
+              <Text style={styles.noCurrentClassesSubtext}>Las próximas clases comenzarán pronto</Text>
+            </View>
+          )}
+
+          {/* Próximas clases */}
+          {clasesProximas && clasesProximas.length > 0 && (
+            <View>
+              <Text style={styles.subsectionTitle}>Próximas clases ({clasesProximas.length})</Text>
+              <View style={styles.currentClassesContainer}>
+                {clasesProximas.map((c: any) => renderClassCard(c, 'upcoming'))}
+              </View>
+            </View>
+          )}
+
+          {/* No hay clases hoy */}
+          {clasesActuales.length === 0 && clasesProximas.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="sunny-outline" size={32} color={colors.text.tertiary} style={{ marginBottom: spacing.sm }} />
+              <Text style={styles.emptyStateText}>No hay clases programadas para hoy.</Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Modales (Usando ElegantModal) */}
+        <Modal
+          visible={modalNuevoAlumnoVisible}
+          onClose={() => setModalNuevoAlumnoVisible(false)}
+          title="Nuevo Alumno"
+          maxWidth={isWeb ? 600 : undefined}
+          footer={
+            <>
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={() => setModalNuevoAlumnoVisible(false)}
+                activeOpacity={0.7}
+                disabled={loadingNuevoAlumno}
+              >
+                <Text style={styles.modalFooterButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <View style={styles.footerDivider} />
+              <TouchableOpacity
+                style={[styles.modalFooterButton, { backgroundColor: loadingNuevoAlumno ? colors.background.secondary : colors.primarySoft }]}
+                onPress={crearNuevoAlumno}
+                activeOpacity={0.7}
+                disabled={loadingNuevoAlumno}
+              >
+                {loadingNuevoAlumno ? (
+                  <ActivityIndicator size="small" color={colors.text.primary} />
+                ) : (
+                  <Text style={[styles.modalFooterButtonText, { color: colors.primary }]}>Crear</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          }
+        >
+          <Input
+            label="Nombre"
+            required
+            value={formNuevoAlumno.nombres}
+            onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, nombres: text })}
+            placeholder="Nombre completo"
+          />
+          <Input
+            label="Edad"
+            value={formNuevoAlumno.edad}
+            onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, edad: text.replace(/[^0-9]/g, '') })}
+            placeholder="Edad (opcional)"
+            keyboardType="numeric"
+          />
+          <Input
+            label="Contacto"
+            value={formNuevoAlumno.contacto}
+            onChangeText={(text) => setFormNuevoAlumno({ ...formNuevoAlumno, contacto: text })}
+            placeholder="Teléfono o email (opcional)"
+          />
+        </Modal>
+
+        <Modal
+          visible={modalNuevaInscripcionVisible}
+          onClose={() => setModalNuevaInscripcionVisible(false)}
+          title="Nueva Inscripción"
+          maxWidth={isWeb ? 600 : undefined}
+          footer={
+            <>
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={() => setModalNuevaInscripcionVisible(false)}
+                activeOpacity={0.7}
+                disabled={loadingNuevaInscripcion || loadingListas}
+              >
+                <Text style={styles.modalFooterButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <View style={styles.footerDivider} />
+              <TouchableOpacity
+                style={[styles.modalFooterButton, { backgroundColor: loadingNuevaInscripcion || loadingListas ? colors.background.secondary : colors.primarySoft }]}
+                onPress={crearNuevaInscripcion}
+                activeOpacity={0.7}
+                disabled={loadingNuevaInscripcion || loadingListas}
+              >
+                {loadingNuevaInscripcion || loadingListas ? (
+                  <ActivityIndicator size="small" color={colors.text.primary} />
+                ) : (
+                  <Text style={[styles.modalFooterButtonText, { color: colors.primary }]}>Crear</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          }
+        >
+          {loadingListas ? (
+            <View style={{ alignItems: 'center', padding: spacing.lg }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ marginTop: spacing.md, color: colors.text.secondary }}>Cargando listas...</Text>
+            </View>
+          ) : (
+            <>
+              <View style={sharedStyles.inputContainer}>
+                <Text style={sharedStyles.label}>Estudiante *</Text>
+                <Select
+                  label=""
+                  value={formNuevaInscripcion.estudiante_id}
+                  onValueChange={(value) => setFormNuevaInscripcion({ ...formNuevaInscripcion, estudiante_id: String(value) })}
+                  items={listaAlumnos}
+                />
+              </View>
+              <View style={sharedStyles.inputContainer}>
+                <Text style={sharedStyles.label}>Taller *</Text>
+                <Select
+                  label=""
+                  value={formNuevaInscripcion.taller_id}
+                  onValueChange={(value) => setFormNuevaInscripcion({ ...formNuevaInscripcion, taller_id: String(value) })}
+                  items={listaTalleres}
+                />
+              </View>
+            </>
+          )}
+        </Modal>
+
+        <Modal
+          visible={modalNuevoTallerVisible}
+          onClose={() => setModalNuevoTallerVisible(false)}
+          title="Nuevo Taller"
+          maxWidth={isWeb ? 600 : undefined}
+          footer={
+            <>
+              <TouchableOpacity
+                style={styles.modalFooterButton}
+                onPress={() => setModalNuevoTallerVisible(false)}
+                activeOpacity={0.7}
+                disabled={loadingNuevoTaller}
+              >
+                <Text style={styles.modalFooterButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <View style={styles.footerDivider} />
+              <TouchableOpacity
+                style={[styles.modalFooterButton, { backgroundColor: loadingNuevoTaller ? colors.background.secondary : colors.primarySoft }]}
+                onPress={crearNuevoTaller}
+                activeOpacity={0.7}
+                disabled={loadingNuevoTaller}
+              >
+                {loadingNuevoTaller ? (
+                  <ActivityIndicator size="small" color={colors.text.primary} />
+                ) : (
+                  <Text style={[styles.modalFooterButtonText, { color: colors.primary }]}>Crear</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          }
+        >
+          <Input
+            label="Nombre"
+            required
+            value={formNuevoTaller.nombre}
+            onChangeText={(text) => setFormNuevoTaller({ ...formNuevoTaller, nombre: text })}
+            placeholder="Nombre del taller"
+          />
+          <Input
+            label="Descripción"
+            value={formNuevoTaller.descripcion}
+            onChangeText={(text) => setFormNuevoTaller({ ...formNuevoTaller, descripcion: text })}
+            placeholder="Descripción del taller (opcional)"
+            multiline
+            numberOfLines={3}
+          />
+        </Modal>
+      </View>
+    </Container>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+    color: colors.text.primary,
     marginBottom: 4,
     letterSpacing: -0.5,
   },
   headerDate: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontSize: typography.sizes.sm,
+    color: colors.text.secondary,
+    fontWeight: typography.weights.medium,
     textTransform: 'capitalize',
   },
 
@@ -735,26 +759,28 @@ const styles = StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
   },
   metricCard: {
-    flex: 1,
-    minWidth: 140,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border.light,
+    borderLeftWidth: 4, // Borde de acento
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.sm,
+    // Sombra sutil minimalista
+    ...(Platform.OS === 'web' && { 
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+    }),
   },
   metricIcon: {
     width: 40,
     height: 40,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -762,186 +788,182 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   metricValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.text.primary,
     lineHeight: 28,
   },
   metricLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontSize: typography.sizes.xs,
+    color: colors.text.secondary,
+    fontWeight: typography.weights.medium,
     marginTop: 2,
   },
 
   // Acciones rápidas
   quickActionsSection: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 12,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
     letterSpacing: -0.3,
   },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   quickActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    gap: spacing.xs,
+    backgroundColor: colors.background.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border.light,
     flex: 1,
     minWidth: '48%',
+    // Sombra sutil minimalista
+    ...(Platform.OS === 'web' && { 
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+    }),
   },
   quickActionText: {
-    fontSize: 13,
-    color: '#374151',
-    fontWeight: '600',
+    fontSize: typography.sizes.sm,
+    color: colors.text.secondary,
+    fontWeight: typography.weights.semibold,
   },
 
   // Sección de clases
   classesSection: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
+    // Estilo de tarjeta grande para envolver
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    ...(Platform.OS === 'web' && { 
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+    }),
   },
   subsectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 12,
-    marginTop: 20,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+    paddingBottom: spacing.xs,
   },
 
-  // Clases en curso
+  // Clases en curso y próximas (unificadas en estilo)
   currentClassesContainer: {
-    gap: 12,
+    gap: spacing.sm,
   },
-  currentClassCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: '#10B981',
+  classCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    borderLeftWidth: 4, 
+  },
+  cardTimeBlock: {
+    padding: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
+    gap: 2,
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    borderRightColor: colors.border.light,
+  },
+  cardTimeText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+  },
+  cardTimeDivider: {
+    fontSize: typography.sizes.sm,
+  },
+  cardInfo: {
+    flex: 1,
+    padding: spacing.md,
+    gap: 4,
+  },
+  cardTallerName: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  cardDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardDetailText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text.secondary,
   },
   currentClassBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.xs,
     paddingVertical: 3,
-    borderRadius: 4,
-    marginBottom: 10,
+    borderRadius: borderRadius.sm,
+    marginBottom: 6,
   },
   currentClassBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#059669',
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
     letterSpacing: 0.5,
   },
-  classTime: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#10B981',
-    marginBottom: 8,
-  },
-  className: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 10,
-    lineHeight: 20,
-  },
-  classInfo: {
-    gap: 6,
-  },
-  classInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  classInfoText: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-
-  // Próximas clases
-  upcomingSection: {
-    marginTop: 8,
-  },
-  upcomingClassCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 14,
-    borderLeftWidth: 3,
-    borderLeftColor: '#3B82F6',
-    borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    marginBottom: 8,
-  },
-  upcomingClassTime: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#3B82F6',
-    marginBottom: 6,
-  },
-  upcomingClassName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 6,
-  },
-  upcomingClassInfo: {
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  upcomingInfoText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-
   // Empty State
   emptyState: {
-    backgroundColor: '#FAFBFC',
-    padding: 24,
-    borderRadius: 8,
+    backgroundColor: colors.background.secondary,
+    padding: spacing.xl,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border.light,
     borderStyle: 'dashed',
     alignItems: 'center',
   },
   emptyStateText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontWeight: '500',
+    fontSize: typography.sizes.sm,
+    color: colors.text.tertiary,
+    fontWeight: typography.weights.medium,
   },
 
-  // Modal footer buttons - estilo quick actions
+  // No current classes state
+  noCurrentClasses: {
+    backgroundColor: colors.infoLight,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.info,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  noCurrentClassesText: {
+    fontSize: typography.sizes.sm,
+    color: colors.info,
+    fontWeight: typography.weights.semibold,
+    textAlign: 'center',
+  },
+  noCurrentClassesSubtext: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+
+  // Modal footer buttons - estilo unificado
   modalFooterButton: {
     flex: 1,
     flexDirection: 'row',
@@ -949,14 +971,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     gap: 6,
+    backgroundColor: colors.background.primary,
+    // Aseguramos que el texto del botón sea legible y el color de fondo cambie en los principales
   },
   modalFooterButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#64748B',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.text.primary, // Color base
   },
   footerDivider: {
     width: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border.light,
   },
 });

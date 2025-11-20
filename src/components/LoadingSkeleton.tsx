@@ -55,18 +55,22 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   );
 };
 
-export const CardSkeleton: React.FC = () => {
-  return (
-    <View style={styles.cardSkeleton}>
-      <LoadingSkeleton width="60%" height={24} style={{ marginBottom: 8 }} />
-      <LoadingSkeleton width="40%" height={16} style={{ marginBottom: 8 }} />
-      <LoadingSkeleton width="80%" height={16} style={{ marginBottom: 8 }} />
-      <View style={{ flexDirection: 'row', marginTop: 12 }}>
-        <LoadingSkeleton width={80} height={32} style={{ marginRight: 8 }} />
-        <LoadingSkeleton width={80} height={32} />
+export const CardSkeleton: React.FC<{ count?: number; isWeb?: boolean }> = ({ count = 1, isWeb = false }) => {
+  const skeletons = [];
+  for (let i = 0; i < count; i++) {
+    skeletons.push(
+      <View key={i} style={[styles.cardSkeleton, isWeb && styles.cardSkeletonWeb]}>
+        <LoadingSkeleton width="60%" height={24} style={{ marginBottom: 8 }} />
+        <LoadingSkeleton width="40%" height={16} style={{ marginBottom: 8 }} />
+        <LoadingSkeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+        <View style={{ flexDirection: 'row', marginTop: 12 }}>
+          <LoadingSkeleton width={80} height={32} style={{ marginRight: 8 }} />
+          <LoadingSkeleton width={80} height={32} />
+        </View>
       </View>
-    </View>
-  );
+    );
+  }
+  return <>{skeletons}</>;
 };
 
 const styles = StyleSheet.create({
@@ -78,5 +82,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: 16,
     marginBottom: 12,
+  },
+  cardSkeletonWeb: {
+    flex: 1,
+    maxWidth: '48.5%',
   },
 });

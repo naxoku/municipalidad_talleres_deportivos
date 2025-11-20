@@ -112,11 +112,11 @@ const AsistenciaScreen = () => {
   const renderClase = ({ item }: { item: Clase }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => cargarAsistencia((item as any).horario_id, item.fecha)}
+      onPress={() => cargarAsistencia((item as any).horario_id, item.fecha_clase)}
     >
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{item.taller_nombre || `Taller ID: ${item.taller_id}`}</Text>
-        <Text style={styles.cardDetail}>Fecha: {item.fecha}</Text>
+        <Text style={styles.cardDetail}>Fecha: {item.fecha_clase}</Text>
         <Text style={styles.cardDetail}>Horario: {item.hora_inicio} - {item.hora_fin}</Text>
       </View>
       <View style={styles.cardArrow}>

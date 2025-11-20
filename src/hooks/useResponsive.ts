@@ -13,11 +13,17 @@ interface ResponsiveInfo {
     isNative: boolean;
     width: number;
     height: number;
+    // Valores dinámicos de UI
+    contentMaxWidth: number | string;
+    numColumns: number;
+    drawerType: 'permanent' | 'front';
+    modalWidth: number | string;
 }
 
 const BREAKPOINTS = {
     tablet: 768,
     desktop: 1024,
+    wide: 1280,
 };
 
 export const useResponsive = (): ResponsiveInfo => {
@@ -31,16 +37,30 @@ export const useResponsive = (): ResponsiveInfo => {
     };
 
     const deviceType = getDeviceType();
+    const isDesktop = deviceType === 'desktop';
+    const isTablet = deviceType === 'tablet';
+    const isMobile = deviceType === 'mobile';
+
+    // Cálculos automáticos para grillas
+    let numColumns = 1;
+    if (width >= BREAKPOINTS.wide) numColumns = 4;
+    else if (width >= BREAKPOINTS.desktop) numColumns = 3;
+    else if (width >= BREAKPOINTS.tablet) numColumns = 2;
 
     return {
         deviceType,
         platformType,
-        isMobile: deviceType === 'mobile',
-        isTablet: deviceType === 'tablet',
-        isDesktop: deviceType === 'desktop',
+        isMobile,
+        isTablet,
+        isDesktop,
         isWeb: platformType === 'web',
         isNative: platformType === 'native',
         width,
         height,
+        // Helpers de UI
+        contentMaxWidth: isDesktop ? 1200 : '100%',
+        numColumns,
+        drawerType: isDesktop ? 'permanent' : 'front',
+        modalWidth: isDesktop ? 600 : '90%',
     };
 };
