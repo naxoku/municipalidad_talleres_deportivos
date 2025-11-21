@@ -11,6 +11,7 @@ import { spacing, typography, colors, borderRadius } from '../src/theme/colors';
 import { Input } from '../src/components/Input';
 import Modal from '../src/components/Modal'; // Usando ElegantModal (el mejorado)
 import { Select } from '../src/components/Select';
+import { QuickActionsMenu, QuickAction } from '../src/components/QuickActionsMenu';
 import { alumnosApi } from '../src/api/alumnos';
 import { talleresApi } from '../src/api/talleres';
 import { inscripcionesApi } from '../src/api/inscripciones';
@@ -55,6 +56,9 @@ export default function DashboardScreen() {
   const [modalNuevoAlumnoVisible, setModalNuevoAlumnoVisible] = useState(false);
   const [modalNuevaInscripcionVisible, setModalNuevaInscripcionVisible] = useState(false);
   const [modalNuevoTallerVisible, setModalNuevoTallerVisible] = useState(false);
+  const [modalAccionesRapidasVisible, setModalAccionesRapidasVisible] = useState(false);
+  const [modalDetalleClaseVisible, setModalDetalleClaseVisible] = useState(false);
+  const [claseSeleccionada, setClaseSeleccionada] = useState<any>(null);
 
   // Estados para listas de datos
   const [listaAlumnos, setListaAlumnos] = useState<any[]>([]);
@@ -383,6 +387,54 @@ export default function DashboardScreen() {
     return (total / max) >= 0.8;
   }).length : 0);
 
+  const quickActions: QuickAction[] = [
+    { 
+      id: 'nuevo_estudiante', 
+      label: 'Nuevo estudiante', 
+      icon: 'person-add-outline', 
+      onPress: abrirModalNuevoEstudiante,
+      variant: 'primary',
+    },
+    { 
+      id: 'nueva_inscripcion', 
+      label: 'Nueva inscripción', 
+      icon: 'add-circle-outline', 
+      onPress: abrirModalNuevaInscripcion,
+      variant: 'secondary',
+    },
+    { 
+      id: 'marcar_asistencia', 
+      label: 'Marcar asistencia', 
+      icon: 'checkmark-circle-outline', 
+      onPress: () => router.push('/asistencia'),
+      variant: 'success',
+    },
+    { 
+      id: 'ver_clases', 
+      label: 'Ver clases del día', 
+      icon: 'calendar-outline', 
+      onPress: () => router.push('/horarios'),
+      variant: 'warning',
+    },
+  ];
+
+  if (isAdmin) {
+    quickActions.push({ 
+      id: 'nuevo_taller', 
+      label: 'Nuevo taller', 
+      icon: 'book-outline', 
+      onPress: abrirModalNuevoTaller,
+      variant: 'primary',
+    });
+    quickActions.push({ 
+      id: 'ver_reportes', 
+      label: 'Ver reportes', 
+      icon: 'stats-chart-outline', 
+      onPress: () => router.push('/reportes'),
+      variant: 'secondary',
+    });
+  }
+
   const actions: any[] = [
     { key: 'clases_hoy', icon: 'calendar-outline', title: 'Clases de hoy', badge: clasesHoyCount, onPress: () => router.push('/horarios') },
     { key: 'nuevo_estudiante', icon: 'person-add-outline', title: 'Nuevo estudiante', onPress: abrirModalNuevoEstudiante },
@@ -424,7 +476,10 @@ export default function DashboardScreen() {
       <TouchableOpacity
         key={clase.id}
         style={[styles.classCard, { borderLeftColor: accentColor }]}
-        onPress={() => router.push('/horarios')}
+        onPress={() => {
+          setClaseSeleccionada(clase);
+          setModalDetalleClaseVisible(true);
+        }}
         activeOpacity={0.7}
       >
         {/* Bloque de Tiempo */}
@@ -509,7 +564,17 @@ export default function DashboardScreen() {
 
           {/* Acciones rápidas */}
           <View style={styles.quickActionsSection}>
-            <Text style={styles.sectionTitle}>Acciones rápidas</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Acciones rápidas</Text>
+              <TouchableOpacity
+                style={styles.verTodasButton}
+                onPress={() => setModalAccionesRapidasVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.verTodasText}>Ver todas</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
             <View style={styles.quickActionsGrid}>
               {actions.map((action) => (
                 <TouchableOpacity
@@ -732,6 +797,93 @@ export default function DashboardScreen() {
             numberOfLines={3}
           />
         </Modal>
+
+        {/* Modal de Acciones Rápidas */}
+        <Modal
+          visible={modalAccionesRapidasVisible}
+          onClose={() => setModalAccionesRapidasVisible(false)}
+          title="Acciones rápidas"
+          maxWidth={isWeb ? 700 : undefined}
+        >
+          <QuickActionsMenu actions={quickActions} />
+        </Modal>
+
+        {/* Modal de Detalle de Clase */}
+        <Modal
+          visible={modalDetalleClaseVisible}
+          onClose={() => setModalDetalleClaseVisible(false)}
+          title="Detalle de clase"
+          maxWidth={isWeb ? 600 : undefined}
+        >
+          {claseSeleccionada && (
+            <View style={{ gap: spacing.lg }}>
+              <View>
+                <Text style={styles.detalleLabel}>Taller</Text>
+                <Text style={styles.detalleValue}>{claseSeleccionada.taller_nombre}</Text>
+              </View>
+              
+              <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.detalleLabel}>Hora inicio</Text>
+                  <Text style={styles.detalleValue}>{formatTimeHHMM(claseSeleccionada.hora_inicio)}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.detalleLabel}>Hora fin</Text>
+                  <Text style={styles.detalleValue}>{formatTimeHHMM(claseSeleccionada.hora_fin)}</Text>
+                </View>
+              </View>
+
+              {claseSeleccionada.profesor_nombre && (
+                <View>
+                  <Text style={styles.detalleLabel}>Profesor</Text>
+                  <Text style={styles.detalleValue}>{claseSeleccionada.profesor_nombre}</Text>
+                </View>
+              )}
+
+              {claseSeleccionada.ubicacion_nombre && (
+                <View>
+                  <Text style={styles.detalleLabel}>Ubicación</Text>
+                  <Text style={styles.detalleValue}>{claseSeleccionada.ubicacion_nombre}</Text>
+                </View>
+              )}
+
+              {claseSeleccionada.cupos_max && (
+                <View>
+                  <Text style={styles.detalleLabel}>Capacidad</Text>
+                  <Text style={styles.detalleValue}>
+                    {claseSeleccionada.total_asistentes || 0} / {claseSeleccionada.cupos_max} alumnos
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.detalleActions}>
+                <TouchableOpacity
+                  style={[styles.detalleButton, { backgroundColor: colors.primarySoft }]}
+                  onPress={() => {
+                    setModalDetalleClaseVisible(false);
+                    router.push('/asistencia');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.primary} />
+                  <Text style={[styles.detalleButtonText, { color: colors.primary }]}>Marcar asistencia</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.detalleButton, { backgroundColor: colors.background.secondary }]}
+                  onPress={() => {
+                    setModalDetalleClaseVisible(false);
+                    router.push('/horarios');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={colors.text.primary} />
+                  <Text style={styles.detalleButtonText}>Ver horario</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </Modal>
       </View>
     </Container>
   );
@@ -810,6 +962,22 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.md,
     letterSpacing: -0.3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  verTodasButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  verTodasText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
   },
   quickActionsGrid: {
     flexDirection: 'row',
@@ -982,5 +1150,40 @@ const styles = StyleSheet.create({
   footerDivider: {
     width: 1,
     backgroundColor: colors.border.light,
+  },
+
+  // Estilos para modal de detalle de clase
+  detalleLabel: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.secondary,
+    fontWeight: typography.weights.medium,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detalleValue: {
+    fontSize: typography.sizes.md,
+    color: colors.text.primary,
+    fontWeight: typography.weights.semibold,
+  },
+  detalleActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  detalleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  detalleButtonText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.text.primary,
   },
 });

@@ -1,8 +1,8 @@
 import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
-import { Estudiante, ApiResponse } from '../types';
+import { Alumno, ApiResponse } from '../types';
 
 export const alumnosApi = {
-    listar: async (): Promise<Estudiante[]> => {
+    listar: async (): Promise<Alumno[]> => {
         try {
             const response = await fetch(`${API_URL}/api/alumnos.php?action=listar`, {
                 headers: getHeaders(),
@@ -15,9 +15,12 @@ export const alumnosApi = {
         }
     },
 
-    obtener: async (id: number): Promise<Estudiante | null> => {
+    obtener: async (id: number, include?: string): Promise<Alumno | null> => {
         try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=obtener&id=${id}`, {
+            const url = include 
+                ? `${API_URL}/api/alumnos.php?action=obtener&id=${id}&include=${include}`
+                : `${API_URL}/api/alumnos.php?action=obtener&id=${id}`;
+            const response = await fetch(url, {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
@@ -28,12 +31,12 @@ export const alumnosApi = {
         }
     },
 
-    crear: async (estudiante: Omit<Estudiante, 'id'>): Promise<ApiResponse<any>> => {
+    crear: async (alumno: Omit<Alumno, 'id'>): Promise<ApiResponse<any>> => {
         try {
             const response = await fetch(`${API_URL}/api/alumnos.php?action=crear`, {
                 method: 'POST',
                 headers: getHeaders(),
-                body: JSON.stringify(estudiante),
+                body: JSON.stringify(alumno),
             });
             return await handleApiResponse(response);
         } catch (error) {
@@ -42,12 +45,12 @@ export const alumnosApi = {
         }
     },
 
-    actualizar: async (estudiante: Estudiante): Promise<ApiResponse<any>> => {
+    actualizar: async (id: number, data: Partial<Alumno>): Promise<ApiResponse<any>> => {
         try {
             const response = await fetch(`${API_URL}/api/alumnos.php?action=actualizar`, {
-                method: 'PUT',
+                method: 'POST',
                 headers: getHeaders(),
-                body: JSON.stringify(estudiante),
+                body: JSON.stringify({ id, ...data }),
             });
             return await handleApiResponse(response);
         } catch (error) {

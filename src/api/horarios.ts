@@ -29,6 +29,20 @@ export const horariosApi = {
         }
     },
 
+    actualizar: async (horario: Horario): Promise<ApiResponse<any>> => {
+        try {
+            const response = await fetch(`${API_URL}/api/horarios.php?action=actualizar`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify(horario),
+            });
+            return await handleApiResponse(response);
+        } catch (error) {
+            handleNetworkError(error);
+            throw error;
+        }
+    },
+
     eliminar: async (id: number): Promise<ApiResponse<any>> => {
         try {
             const response = await fetch(`${API_URL}/api/horarios.php?action=eliminar`, {

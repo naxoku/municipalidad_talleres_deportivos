@@ -15,9 +15,12 @@ export const profesoresApi = {
         }
     },
 
-    obtener: async (id: number): Promise<Profesor | null> => {
+    obtener: async (id: number, include?: string): Promise<Profesor | null> => {
         try {
-            const response = await fetch(`${API_URL}/api/profesores.php?action=obtener&id=${id}`, {
+            const url = include 
+                ? `${API_URL}/api/profesores.php?action=obtener&id=${id}&include=${include}`
+                : `${API_URL}/api/profesores.php?action=obtener&id=${id}`;
+            const response = await fetch(url, {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
@@ -42,12 +45,12 @@ export const profesoresApi = {
         }
     },
 
-    actualizar: async (profesor: Profesor): Promise<ApiResponse<any>> => {
+    actualizar: async (id: number, data: Partial<Profesor>): Promise<ApiResponse<any>> => {
         try {
             const response = await fetch(`${API_URL}/api/profesores.php?action=actualizar`, {
                 method: 'PUT',
                 headers: getHeaders(),
-                body: JSON.stringify(profesor),
+                body: JSON.stringify({ id, ...data }),
             });
             return await handleApiResponse(response);
         } catch (error) {

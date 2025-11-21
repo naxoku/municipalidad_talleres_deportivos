@@ -15,9 +15,12 @@ export const talleresApi = {
         }
     },
 
-    obtener: async (id: number): Promise<Taller | null> => {
+    obtener: async (id: number, include?: string): Promise<Taller | null> => {
         try {
-            const response = await fetch(`${API_URL}/api/talleres.php?action=obtener&id=${id}`, {
+            const url = include 
+                ? `${API_URL}/api/talleres.php?action=obtener&id=${id}&include=${include}`
+                : `${API_URL}/api/talleres.php?action=obtener&id=${id}`;
+            const response = await fetch(url, {
                 headers: getHeaders(),
             });
             const data = await handleApiResponse(response);
@@ -42,12 +45,12 @@ export const talleresApi = {
         }
     },
 
-    actualizar: async (taller: Taller): Promise<ApiResponse<any>> => {
+    actualizar: async (id: number, data: Partial<Taller>): Promise<ApiResponse<any>> => {
         try {
             const response = await fetch(`${API_URL}/api/talleres.php?action=actualizar`, {
                 method: 'PUT',
                 headers: getHeaders(),
-                body: JSON.stringify(taller),
+                body: JSON.stringify({ id, ...data }),
             });
             return await handleApiResponse(response);
         } catch (error) {

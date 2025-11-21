@@ -56,13 +56,15 @@ export default function HorariosScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // View State
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('list'); // 'calendar' = Grid Semanal, 'list' = Tarjetas por día
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'planning'>('list'); // 'calendar' = Grid Semanal, 'list' = Tarjetas por día, 'planning' = Planificación
   const [selectedDay, setSelectedDay] = useState<string>('todos');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingHorario, setEditingHorario] = useState<Horario | null>(null);
   const [formData, setFormData] = useState({
     taller_id: '',
     dia_semana: '',
@@ -135,6 +137,20 @@ export default function HorariosScreen() {
   }, [filteredHorarios]);
 
   // 4. Handlers
+  const handleEventPress = (event: CalendarEvent) => {
+    const horario = horarios.find(h => h.id === event.id);
+    if (horario && isAdmin) {
+      setEditingHorario(horario);
+      setFormData({
+        taller_id: horario.taller_id?.toString() || '',
+        dia_semana: horario.dia_semana,
+        hora_inicio: horario.hora_inicio,
+        hora_fin: horario.hora_fin,
+      });
+      setEditModalVisible(true);
+    }
+  };
+
   const handleDelete = (horario: Horario) => {
     Alert.alert(
       'Eliminar Horario',
@@ -173,9 +189,36 @@ export default function HorariosScreen() {
         });
         showToast('Horario creado', 'success');
         setModalVisible(false);
+        setFormData({ taller_id: '', dia_semana: '', hora_inicio: '', hora_fin: '' });
         cargarDatos();
     } catch {
         showToast('Error al crear horario', 'error');
+    } finally {
+        setSaving(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!editingHorario || !formData.taller_id || !formData.dia_semana || !formData.hora_inicio || !formData.hora_fin) {
+        showToast('Completa todos los campos', 'error');
+        return;
+    }
+    setSaving(true);
+    try {
+        await horariosApi.actualizar({
+            id: editingHorario.id,
+            taller_id: parseInt(formData.taller_id),
+            dia_semana: formData.dia_semana,
+            hora_inicio: formData.hora_inicio,
+            hora_fin: formData.hora_fin
+        });
+        showToast('Horario actualizado', 'success');
+        setEditModalVisible(false);
+        setEditingHorario(null);
+        setFormData({ taller_id: '', dia_semana: '', hora_inicio: '', hora_fin: '' });
+        cargarDatos();
+    } catch {
+        showToast('Error al actualizar horario', 'error');
     } finally {
         setSaving(false);
     }
@@ -257,6 +300,14 @@ export default function HorariosScreen() {
             <Ionicons name="calendar" size={16} color={viewMode === 'calendar' ? colors.primary : colors.text.secondary} />
             <Text style={[styles.viewTabText, viewMode === 'calendar' && styles.viewTabTextActive]}>Semanal</Text>
         </TouchableOpacity>
+        
+        <TouchableOpacity 
+            style={[styles.viewTab, viewMode === 'planning' && styles.viewTabActive]}
+            onPress={() => setViewMode('planning')}
+        >
+            <Ionicons name="calendar-outline" size={16} color={viewMode === 'planning' ? colors.primary : colors.text.secondary} />
+            <Text style={[styles.viewTabText, viewMode === 'planning' && styles.viewTabTextActive]}>Planificación</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Contenido Principal */}
@@ -301,9 +352,78 @@ export default function HorariosScreen() {
                     <View style={{ flex: 1 }}>
                         <WeekCalendar 
                             events={calendarEvents} 
-                            onEventPress={(e) => isAdmin ? handleDelete({ id: e.id, taller_nombre: e.title } as Horario) : null}
+                            onEventPress={handleEventPress}
                         />
                     </View>
+                )}
+
+                {/* VISTA 3: PLANIFICACIÓN (PRÓXIMAS CLASES) */}
+                {viewMode === 'planning' && (
+                    <ScrollView 
+                        style={{ flex: 1 }}
+                        contentContainerStyle={styles.planningContainer}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    >
+                        <Text style={styles.planningTitle}>Próximas Clases Programadas</Text>
+                        <Text style={styles.planningSubtitle}>Horarios recurrentes de la semana</Text>
+                        
+                        {DIAS_SEMANA_FILTRO.slice(1).map(day => {
+                            const dayHorarios = filteredHorarios.filter(h => normalize(h.dia_semana) === normalize(day.label));
+                            if (dayHorarios.length === 0) return null;
+                            
+                            return (
+                                <View key={day.value} style={styles.planningDaySection}>
+                                    <View style={styles.planningDayHeader}>
+                                        <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                                        <Text style={styles.planningDayTitle}>{day.label}</Text>
+                                        <Text style={styles.planningDayCount}>({dayHorarios.length})</Text>
+                                    </View>
+                                    
+                                    {dayHorarios.map(horario => (
+                                        <TouchableOpacity
+                                            key={horario.id}
+                                            style={styles.planningCard}
+                                            onPress={() => isAdmin ? handleEventPress({ id: horario.id, title: horario.taller_nombre } as CalendarEvent) : null}
+                                            activeOpacity={isAdmin ? 0.7 : 1}
+                                        >
+                                            <View style={styles.planningCardTime}>
+                                                <Text style={styles.planningCardTimeText}>{formatTimeHHMM(horario.hora_inicio)}</Text>
+                                                <Text style={styles.planningCardTimeSeparator}>-</Text>
+                                                <Text style={styles.planningCardTimeText}>{formatTimeHHMM(horario.hora_fin)}</Text>
+                                            </View>
+                                            
+                                            <View style={styles.planningCardInfo}>
+                                                <Text style={styles.planningCardTitle}>{horario.taller_nombre}</Text>
+                                                
+                                                <View style={styles.planningCardMeta}>
+                                                    {horario.profesor_nombre && (
+                                                        <View style={styles.planningCardMetaItem}>
+                                                            <Ionicons name="person" size={12} color={colors.text.secondary} />
+                                                            <Text style={styles.planningCardMetaText}>{horario.profesor_nombre}</Text>
+                                                        </View>
+                                                    )}
+                                                    {horario.ubicacion_nombre && (
+                                                        <View style={styles.planningCardMetaItem}>
+                                                            <Ionicons name="location" size={12} color={colors.text.secondary} />
+                                                            <Text style={styles.planningCardMetaText}>{horario.ubicacion_nombre}</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            </View>
+                                            
+                                            {isAdmin && (
+                                                <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+                                            )}
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            );
+                        })}
+                        
+                        {filteredHorarios.length === 0 && (
+                            <EmptyState message="No hay horarios programados" />
+                        )}
+                    </ScrollView>
                 )}
             </>
         )}
@@ -312,11 +432,17 @@ export default function HorariosScreen() {
       {/* Modal de Creación */}
       <Modal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+            setModalVisible(false);
+            setFormData({ taller_id: '', dia_semana: '', hora_inicio: '', hora_fin: '' });
+        }}
         title="Nuevo Horario"
         footer={
             <View style={styles.modalFooter}>
-                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalBtnCancel}>
+                <TouchableOpacity onPress={() => {
+                    setModalVisible(false);
+                    setFormData({ taller_id: '', dia_semana: '', hora_inicio: '', hora_fin: '' });
+                }} style={styles.modalBtnCancel}>
                     <Text style={styles.modalBtnTextCancel}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleCreate} style={styles.modalBtnConfirm} disabled={saving}>
@@ -336,6 +462,78 @@ export default function HorariosScreen() {
             value={formData.dia_semana}
             onValueChange={v => setFormData({...formData, dia_semana: String(v)})}
             items={DIAS_SEMANA_FILTRO.slice(1).map(d => ({ label: d.label, value: d.label }))} // Usamos label para guardar bonito
+        />
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+            <View style={{ flex: 1 }}>
+                <Input 
+                    label="Inicio (HH:MM)" 
+                    value={formData.hora_inicio} 
+                    onChangeText={t => setFormData({...formData, hora_inicio: t})} 
+                    placeholder="09:00"
+                />
+            </View>
+            <View style={{ flex: 1 }}>
+                <Input 
+                    label="Fin (HH:MM)" 
+                    value={formData.hora_fin} 
+                    onChangeText={t => setFormData({...formData, hora_fin: t})} 
+                    placeholder="10:30"
+                />
+            </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Edición Rápida */}
+      <Modal
+        visible={editModalVisible}
+        onClose={() => {
+            setEditModalVisible(false);
+            setEditingHorario(null);
+            setFormData({ taller_id: '', dia_semana: '', hora_inicio: '', hora_fin: '' });
+        }}
+        title="Editar Horario"
+        footer={
+            <View style={styles.modalFooter}>
+                {editingHorario && (
+                    <TouchableOpacity 
+                        onPress={() => {
+                            handleDelete(editingHorario);
+                            setEditModalVisible(false);
+                        }} 
+                        style={styles.modalBtnDelete}
+                    >
+                        <Ionicons name="trash-outline" size={16} color={colors.error} />
+                        <Text style={styles.modalBtnTextDelete}>Eliminar</Text>
+                    </TouchableOpacity>
+                )}
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity 
+                    onPress={() => {
+                        setEditModalVisible(false);
+                        setEditingHorario(null);
+                        setFormData({ taller_id: '', dia_semana: '', hora_inicio: '', hora_fin: '' });
+                    }} 
+                    style={styles.modalBtnCancel}
+                >
+                    <Text style={styles.modalBtnTextCancel}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleUpdate} style={styles.modalBtnConfirm} disabled={saving}>
+                    {saving ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.modalBtnTextConfirm}>Actualizar</Text>}
+                </TouchableOpacity>
+            </View>
+        }
+      >
+        <Select
+            label="Taller"
+            value={formData.taller_id}
+            onValueChange={v => setFormData({...formData, taller_id: String(v)})}
+            items={talleres.map(t => ({ label: t.nombre, value: String(t.id) }))}
+        />
+        <Select
+            label="Día"
+            value={formData.dia_semana}
+            onValueChange={v => setFormData({...formData, dia_semana: String(v)})}
+            items={DIAS_SEMANA_FILTRO.slice(1).map(d => ({ label: d.label, value: d.label }))}
         />
         <View style={{ flexDirection: 'row', gap: 16 }}>
             <View style={{ flex: 1 }}>
@@ -511,6 +709,7 @@ const styles = StyleSheet.create({
   modalFooter: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
+      alignItems: 'center',
       gap: 12,
       marginTop: 8,
   },
@@ -531,5 +730,113 @@ const styles = StyleSheet.create({
   modalBtnTextConfirm: {
       color: '#FFF',
       fontWeight: '600',
+  },
+  modalBtnDelete: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: borderRadius.sm,
+      borderWidth: 1,
+      borderColor: colors.error,
+  },
+  modalBtnTextDelete: {
+      color: colors.error,
+      fontWeight: '500',
+  },
+
+  // Planning View Styles
+  planningContainer: {
+      padding: spacing.md,
+      paddingBottom: 40,
+  },
+  planningTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: spacing.xs,
+  },
+  planningSubtitle: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      marginBottom: spacing.lg,
+  },
+  planningDaySection: {
+      marginBottom: spacing.lg,
+  },
+  planningDayHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: spacing.sm,
+      paddingBottom: spacing.xs,
+      borderBottomWidth: 2,
+      borderBottomColor: colors.primary,
+  },
+  planningDayTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text.primary,
+  },
+  planningDayCount: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      fontWeight: '500',
+  },
+  planningCard: {
+      backgroundColor: colors.background.primary,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border.light,
+      ...(Platform.OS === 'web' && { boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }),
+  },
+  planningCardTime: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background.secondary,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: borderRadius.sm,
+      marginRight: spacing.md,
+      minWidth: 100,
+      justifyContent: 'center',
+  },
+  planningCardTimeText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text.primary,
+  },
+  planningCardTimeSeparator: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      marginHorizontal: 4,
+  },
+  planningCardInfo: {
+      flex: 1,
+  },
+  planningCardTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text.primary,
+      marginBottom: 4,
+  },
+  planningCardMeta: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+  },
+  planningCardMetaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+  },
+  planningCardMetaText: {
+      fontSize: 12,
+      color: colors.text.secondary,
   },
 });

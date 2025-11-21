@@ -1,9 +1,10 @@
   import React from 'react';
-  import { Modal, View, StyleSheet, Platform, TouchableWithoutFeedback, KeyboardAvoidingView, ScrollView, Text, TouchableOpacity, Animated } from 'react-native';
+  import { Modal, View, StyleSheet, Platform, TouchableWithoutFeedback, KeyboardAvoidingView, ScrollView, Text, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
   import { SafeAreaView } from 'react-native-safe-area-context';
   import { sharedStyles } from '../theme/sharedStyles';
   import { colors, borderRadius, spacing } from '../theme/colors';
   import { useResponsive } from '../hooks/useResponsive';
+  import Ionicons from '@expo/vector-icons/Ionicons';
 
   type Props = {
     visible: boolean;
@@ -14,6 +15,7 @@
     dismissOnBackdropPress?: boolean;
     footer?: React.ReactNode;
     header?: React.ReactNode;
+    floatingAlerts?: string[];
   };
 
   export default function ElegantModal({ 
@@ -24,7 +26,8 @@
     title, 
     dismissOnBackdropPress = true, 
     footer,
-    header 
+    header,
+    floatingAlerts = []
   }: Props) {
     // Obtenemos los estados de responsive
     const { isWeb, isNative, isMobile } = useResponsive();
@@ -36,6 +39,10 @@
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
     // Animación para el contenido (deslizamiento vertical)
     const slideAnim = React.useRef(new Animated.Value(1000)).current; 
+    // Animación para las alertas flotantes
+    const alertAnim = React.useRef(new Animated.Value(0)).current;
+    // Estado para el scroll
+    const [scrollY, setScrollY] = React.useState(0); 
 
     // Determinar si se usa el estilo de "hoja inferior" (Bottom Sheet)
     const useMobileStyle = isNative || (isWeb && isMobile);
@@ -96,6 +103,79 @@
         }
       }
     }, [visible, fadeAnim, slideAnim, useMobileStyle]);
+
+    // Efecto para animar las alertas flotantes
+    React.useEffect(() => {
+      if (floatingAlerts.length > 0) {
+        // Mostrar alertas con animación
+        Animated.spring(alertAnim, {
+          toValue: 1,
+          useNativeDriver: Platform.OS !== 'web',
+          tension: 100,
+          friction: 8,
+        }).start();
+
+        // Ocultar automáticamente después de 5 segundos
+        const timer = setTimeout(() => {
+          Animated.timing(alertAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: Platform.OS !== 'web',
+          }).start();
+        }, 5000);
+
+        return () => clearTimeout(timer);
+      } else {
+        // Ocultar alertas
+        Animated.timing(alertAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: Platform.OS !== 'web',
+        }).start();
+      }
+    }, [floatingAlerts, alertAnim]);
+
+    // Función para manejar el scroll
+    const handleScroll = React.useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      setScrollY(event.nativeEvent.contentOffset.y);
+    }, []);
+
+    // Componente de alertas flotantes
+    const FloatingAlerts = () => {
+      if (floatingAlerts.length === 0) return null;
+
+      return (
+        <Animated.View 
+          style={[
+            styles.floatingAlertsContainer,
+            {
+              opacity: alertAnim,
+              transform: [
+                { 
+                  translateY: alertAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  })
+                }
+              ],
+            },
+            // Posicionamiento flotante que se mueve con el scroll
+            { top: Math.max(16, 16 - scrollY) }
+          ] as any}
+        >
+          <View style={styles.floatingAlertsContent}>
+            <Ionicons name="warning-outline" size={20} color="#EF4444" />
+            <View style={styles.floatingAlertsText}>
+              {floatingAlerts.map((alert, index) => (
+                <Text key={index} style={styles.floatingAlertText}>
+                  • {alert}
+                </Text>
+              ))}
+            </View>
+          </View>
+        </Animated.View>
+      );
+    };
 
     // Si showModal es false, no renderizamos el Modal, lo que permite su desmontaje.
     if (!showModal) {
@@ -196,11 +276,16 @@
                       keyboardShouldPersistTaps="handled"
                       showsVerticalScrollIndicator={isWeb}
                       bounces={Platform.OS === 'ios'}
+                      onScroll={handleScroll}
+                      scrollEventThrottle={16}
                     >
                       <View style={sharedStyles.modalBody}>
                         {children}
                       </View>
                     </ScrollView>
+
+                    {/* Alertas flotantes */}
+                    <FloatingAlerts />
 
                     {/* Footer para botones de acción */}
                     {footer ? (
@@ -273,5 +358,40 @@
       color: colors.text.secondary,
       fontWeight: '300',
       lineHeight: 22,
+    },
+    // Estilos para alertas flotantes
+    floatingAlertsContainer: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      zIndex: 1000,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      backgroundColor: 'transparent',
+    },
+    floatingAlertsContent: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      backgroundColor: '#FEF2F2',
+      borderWidth: 1,
+      borderColor: '#FECACA',
+      borderRadius: borderRadius.md,
+      padding: 16,
+      gap: 12,
+    },
+    floatingAlertsText: {
+      flex: 1,
+      gap: 4,
+    },
+    floatingAlertText: {
+      fontSize: 14,
+      color: '#DC2626',
+      lineHeight: 20,
     },
   });

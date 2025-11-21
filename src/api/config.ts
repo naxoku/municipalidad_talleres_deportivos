@@ -1,5 +1,9 @@
 // Configuración de la API
-export const API_URL = 'http://129.1.5.7/talleres_backend';
+import { Platform } from 'react-native';
+
+export const API_URL = Platform.OS === 'web' 
+  ? 'http://localhost/talleres_backend'
+  : 'https://e88aadb1c9fd.ngrok-free.app/talleres_backend';
 
 // Headers comunes para las peticiones
 export const getHeaders = () => ({

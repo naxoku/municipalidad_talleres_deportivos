@@ -10,7 +10,7 @@ export interface Profesor {
     especialidad?: string;
 }
 
-export interface Estudiante {
+export interface Alumno {
     id: number;
     nombres: string;
     apellidos: string;

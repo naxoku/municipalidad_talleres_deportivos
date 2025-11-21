@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { inscripcionesApi } from '../src/api/inscripciones';
 import { alumnosApi } from '../src/api/alumnos';
 import { talleresApi } from '../src/api/talleres';
-import { Inscripcion, Estudiante, Taller } from '../src/types';
+import { Inscripcion, Alumno, Taller } from '../src/types';
 import { EmptyState } from '../src/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { shadows, colors, spacing, typography, borderRadius } from '../src/theme/colors';
@@ -25,7 +25,7 @@ import { useAuth } from '../src/contexts/AuthContext';
 
 const InscripcionesScreen = () => {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
-  const [Alumnos, setAlumnos] = useState<Estudiante[]>([]);
+  const [Alumnos, setAlumnos] = useState<Alumno[]>([]);
   const [talleres, setTalleres] = useState<Taller[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);

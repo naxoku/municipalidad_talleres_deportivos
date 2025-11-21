@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Modal,
   Pressable,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -359,6 +360,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   mainScroll: {
     flex: 1,
@@ -375,6 +378,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   cornerHeader: {
     width: SIDEBAR_WIDTH,
@@ -383,6 +388,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#E2E8F0',
     backgroundColor: '#F1F5F9',
+    borderTopLeftRadius: 12,
   },
   cornerText: {
     fontSize: 11,
@@ -395,10 +401,10 @@ const styles = StyleSheet.create({
   timeHeaderCell: {
     width: HOUR_WIDTH,
     justifyContent: 'center',
-    alignItems: 'flex-start', // Alinear al inicio para marcar la línea
+    alignItems: 'flex-start',
     paddingLeft: 8,
-    borderRightWidth: 1, // Marca de hora
-    borderRightColor: '#E2E8F0', // Muy sutil
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
   },
   timeHeaderText: {
     fontSize: 12,
@@ -417,7 +423,7 @@ const styles = StyleSheet.create({
   gridVerticalLine: {
     width: HOUR_WIDTH,
     borderRightWidth: 1,
-    borderRightColor: '#F1F5F9', // Líneas de fondo muy claras
+    borderRightColor: '#F1F5F9',
   },
   
   // FILAS
@@ -455,7 +461,7 @@ const styles = StyleSheet.create({
   // EVENTS (TARJETAS)
   eventCard: {
     position: 'absolute',
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 8,
@@ -465,8 +471,11 @@ const styles = StyleSheet.create({
         height: 1,
     },
     shadowOpacity: 0.10,
-    shadowRadius: 1.5,
+    shadowRadius: 2,
     elevation: 2,
+    ...(Platform.OS === 'web' && { 
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+    }),
   },
   eventCardPressed: {
     opacity: 0.8,
@@ -494,6 +503,7 @@ const styles = StyleSheet.create({
     width: 2,
     backgroundColor: '#EF4444',
     zIndex: 20,
+    borderRadius: 1,
   },
   currentTimeDot: {
     width: 8,
@@ -501,7 +511,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#EF4444',
     marginLeft: -3,
-    marginTop: -4, // Subirlo al header
+    marginTop: -4,
   },
 
   // MODAL STYLES
@@ -518,12 +528,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: {
+        width: 0,
+        height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+    ...(Platform.OS === 'web' && { 
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+    }),
   },
   tooltipHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   tooltipTitle: {
     fontSize: 16,
