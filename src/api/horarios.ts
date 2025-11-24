@@ -1,59 +1,38 @@
-import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
-import { Horario, ApiResponse } from '../types';
+import api from "./axios";
+
+import { Horario } from "@/types/schema";
 
 export const horariosApi = {
-    listar: async (): Promise<Horario[]> => {
-        try {
-            const response = await fetch(`${API_URL}/api/horarios.php?action=listar`, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || [];
-        } catch (error) {
-            handleNetworkError(error);
-            return [];
-        }
-    },
+  getAll: async (): Promise<Horario[]> => {
+    const response = await api.get("/api/horarios.php?action=listar");
 
-    crear: async (horario: Omit<Horario, 'id'>): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/horarios.php?action=crear`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(horario),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+    return response.data.datos || response.data;
+  },
 
-    actualizar: async (horario: Horario): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/horarios.php?action=actualizar`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(horario),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  getById: async (id: number): Promise<Horario> => {
+    const response = await api.get(`/api/horarios.php?action=obtener&id=${id}`);
 
-    eliminar: async (id: number): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/horarios.php?action=eliminar`, {
-                method: 'DELETE',
-                headers: getHeaders(),
-                body: JSON.stringify({ id }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+    return response.data.datos || response.data;
+  },
+
+  update: async (id: number, data: Partial<Horario>): Promise<Horario> => {
+    const response = await api.post("/api/horarios.php?action=actualizar", {
+      id,
+      ...data,
+    });
+
+    return response.data.datos || response.data;
+  },
+
+  getAlumnos: async (id: number): Promise<any[]> => {
+    const response = await api.get(`/api/horarios.php?action=alumnos&id=${id}`);
+
+    return response.data.datos || response.data;
+  },
+
+  getClases: async (id: number): Promise<any[]> => {
+    const response = await api.get(`/api/horarios.php?action=clases&id=${id}`);
+
+    return response.data.datos || response.data;
+  },
 };

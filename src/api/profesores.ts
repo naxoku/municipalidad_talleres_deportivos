@@ -1,75 +1,72 @@
-import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
-import { Profesor, ApiResponse } from '../types';
+import api from "./axios";
+
+import { Profesor } from "@/types/schema";
 
 export const profesoresApi = {
-    listar: async (): Promise<Profesor[]> => {
-        try {
-            const response = await fetch(`${API_URL}/api/profesores.php?action=listar`, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || [];
-        } catch (error) {
-            handleNetworkError(error);
-            return [];
-        }
-    },
+  getAll: async (): Promise<Profesor[]> => {
+    const response = await api.get("/api/profesores.php?action=listar");
 
-    obtener: async (id: number, include?: string): Promise<Profesor | null> => {
-        try {
-            const url = include 
-                ? `${API_URL}/api/profesores.php?action=obtener&id=${id}&include=${include}`
-                : `${API_URL}/api/profesores.php?action=obtener&id=${id}`;
-            const response = await fetch(url, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || null;
-        } catch (error) {
-            handleNetworkError(error);
-            return null;
-        }
-    },
+    return response.data.datos || response.data;
+  },
 
-    crear: async (profesor: Omit<Profesor, 'id'> & { contrasena: string }): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/profesores.php?action=crear`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(profesor),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  getById: async (id: number): Promise<Profesor> => {
+    const response = await api.get(
+      `/api/profesores.php?action=obtener&id=${id}`,
+    );
 
-    actualizar: async (id: number, data: Partial<Profesor>): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/profesores.php?action=actualizar`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify({ id, ...data }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+    return response.data.datos || response.data;
+  },
 
-    eliminar: async (id: number): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/profesores.php?action=eliminar`, {
-                method: 'DELETE',
-                headers: getHeaders(),
-                body: JSON.stringify({ id }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  create: async (profesor: Omit<Profesor, "id">): Promise<Profesor> => {
+    const response = await api.post(
+      "/api/profesores.php?action=crear",
+      profesor,
+    );
+
+    return response.data;
+  },
+
+  update: async (
+    id: number,
+    profesor: Partial<Profesor>,
+  ): Promise<Profesor> => {
+    const response = await api.put(
+      `/api/profesores.php?action=actualizar&id=${id}`,
+      profesor,
+    );
+
+    return response.data;
+  },
+
+  getTalleres: async (id: number) => {
+    const response = await api.get(
+      `/api/profesores.php?action=talleres&id=${id}`,
+    );
+
+    return response.data.datos || response.data;
+  },
+
+  getHorarios: async (id: number) => {
+    const response = await api.get(
+      `/api/profesores.php?action=horarios&id=${id}`,
+    );
+
+    return response.data.datos || response.data;
+  },
+
+  getAlumnos: async (id: number) => {
+    const response = await api.get(
+      `/api/profesores.php?action=alumnos&id=${id}`,
+    );
+
+    return response.data.datos || response.data;
+  },
+
+  getClases: async (id: number) => {
+    const response = await api.get(
+      `/api/profesores.php?action=clases&id=${id}`,
+    );
+
+    return response.data.datos || response.data;
+  },
 };

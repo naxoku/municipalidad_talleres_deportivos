@@ -1,75 +1,184 @@
-import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
-import { Alumno, ApiResponse } from '../types';
+import api from "./axios";
+
+import { Estudiante } from "@/types/schema";
 
 export const alumnosApi = {
-    listar: async (): Promise<Alumno[]> => {
-        try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=listar`, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || [];
-        } catch (error) {
-            handleNetworkError(error);
-            return [];
-        }
-    },
+  getAll: async (): Promise<Estudiante[]> => {
+    const response = await api.get("/api/alumnos.php?action=listar");
+    const data = response.data.datos || response.data;
 
-    obtener: async (id: number, include?: string): Promise<Alumno | null> => {
-        try {
-            const url = include 
-                ? `${API_URL}/api/alumnos.php?action=obtener&id=${id}&include=${include}`
-                : `${API_URL}/api/alumnos.php?action=obtener&id=${id}`;
-            const response = await fetch(url, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || null;
-        } catch (error) {
-            handleNetworkError(error);
-            return null;
-        }
-    },
+    // Mapear campos del backend al formato del frontend
+    return data.map((alumno: any) => ({
+      id: alumno.id,
+      rut: alumno.rut,
+      nombre: alumno.nombres,
+      apellidos: alumno.apellidos,
+      fecha_nacimiento: alumno.fecha_nacimiento,
+      genero: alumno.sexo,
+      telefono: alumno.telefono || "",
+      telefono_emergencia: alumno.telefono_emergencia || "",
+      observaciones: alumno.observaciones || "",
+      correo_electronico: alumno.correo_electronico || "",
+      direccion: alumno.direccion || "",
+      colegio: alumno.colegio || "",
+      curso: alumno.curso || "",
+      tutor_nombre: alumno.tutor_nombre || "",
+      tutor_telefono: alumno.tutor_telefono || "",
+      autorizo_imagenes: Boolean(alumno.autorizo_imagenes),
+      notificaciones_movil: Boolean(alumno.notificaciones_movil),
+      edad: alumno.edad,
+      fecha_inscripcion: alumno.inscripcion,
+    }));
+  },
 
-    crear: async (alumno: Omit<Alumno, 'id'>): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=crear`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(alumno),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  getById: async (id: number): Promise<Estudiante> => {
+    const response = await api.get(`/api/alumnos.php?action=obtener&id=${id}`);
+    const alumno = response.data.datos || response.data;
 
-    actualizar: async (id: number, data: Partial<Alumno>): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=actualizar`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify({ id, ...data }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+    // Mapear campos del backend al formato del frontend
+    return {
+      id: alumno.id,
+      rut: alumno.rut,
+      nombre: alumno.nombres,
+      apellidos: alumno.apellidos,
+      fecha_nacimiento: alumno.fecha_nacimiento,
+      genero: alumno.sexo,
+      telefono: alumno.telefono || "",
+      telefono_emergencia: alumno.telefono_emergencia || "",
+      observaciones: alumno.observaciones || "",
+      correo_electronico: alumno.correo_electronico || "",
+      direccion: alumno.direccion || "",
+      colegio: alumno.colegio || "",
+      curso: alumno.curso || "",
+      tutor_nombre: alumno.tutor_nombre || "",
+      tutor_telefono: alumno.tutor_telefono || "",
+      autorizo_imagenes: Boolean(alumno.autorizo_imagenes),
+      notificaciones_movil: Boolean(alumno.notificaciones_movil),
+      edad: alumno.edad,
+      fecha_inscripcion: alumno.inscripcion,
+    };
+  },
 
-    eliminar: async (id: number): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/alumnos.php?action=eliminar`, {
-                method: 'DELETE',
-                headers: getHeaders(),
-                body: JSON.stringify({ id }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  getTalleres: async (id: number) => {
+    const response = await api.get(`/api/alumnos.php?action=talleres&id=${id}`);
+    const data = response.data.datos || response.data || [];
+
+    // Mapear la respuesta a una estructura consistente
+    return (data as any[]).map((insc: any) => ({
+      id: insc.id,
+      alumno_id: insc.alumno_id,
+      horario_id: insc.horario_id,
+      fecha_inscripcion: insc.fecha_inscripcion,
+      horario: insc.horario
+        ? {
+            id: insc.horario.id || insc.horario_id,
+            taller_id: insc.horario.taller_id || insc.taller_id,
+            profesor_id: insc.horario.profesor_id || insc.profesor_id,
+            dia_semana: insc.horario.dia_semana,
+            hora_inicio: insc.horario.hora_inicio,
+            hora_fin: insc.horario.hora_fin,
+            ubicacion_id: insc.horario.ubicacion_id || insc.ubicacion_id,
+            taller:
+              insc.horario.taller ||
+              (insc.taller_id
+                ? {
+                    id: insc.taller_id,
+                    nombre: insc.taller_nombre,
+                    descripcion: insc.taller_descripcion,
+                  }
+                : null),
+            profesor:
+              insc.horario.profesor ||
+              (insc.profesor_id
+                ? {
+                    id: insc.profesor_id,
+                    nombre: insc.profesor_nombre,
+                  }
+                : null),
+            ubicacion:
+              insc.horario.ubicacion ||
+              (insc.ubicacion_id
+                ? {
+                    id: insc.ubicacion_id,
+                    nombre: insc.ubicacion_nombre,
+                  }
+                : null),
+          }
+        : insc.horario_id
+          ? {
+              id: insc.horario_id,
+              taller_id: insc.taller_id,
+              profesor_id: insc.profesor_id,
+              dia_semana: insc.dia_semana,
+              hora_inicio: insc.hora_inicio,
+              hora_fin: insc.hora_fin,
+              ubicacion_id: insc.ubicacion_id,
+              taller: insc.taller_id
+                ? {
+                    id: insc.taller_id,
+                    nombre: insc.taller_nombre,
+                    descripcion: insc.taller_descripcion,
+                  }
+                : null,
+              profesor: insc.profesor_id
+                ? {
+                    id: insc.profesor_id,
+                    nombre: insc.profesor_nombre,
+                  }
+                : null,
+              ubicacion: insc.ubicacion_id
+                ? {
+                    id: insc.ubicacion_id,
+                    nombre: insc.ubicacion_nombre,
+                  }
+                : null,
+            }
+          : null,
+      // add top-level taller/taller_id for backward compatibility with existing UI
+      taller_id:
+        insc.taller_id ||
+        (insc.horario && insc.horario.taller_id) ||
+        insc.horario?.taller?.id,
+      taller:
+        insc.taller ||
+        insc.horario?.taller ||
+        (insc.taller_id
+          ? {
+              id: insc.taller_id,
+              nombre: insc.taller_nombre,
+              descripcion: insc.taller_descripcion,
+            }
+          : null),
+    }));
+  },
+
+  getAsistencia: async (id: number) => {
+    const response = await api.get(
+      `/api/alumnos.php?action=asistencia&id=${id}`,
+    );
+
+    return response.data.datos || response.data;
+  },
+
+  create: async (alumno: Estudiante): Promise<Estudiante> => {
+    const response = await api.post("/api/alumnos.php?action=crear", alumno);
+
+    return response.data;
+  },
+
+  update: async (
+    id: number,
+    alumno: Partial<Estudiante>,
+  ): Promise<Estudiante> => {
+    const response = await api.put(
+      `/api/alumnos.php?action=actualizar&id=${id}`,
+      alumno,
+    );
+
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/alumnos.php?action=eliminar&id=${id}`);
+  },
 };

@@ -1,45 +1,44 @@
-import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
-import { Inscripcion, ApiResponse } from '../types';
+import api from "./axios";
 
 export const inscripcionesApi = {
-    listar: async (): Promise<Inscripcion[]> => {
-        try {
-            const response = await fetch(`${API_URL}/api/inscripciones.php?action=listar`, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || [];
-        } catch (error) {
-            handleNetworkError(error);
-            return [];
-        }
-    },
+  getAll: async () => {
+    const response = await api.get("/api/inscripciones.php?action=listar");
 
-    crear: async (inscripcion: Omit<Inscripcion, 'id'>): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/inscripciones.php?action=crear`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(inscripcion),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+    return response.data.datos || response.data;
+  },
 
-    eliminar: async (id: number): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/inscripciones.php?action=eliminar`, {
-                method: 'DELETE',
-                headers: getHeaders(),
-                body: JSON.stringify({ id }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  crear: async (data: {
+    alumno_id: number;
+    taller_id: number;
+    horario_id?: number;
+  }) => {
+    const response = await api.post(
+      "/api/inscripciones.php?action=crear",
+      data,
+    );
+
+    return response.data.datos || response.data;
+  },
+
+  actualizar: async (
+    id: number,
+    data: Partial<{ horario_id: number; taller_id: number }>,
+  ) => {
+    const response = await api.put(
+      `/api/inscripciones.php?action=actualizar&id=${id}`,
+      data,
+    );
+
+    return response.data.datos || response.data;
+  },
+
+  eliminar: async (id: number) => {
+    const response = await api.delete(
+      `/api/inscripciones.php?action=eliminar&id=${id}`,
+    );
+
+    return response.data.datos || response.data;
+  },
 };
+
+export default inscripcionesApi;

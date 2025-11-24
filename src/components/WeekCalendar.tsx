@@ -1,15 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
   Modal,
-  Pressable,
-  Platform,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+} from "@heroui/react";
+import { User } from "lucide-react";
 
 // ============= TIPOS Y CONSTANTES =============
 
@@ -34,66 +32,75 @@ interface WeekCalendarProps {
 }
 
 const DAYS = [
-  { id: 'lunes', label: 'Lunes', short: 'Lun' },
-  { id: 'martes', label: 'Martes', short: 'Mar' },
-  { id: 'miercoles', label: 'Miércoles', short: 'Mié' },
-  { id: 'jueves', label: 'Jueves', short: 'Jue' },
-  { id: 'viernes', label: 'Viernes', short: 'Vie' },
-  { id: 'sabado', label: 'Sábado', short: 'Sáb' },
-  { id: 'domingo', label: 'Domingo', short: 'Dom' },
+  { id: "lunes", label: "Lunes", short: "Lun" },
+  { id: "martes", label: "Martes", short: "Mar" },
+  { id: "miércoles", label: "Miércoles", short: "Mié" },
+  { id: "jueves", label: "Jueves", short: "Jue" },
+  { id: "viernes", label: "Viernes", short: "Vie" },
+  { id: "sábado", label: "Sábado", short: "Sáb" },
+  { id: "domingo", label: "Domingo", short: "Dom" },
 ];
 
-// CONFIGURACIÓN DE GANTT
-const HOUR_WIDTH = 100; // Ancho en pixeles de cada hora
-const SIDEBAR_WIDTH = 80; // Ancho de la columna de días
-const EVENT_HEIGHT = 45; // Altura de cada tarjeta de evento
-const EVENT_GAP = 4; // Espacio vertical entre eventos superpuestos
-const ROW_PADDING = 10; // Padding arriba y abajo dentro de cada fila de día
+// CONFIGURACIÓN DE GANTT - MEJORADA PARA RESPONSIVE
+const HOUR_WIDTH = 140; // Ancho en pixeles de cada hora (aumentado)
+const SIDEBAR_WIDTH = 160; // Ancho de la columna de días (aumentado)
+const EVENT_HEIGHT = 90; // Altura de cada tarjeta de evento (aumentado)
+const EVENT_GAP = 6; // Espacio vertical entre eventos superpuestos (reducido)
+const ROW_PADDING = 16; // Padding arriba y abajo dentro de cada fila de día (aumentado)
 
 // Paleta de colores
 const COLOR_THEMES = [
-  { bg: '#4F46E5', border: '#3730A3', text: '#FFFFFF', subtext: '#E0E7FF' }, // Indigo
-  { bg: '#059669', border: '#065F46', text: '#FFFFFF', subtext: '#D1FAE5' }, // Emerald
-  { bg: '#D97706', border: '#92400E', text: '#FFFFFF', subtext: '#FEF3C7' }, // Amber
-  { bg: '#DB2777', border: '#9D174D', text: '#FFFFFF', subtext: '#FCE7F3' }, // Pink
-  { bg: '#2563EB', border: '#1E40AF', text: '#FFFFFF', subtext: '#DBEAFE' }, // Blue
-  { bg: '#7C3AED', border: '#5B21B6', text: '#FFFFFF', subtext: '#EDE9FE' }, // Violet
-  { bg: '#DC2626', border: '#991B1B', text: '#FFFFFF', subtext: '#FEE2E2' }, // Red
-  { bg: '#0D9488', border: '#115E59', text: '#FFFFFF', subtext: '#CCFBF1' }, // Teal
+  { bg: "#4F46E5", border: "#3730A3", text: "#FFFFFF", subtext: "#E0E7FF" }, // Indigo
+  { bg: "#059669", border: "#065F46", text: "#FFFFFF", subtext: "#D1FAE5" }, // Emerald
+  { bg: "#D97706", border: "#92400E", text: "#FFFFFF", subtext: "#FEF3C7" }, // Amber
+  { bg: "#DB2777", border: "#9D174D", text: "#FFFFFF", subtext: "#FCE7F3" }, // Pink
+  { bg: "#2563EB", border: "#1E40AF", text: "#FFFFFF", subtext: "#DBEAFE" }, // Blue
+  { bg: "#7C3AED", border: "#5B21B6", text: "#FFFFFF", subtext: "#EDE9FE" }, // Violet
+  { bg: "#DC2626", border: "#991B1B", text: "#FFFFFF", subtext: "#FEE2E2" }, // Red
+  { bg: "#0D9488", border: "#115E59", text: "#FFFFFF", subtext: "#CCFBF1" }, // Teal
 ];
 
 // ============= HELPERS =============
 
 const normalizeKey = (str: string) =>
-  str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  str
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
 const getMinutes = (time: string) => {
-  const [h, m] = time.split(':').map(Number);
+  const [h, m] = time.split(":").map(Number);
+
   return h * 60 + m;
 };
 
 const formatTime = (time: string) => {
-  const [h, m] = time.split(':');
+  const [h, m] = time.split(":");
   const hour = parseInt(h);
   const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+
   return `${displayHour}:${m}`;
 };
 
 // Algoritmo de Layout Horizontal (Gantt)
 const calculateGanttLayout = (events: CalendarEvent[], startHour: number) => {
   // 1. Ordenar eventos por hora de inicio y duración
-  const items = events.map(e => ({
-    ...e,
-    startMin: getMinutes(e.start),
-    endMin: getMinutes(e.end),
-    lane: 0, // Nivel vertical dentro de la misma fila
-  })).sort((a, b) => a.startMin - b.startMin || (b.endMin - a.endMin));
+  const items = events
+    .map((e) => ({
+      ...e,
+      startMin: getMinutes(e.start),
+      endMin: getMinutes(e.end),
+      lane: 0, // Nivel vertical dentro de la misma fila
+    }))
+    .sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin);
 
   // 2. Calcular "Lanes" (Si se superponen, bajan de nivel)
   const lanes: number[] = []; // Guarda el minuto final del último evento en cada carril
 
-  items.forEach(item => {
+  items.forEach((item) => {
     let placed = false;
+
     // Buscar un carril libre
     for (let i = 0; i < lanes.length; i++) {
       if (lanes[i] <= item.startMin) {
@@ -114,24 +121,122 @@ const calculateGanttLayout = (events: CalendarEvent[], startHour: number) => {
 
   // 3. Calcular posiciones absolutas (Left y Width)
   return {
-    items: items.map(item => {
-      const startOffset = item.startMin - (startHour * 60);
+    items: items.map((item) => {
+      const startOffset = item.startMin - startHour * 60;
       const duration = item.endMin - item.startMin;
 
       return {
         ...item,
         left: (startOffset / 60) * HOUR_WIDTH,
         width: (duration / 60) * HOUR_WIDTH,
-        top: ROW_PADDING + (item.lane * (EVENT_HEIGHT + EVENT_GAP)),
+        top: ROW_PADDING + item.lane * (EVENT_HEIGHT + EVENT_GAP),
       };
     }),
-    rowHeight: (maxLanes * (EVENT_HEIGHT + EVENT_GAP)) + (ROW_PADDING * 2)
+    rowHeight: maxLanes * (EVENT_HEIGHT + EVENT_GAP) + ROW_PADDING * 2,
   };
 };
 
 const getEventTheme = (title: string) => {
-  const hash = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const hash = title
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
   return COLOR_THEMES[hash % COLOR_THEMES.length];
+};
+
+// ============= COMPONENTE MODAL DETALLE =============
+
+const EventModal: React.FC<{
+  event: CalendarEvent | null;
+  onClose: () => void;
+  onPress?: (event: CalendarEvent) => void;
+}> = ({ event, onClose, onPress }) => {
+  if (!event) return null;
+
+  return (
+    <Modal
+      backdrop="blur"
+      classNames={{
+        backdrop: "bg-black/50 backdrop-opacity-40",
+      }}
+      isOpen={!!event}
+      placement="center"
+      onOpenChange={onClose}
+    >
+      <ModalContent>
+        {(onCloseModal) => (
+          <>
+            <ModalHeader className="flex flex-col gap-1">
+              {event.title}
+            </ModalHeader>
+            <ModalBody>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-default-600">Día</p>
+                    <p className="font-medium capitalize">{event.day}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-default-600">Horario</p>
+                    <p className="font-medium">
+                      {formatTime(event.start)} - {formatTime(event.end)}
+                    </p>
+                  </div>
+                </div>
+
+                {event.profesor_nombre && (
+                  <div>
+                    <p className="text-sm text-default-600">Profesor</p>
+                    <p className="font-medium">{event.profesor_nombre}</p>
+                  </div>
+                )}
+
+                {event.ubicacion_nombre && (
+                  <div>
+                    <p className="text-sm text-default-600">Ubicación</p>
+                    <p className="font-medium">{event.ubicacion_nombre}</p>
+                  </div>
+                )}
+
+                {(event.capacidad || event.alumnos_inscritos) && (
+                  <div>
+                    <p className="text-sm text-default-600">Capacidad</p>
+                    <p className="font-medium">
+                      {event.alumnos_inscritos || 0} / {event.capacidad || 0}{" "}
+                      alumnos
+                    </p>
+                  </div>
+                )}
+
+                {event.subtitle && (
+                  <div>
+                    <p className="text-sm text-default-600">Descripción</p>
+                    <p className="text-sm">{event.subtitle}</p>
+                  </div>
+                )}
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="light" onPress={onCloseModal}>
+                Cerrar
+              </Button>
+              {onPress && (
+                <Button
+                  color="primary"
+                  onPress={() => {
+                    onPress(event);
+                    onCloseModal();
+                  }}
+                >
+                  Gestionar Horario
+                </Button>
+              )}
+            </ModalFooter>
+          </>
+        )}
+      </ModalContent>
+    </Modal>
+  );
 };
 
 // ============= COMPONENTE PRINCIPAL =============
@@ -140,30 +245,35 @@ export default function WeekCalendar({
   events = [],
   onEventPress,
   startHour = 8,
-  endHour = 22
+  endHour = 22,
 }: WeekCalendarProps) {
-  
-  const [pressedEvent, setPressedEvent] = useState<string | number | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null,
+  );
 
   // Generar etiquetas de tiempo (Columnas)
   const timeLabels = useMemo(() => {
     const times = [];
+
     for (let h = startHour; h <= endHour; h++) {
       times.push(h);
     }
+
     return times;
   }, [startHour, endHour]);
 
   // Procesar eventos por día y calcular layout
   const rowsData = useMemo(() => {
-    return DAYS.map(day => {
-      const dayEvents = events.filter(e => normalizeKey(e.day) === normalizeKey(day.id));
+    return DAYS.map((day) => {
+      const dayEvents = events.filter(
+        (e) => normalizeKey(e.day) === normalizeKey(day.id),
+      );
       const layout = calculateGanttLayout(dayEvents, startHour);
+
       return {
         day,
         events: layout.items,
-        height: Math.max(layout.rowHeight, 80) // Altura mínima de fila
+        height: Math.max(layout.rowHeight, 80), // Altura mínima de fila
       };
     });
   }, [events, startHour]);
@@ -173,414 +283,159 @@ export default function WeekCalendar({
     const now = new Date();
     const h = now.getHours();
     const m = now.getMinutes();
+
     if (h < startHour || h > endHour) return null;
-    const diffMinutes = (h * 60 + m) - (startHour * 60);
+    const diffMinutes = h * 60 + m - startHour * 60;
+
     return (diffMinutes / 60) * HOUR_WIDTH;
   }, [startHour, endHour]);
 
   return (
-    <View style={styles.container}>
+    <div className="w-full bg-background rounded-lg shadow-lg border border-default-200 overflow-hidden">
       {/* Estructura: Scroll Vertical (Filas) -> Scroll Horizontal (Timeline) */}
-      <ScrollView 
-        style={styles.mainScroll} 
-        showsVerticalScrollIndicator={false}
-      >
-        <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={true}
-            contentContainerStyle={{ paddingBottom: 20 }}
-        >
-            <View style={styles.ganttContainer}>
-                
-                {/* 1. HEADER (Horas) */}
-                <View style={styles.headerRow}>
-                    {/* Esquina superior izquierda vacía (espacio del sidebar) */}
-                    <View style={styles.cornerHeader}>
-                        <Text style={styles.cornerText}>Día / Hora</Text>
-                    </View>
-                    
-                    {/* Columnas de Hora */}
-                    <View style={styles.timeHeaderContainer}>
-                        {timeLabels.map((h, index) => (
-                            <View key={h} style={styles.timeHeaderCell}>
-                                <Text style={styles.timeHeaderText}>{h}:00</Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
+      <div className="overflow-auto max-h-[80vh]">
+        <div className="overflow-x-auto min-w-full">
+          <div className="relative bg-background min-w-max">
+            {/* 1. HEADER (Horas) */}
+            <div className="flex border-b-2 border-default-200 bg-default-50 sticky top-0 z-20">
+              {/* Esquina superior izquierda vacía (espacio del sidebar) */}
+              <div
+                className="flex items-center justify-center border-r-2 border-default-200 bg-default-100 px-4 py-4"
+                style={{ width: SIDEBAR_WIDTH, height: 60 }}
+              >
+                <span className="text-sm font-bold text-default-700 text-center">
+                  Día / Hora
+                </span>
+              </div>
 
-                {/* 2. CUERPO (Filas de Días) */}
-                <View style={styles.bodyContainer}>
-                    
-                    {/* Grid de Fondo (Líneas Verticales) */}
-                    <View style={styles.gridBackground}>
-                        <View style={{ width: SIDEBAR_WIDTH }} />
-                        {timeLabels.map((h) => (
-                            <View key={`line-${h}`} style={styles.gridVerticalLine} />
-                        ))}
-                         {/* Línea de Hora Actual */}
-                        {currentTimeX !== null && (
-                            <View style={[styles.currentTimeLine, { left: SIDEBAR_WIDTH + currentTimeX }]}>
-                                <View style={styles.currentTimeDot} />
-                            </View>
-                        )}
-                    </View>
+              {/* Columnas de Hora */}
+              <div className="flex">
+                {timeLabels.map((h, _index) => (
+                  <div
+                    key={h}
+                    className="flex items-center justify-center px-3 py-4 border-r border-default-200 min-w-0"
+                    style={{ width: HOUR_WIDTH }}
+                  >
+                    <span className="text-sm font-semibold text-default-700 whitespace-nowrap">
+                      {h}:00
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-                    {/* Filas de Datos */}
-                    {rowsData.map((row, index) => {
-                         const isLast = index === rowsData.length - 1;
-                         
-                         return (
-                            <View key={row.day.id} style={[styles.rowContainer, { height: row.height, borderBottomWidth: isLast ? 0 : 1 }]}>
-                                
-                                {/* Columna Izquierda (Sticky visual) */}
-                                <View style={styles.rowLabel}>
-                                    <Text style={styles.rowLabelText}>{row.day.label}</Text>
-                                    <Text style={styles.rowLabelSub}>{row.events.length} clases</Text>
-                                </View>
-
-                                {/* Área de Eventos */}
-                                <View style={styles.rowEventsContainer}>
-                                    {row.events.map((event) => {
-                                        const theme = getEventTheme(event.title);
-                                        const isPressed = pressedEvent === event.id;
-
-                                        return (
-                                            <TouchableOpacity
-                                                key={event.id}
-                                                activeOpacity={0.9}
-                                                onPress={() => setSelectedEvent(event)}
-                                                onPressIn={() => setPressedEvent(event.id)}
-                                                onPressOut={() => setPressedEvent(null)}
-                                                style={[
-                                                    styles.eventCard,
-                                                    {
-                                                        left: event.left,
-                                                        width: event.width - 2, // -2 para margen visual
-                                                        top: event.top,
-                                                        height: EVENT_HEIGHT,
-                                                        backgroundColor: theme.bg,
-                                                        borderColor: theme.border,
-                                                    },
-                                                    isPressed && styles.eventCardPressed
-                                                ]}
-                                            >
-                                                <View style={styles.eventContent}>
-                                                    <Text style={[styles.eventTitle, { color: theme.text }]} numberOfLines={1}>
-                                                        {event.title}
-                                                    </Text>
-                                                    <Text style={[styles.eventTime, { color: theme.subtext }]}>
-                                                        {formatTime(event.start)} - {formatTime(event.end)}
-                                                    </Text>
-                                                </View>
-                                            </TouchableOpacity>
-                                        );
-                                    })}
-                                </View>
-                            </View>
-                         );
-                    })}
-                </View>
-            </View>
-        </ScrollView>
-      </ScrollView>
-
-      {/* ========== MODAL DETALLE (Igual que antes) ========== */}
-      {selectedEvent && (
-        <Modal
-          transparent
-          visible={!!selectedEvent}
-          animationType="fade"
-          onRequestClose={() => setSelectedEvent(null)}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setSelectedEvent(null)}
-          >
-            <View style={styles.tooltipCard}>
-              <View style={[styles.tooltipHeader, { backgroundColor: getEventTheme(selectedEvent.title).bg }]}>
-                <Text style={[styles.tooltipTitle, { color: '#FFF' }]}>
-                  {selectedEvent.title}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setSelectedEvent(null)}
-                  style={styles.closeButton}
-                >
-                  <Ionicons name="close" size={20} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.tooltipBody}>
-                <View style={styles.tooltipRow}>
-                  <Ionicons name="calendar-outline" size={18} color="#71717A" />
-                  <Text style={styles.tooltipText}>{selectedEvent.day}</Text>
-                </View>
-                <View style={styles.tooltipRow}>
-                  <Ionicons name="time-outline" size={18} color="#71717A" />
-                  <Text style={styles.tooltipText}>
-                    {formatTime(selectedEvent.start)} - {formatTime(selectedEvent.end)}
-                  </Text>
-                </View>
-
-                {selectedEvent.profesor_nombre && (
-                  <View style={styles.tooltipRow}>
-                    <Ionicons name="person-outline" size={18} color="#71717A" />
-                    <Text style={styles.tooltipText}>{selectedEvent.profesor_nombre}</Text>
-                  </View>
+            {/* 2. CUERPO (Filas de Días) */}
+            <div className="relative">
+              {/* Grid de Fondo (Líneas Verticales) */}
+              <div className="absolute inset-0 flex pointer-events-none">
+                <div style={{ width: SIDEBAR_WIDTH }} />
+                {timeLabels.map((h) => (
+                  <div
+                    key={`line-${h}`}
+                    className="border-r border-default-100"
+                    style={{ width: HOUR_WIDTH }}
+                  />
+                ))}
+                {/* Línea de Hora Actual */}
+                {currentTimeX !== null && (
+                  <div
+                    className="absolute top-0 bottom-0 w-1 bg-red-500 z-20 shadow-lg"
+                    style={{ left: SIDEBAR_WIDTH + currentTimeX }}
+                  >
+                    <div className="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full border-2 border-background shadow-md" />
+                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium">
+                      {new Date().toLocaleTimeString("es-CL", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
                 )}
+              </div>
 
-                {selectedEvent.ubicacion_nombre && (
-                  <View style={styles.tooltipRow}>
-                    <Ionicons name="location-outline" size={18} color="#71717A" />
-                    <Text style={styles.tooltipText}>{selectedEvent.ubicacion_nombre}</Text>
-                  </View>
-                )}
+              {/* Filas de Datos */}
+              {rowsData.map((row, index) => {
+                const isLast = index === rowsData.length - 1;
 
-                <TouchableOpacity
-                  style={[styles.tooltipButton, { backgroundColor: getEventTheme(selectedEvent.title).bg }]}
-                  onPress={() => {
-                    onEventPress?.(selectedEvent);
-                    setSelectedEvent(null);
-                  }}
-                >
-                  <Text style={styles.tooltipButtonText}>Gestionar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Pressable>
-        </Modal>
-      )}
-    </View>
+                return (
+                  <div
+                    key={row.day.id}
+                    className={`flex relative hover:bg-default-50/50 transition-colors ${!isLast ? "border-b border-default-200" : ""}`}
+                    style={{ height: row.height }}
+                  >
+                    {/* Columna Izquierda (Sticky visual) */}
+                    <div
+                      className="flex flex-col items-center justify-center border-r-2 border-default-200 bg-background z-10 px-4 py-6 sticky left-0"
+                      style={{ width: SIDEBAR_WIDTH }}
+                    >
+                      <span className="text-base font-bold text-foreground text-center leading-tight">
+                        {row.day.label}
+                      </span>
+                      <span className="text-xs text-default-500 mt-2 bg-default-100 px-2 py-1 rounded-full">
+                        {row.events.length}{" "}
+                        {row.events.length === 1 ? "clase" : "clases"}
+                      </span>
+                    </div>
+
+                    {/* Área de Eventos */}
+                    <div className="flex-1 relative min-h-full">
+                      {row.events.length === 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center text-default-400 text-sm pointer-events-none">
+                          <div className="text-center opacity-50">
+                            Sin clases programadas
+                          </div>
+                        </div>
+                      )}
+                      {row.events.map((event) => {
+                        const theme = getEventTheme(event.title);
+
+                        return (
+                          <button
+                            key={event.id}
+                            className="absolute rounded-lg border-2 shadow-md hover:shadow-xl transition-all duration-200 cursor-pointer text-left transform hover:scale-105 group"
+                            style={{
+                              left: event.left,
+                              width: event.width - 6, // -6 para margen visual
+                              top: event.top,
+                              height: EVENT_HEIGHT,
+                              backgroundColor: theme.bg,
+                              borderColor: theme.border,
+                            }}
+                            onClick={() => setSelectedEvent(event)}
+                          >
+                            <div className="p-3 h-full flex flex-col justify-between">
+                              <div className="font-bold text-sm leading-tight truncate text-white group-hover:text-white">
+                                {event.title}
+                              </div>
+                              <div className="text-xs mt-1 text-white/90 font-medium">
+                                {formatTime(event.start)} -{" "}
+                                {formatTime(event.end)}
+                              </div>
+                              {event.profesor_nombre && (
+                                <div className="text-xs mt-1 text-white/80 truncate flex items-center gap-1">
+                                  <User size={12} />
+                                  {event.profesor_nombre}
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Detalle */}
+      <EventModal
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        onPress={onEventPress}
+      />
+    </div>
   );
 }
-
-// ============= ESTILOS =============
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  mainScroll: {
-    flex: 1,
-  },
-  ganttContainer: {
-    flexDirection: 'column',
-    backgroundColor: '#FFFFFF',
-  },
-  
-  // HEADER
-  headerRow: {
-    flexDirection: 'row',
-    height: 50,
-    backgroundColor: '#F8FAFC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  cornerHeader: {
-    width: SIDEBAR_WIDTH,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
-    backgroundColor: '#F1F5F9',
-    borderTopLeftRadius: 12,
-  },
-  cornerText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  timeHeaderContainer: {
-    flexDirection: 'row',
-  },
-  timeHeaderCell: {
-    width: HOUR_WIDTH,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 8,
-    borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
-  },
-  timeHeaderText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-
-  // BODY
-  bodyContainer: {
-    position: 'relative',
-  },
-  gridBackground: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
-  },
-  gridVerticalLine: {
-    width: HOUR_WIDTH,
-    borderRightWidth: 1,
-    borderRightColor: '#F1F5F9',
-  },
-  
-  // FILAS
-  rowContainer: {
-    flexDirection: 'row',
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: 'transparent',
-  },
-  rowLabel: {
-    width: SIDEBAR_WIDTH,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    zIndex: 10,
-  },
-  rowLabelText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-    textAlign: 'center',
-  },
-  rowLabelSub: {
-    fontSize: 10,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  rowEventsContainer: {
-    flex: 1,
-    position: 'relative',
-  },
-
-  // EVENTS (TARJETAS)
-  eventCard: {
-    position: 'absolute',
-    borderRadius: 8,
-    borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-        width: 0,
-        height: 1,
-    },
-    shadowOpacity: 0.10,
-    shadowRadius: 2,
-    elevation: 2,
-    ...(Platform.OS === 'web' && { 
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
-    }),
-  },
-  eventCardPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }]
-  },
-  eventContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  eventTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  eventTime: {
-    fontSize: 10,
-    fontWeight: '500',
-  },
-
-  // INDICADOR HORA ACTUAL
-  currentTimeLine: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: '#EF4444',
-    zIndex: 20,
-    borderRadius: 1,
-  },
-  currentTimeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-    marginLeft: -3,
-    marginTop: -4,
-  },
-
-  // MODAL STYLES
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  tooltipCard: {
-    width: '100%',
-    maxWidth: 300,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: {
-        width: 0,
-        height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
-    ...(Platform.OS === 'web' && { 
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-    }),
-  },
-  tooltipHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  tooltipTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 10,
-  },
-  closeButton: {
-    padding: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-  },
-  tooltipBody: {
-    padding: 16,
-  },
-  tooltipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 10,
-  },
-  tooltipText: {
-    fontSize: 14,
-    color: '#3F3F46',
-    flex: 1,
-  },
-  tooltipButton: {
-    marginTop: 8,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  tooltipButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-});

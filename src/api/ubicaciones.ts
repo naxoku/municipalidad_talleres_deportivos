@@ -1,72 +1,44 @@
-import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
-import { Ubicacion, ApiResponse } from '../types';
+import api from "./axios";
+
+import { Ubicacion } from "@/types/schema";
 
 export const ubicacionesApi = {
-    listar: async (): Promise<Ubicacion[]> => {
-        try {
-            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=listar`, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || [];
-        } catch (error) {
-            handleNetworkError(error);
-            return [];
-        }
-    },
+  getAll: async (): Promise<Ubicacion[]> => {
+    const response = await api.get("/api/ubicaciones.php?action=listar");
 
-    obtener: async (id: number): Promise<Ubicacion | null> => {
-        try {
-            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=obtener&id=${id}`, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || null;
-        } catch (error) {
-            handleNetworkError(error);
-            return null;
-        }
-    },
+    return response.data.datos || response.data;
+  },
 
-    crear: async (ubicacion: Omit<Ubicacion, 'id'>): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=crear`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(ubicacion),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  getById: async (id: number): Promise<Ubicacion> => {
+    const response = await api.get(
+      `/api/ubicaciones.php?action=obtener&id=${id}`,
+    );
 
-    actualizar: async (ubicacion: Ubicacion): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=actualizar`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(ubicacion),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+    return response.data.datos || response.data;
+  },
 
-    eliminar: async (id: number): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/ubicaciones.php?action=eliminar`, {
-                method: 'DELETE',
-                headers: getHeaders(),
-                body: JSON.stringify({ id }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  create: async (ubicacion: Omit<Ubicacion, "id">): Promise<Ubicacion> => {
+    const response = await api.post(
+      "/api/ubicaciones.php?action=crear",
+      ubicacion,
+    );
+
+    return response.data;
+  },
+
+  update: async (
+    id: number,
+    ubicacion: Partial<Ubicacion>,
+  ): Promise<Ubicacion> => {
+    const response = await api.put(
+      `/api/ubicaciones.php?action=actualizar&id=${id}`,
+      ubicacion,
+    );
+
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/ubicaciones.php?action=eliminar&id=${id}`);
+  },
 };

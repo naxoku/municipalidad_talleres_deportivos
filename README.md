@@ -1,164 +1,103 @@
-# 📱 Talleres Deportivos - Municipalidad de Angol
+# Sistema de Gestión de Talleres Deportivos
 
-Sistema de gestión de talleres deportivos desarrollado con **React Native + Expo** para móvil, tablet y web.
+Aplicación web para la gestión de talleres deportivos municipales, construida con React, Vite y HeroUI.
 
-## 🎨 Características Principales
+## Tecnologías Utilizadas
 
-- ✅ **Navegación por Drawer** con menú lateral responsivo
-- ✅ **9 secciones principales** con operaciones CRUD completas
-- ✅ **Diseño responsive** (móvil, tablet, web)
-- ✅ **Modales deslizables** para formularios
-- ✅ **Estados de carga** y confirmaciones
-- ✅ **Sistema de autenticación** por roles (Admin/Profesor/Alumno)
-- ✅ **Búsqueda global** integrada
+- [Vite](https://vitejs.dev/guide/) - Build tool
+- [HeroUI](https://heroui.com) - Componentes UI
+- [Tailwind CSS](https://tailwindcss.com) - Estilos
+- [TypeScript](https://www.typescriptlang.org) - Tipado
+- [React Query](https://tanstack.com/query) - Gestión de estado del servidor
+- [Axios](https://axios-http.com) - Cliente HTTP
+- [React Router](https://reactrouter.com) - Enrutamiento
 
-## 🚀 Inicio Rápido
+## Requisitos Previos
 
-### Configurar Backend URL
+- Node.js 18+
+- Backend PHP corriendo en `http://localhost/talleres_backend`
 
-Edita `src/api/config.ts`:
-```typescript
-export const API_URL = 'http://localhost/talleres_backend';
+## Instalación
+
+1. Clona el repositorio:
+```bash
+git clone <repository-url>
+cd muni_talleres
 ```
 
-### Instalar y Ejecutar
+2. Instala las dependencias:
+```bash
+pnpm install
+```
+
+3. Copia las variables de entorno:
+```bash
+cp .env.example .env
+```
+
+4. Verifica la conexión con el backend:
+```bash
+pnpm check-backend
+```
+
+## Verificación del Backend
+
+Antes de ejecutar la aplicación, asegúrate de que tu backend esté funcionando correctamente:
 
 ```bash
-npm install
-npx expo start --clear    # Para desarrollo
-npm run web              # Para web
-npm run android          # Para Android
+pnpm check-backend
 ```
 
-## 🗺️ Rutas de la Aplicación
+Este comando verificará que el backend esté accesible y responda correctamente a las peticiones.
 
-### Rutas Principales
-| Ruta | Descripción | Acceso |
-|------|-------------|--------|
-| `/` | Dashboard principal | Todos |
-| `/talleres` | Gestión de talleres | Admin/Profesor |
-| `/profesores` | Gestión de profesores | Admin |
-| `/alumnos` | Gestión de alumnos | Admin/Profesor |
-| `/horarios` | Gestión de horarios | Admin/Profesor |
-| `/inscripciones` | Gestión de inscripciones | Admin |
-| `/asistencia` | Control de asistencia | Admin/Profesor |
-| `/reportes` | Reportes y estadísticas | Admin |
-| `/clases` | Gestión de clases programadas | Admin |
+## Configuración del Backend
 
-### Rutas Modales
-Los modales se muestran localmente sin cambiar la URL de navegación.
+El backend debe estar disponible en `http://localhost/talleres_backend` y exponer los siguientes endpoints:
 
-## 📡 API Endpoints
+### Talleres
+- `GET /api/talleres.php?action=listar` - Lista todos los talleres
+- `GET /api/talleres.php?action=detalle&id={id}` - Detalle de un taller
+- `GET /api/talleres.php?action=horarios&id={id}` - Horarios de un taller
+- `GET /api/talleres.php?action=alumnos&id={id}` - Alumnos inscritos en un taller
+- `GET /api/talleres.php?action=clases&id={id}` - Clases de un taller
 
-### Configuración Base
-**URL Base**: `http://localhost/talleres_backend/api/`
+### Alumnos
+- `GET /api/alumnos.php?action=listar` - Lista todos los alumnos
+- `GET /api/alumnos.php?action=detalle&rut={rut}` - Detalle de un alumno
 
-### 👨‍🏫 Profesores
-**Endpoint**: `profesores.php`
-- `GET ?accion=listar` - Listar profesores
-- `POST ?accion=crear` - Crear profesor
-- `PUT ?accion=actualizar` - Actualizar profesor
-- `DELETE ?accion=eliminar` - Eliminar profesor
+### Dashboard
+- `GET /api/dashboard.php?action=stats` - Estadísticas del dashboard
 
-### 👨‍🎓 Alumnos
-**Endpoint**: `alumnos.php`
-- `GET ?accion=listar` - Listar alumnos
-- `POST ?accion=crear` - Crear alumno
-- `PUT ?accion=actualizar` - Actualizar alumno
-- `DELETE ?accion=eliminar` - Eliminar alumno
+## Ejecución
 
-### 📚 Talleres
-**Endpoint**: `talleres.php`
-- `GET ?accion=listar` - Listar talleres
-- `POST ?accion=crear` - Crear taller
-- `PUT ?accion=actualizar` - Actualizar taller
-- `DELETE ?accion=eliminar` - Eliminar taller
-
-### 🕐 Horarios
-**Endpoint**: `horarios.php`
-- `GET ?accion=listar` - Listar horarios
-- `POST ?accion=crear` - Crear horario
-- `DELETE ?accion=eliminar` - Eliminar horario
-
-### ✅ Inscripciones
-**Endpoint**: `inscripciones.php`
-- `GET ?accion=listar` - Listar inscripciones
-- `POST ?accion=crear` - Crear inscripción
-- `DELETE ?accion=eliminar` - Eliminar inscripción
-
-### 📅 Clases
-**Endpoint**: `clases.php`
-- `GET ?accion=listar` - Listar clases
-- `POST ?accion=crear` - Crear clase
-- `DELETE ?accion=eliminar` - Eliminar clase
-
-### 📍 Asistencia
-**Endpoint**: `asistencia.php`
-- `GET ?accion=obtener&clase_id=X` - Obtener asistencia
-- `POST ?accion=marcar` - Marcar asistencia
-
-### 📊 Dashboard
-**Endpoint**: `dashboard.php`
-- `GET` - Datos del dashboard
-
-### 📈 Reportes
-**Endpoint**: `reportes.php`
-- `GET ?accion=estadisticas&period=X` - Estadísticas
-- `GET ?accion=exportar_X&period=X` - Exportar reportes
-
-## 🛠️ Stack Tecnológico
-
-- **React Native** 0.81.5 + **Expo** ~54.0
-- **Expo Router** (navegación basada en archivos)
-- **TypeScript** ~5.9
-- **React Navigation** (integrado con Expo Router)
-
-## 📱 Testing
-
-- **Web**: `http://localhost:8081`
-- **Android/iOS**: Expo Go + QR code (misma red WiFi)
-- **Móvil**: Usar IP de la PC, no `localhost`
-
-## 🐛 Troubleshooting
-
-### Backend no conecta
-1. Verificar que WAMP esté ejecutándose
-2. Revisar URL en `src/api/config.ts`
-3. Para móvil: usar IP de la PC (ej: `http://192.168.1.100/talleres_backend`)
-4. Verificar firewall/antivirus
-
-### Limpiar caché
 ```bash
-npx expo start --clear
+pnpm dev
 ```
 
-### Errores de TypeScript
-En VS Code: `Ctrl+Shift+P` → "TypeScript: Restart TS Server"
+La aplicación estará disponible en `http://localhost:5173`
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
-municipalidad_talleres_deportivos/
-├── app/                    # Rutas de Expo Router
-│   ├── (drawer)/          # Layout con drawer
-│   ├── (modals)/          # Rutas modales
-│   ├── _layout.tsx        # Layout raíz
-│   └── [ruta].tsx         # Páginas principales
-├── src/
-│   ├── api/               # Servicios API
-│   ├── components/        # Componentes reutilizables
-│   ├── contexts/          # Contextos React
-│   ├── hooks/             # Hooks personalizados
-│   ├── screens/           # Pantallas (componentes)
-│   ├── theme/             # Sistema de diseño
-│   └── types/             # Tipos TypeScript
-└── talleres_backend/      # Backend PHP
+src/
+├── api/           # Servicios de API
+├── components/    # Componentes reutilizables
+├── context/       # Contextos de React
+├── layouts/       # Layouts de la aplicación
+├── pages/         # Páginas de la aplicación
+├── types/         # Definiciones de tipos
+└── utils/         # Utilidades
 ```
 
-## 📄 Licencia
+## Funcionalidades
 
-Municipalidad de Angol - Unidad de Deportes © 2025
+- ✅ Dashboard con métricas y clases del día
+- ✅ Gestión de talleres deportivos
+- ✅ Gestión de alumnos
+- ✅ Sistema de autenticación
+- ✅ Diseño responsivo con HeroUI
+- ✅ PWA (Progressive Web App)
 
----
+## Licencia
 
-**Desarrollado con** ❤️ **usando React Native + Expo**
+MIT

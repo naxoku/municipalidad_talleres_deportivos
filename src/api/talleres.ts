@@ -1,75 +1,90 @@
-import { API_URL, getHeaders, handleApiResponse, handleNetworkError } from './config';
-import { Taller, ApiResponse } from '../types';
+import api from "./axios";
+
+import { Taller } from "@/types/schema";
 
 export const talleresApi = {
-    listar: async (): Promise<Taller[]> => {
-        try {
-            const response = await fetch(`${API_URL}/api/talleres.php?action=listar`, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || [];
-        } catch (error) {
-            handleNetworkError(error);
-            return [];
-        }
-    },
+  getAll: async (): Promise<Taller[]> => {
+    const response = await api.get("/api/talleres.php?action=listar");
+    const data = response.data.datos || response.data;
 
-    obtener: async (id: number, include?: string): Promise<Taller | null> => {
-        try {
-            const url = include 
-                ? `${API_URL}/api/talleres.php?action=obtener&id=${id}&include=${include}`
-                : `${API_URL}/api/talleres.php?action=obtener&id=${id}`;
-            const response = await fetch(url, {
-                headers: getHeaders(),
-            });
-            const data = await handleApiResponse(response);
-            return data.datos || null;
-        } catch (error) {
-            handleNetworkError(error);
-            return null;
-        }
-    },
+    // Mapear campos del backend al formato del frontend
+    return data.map((taller: any) => ({
+      id: parseInt(taller.id),
+      nombre: taller.nombre,
+      descripcion: taller.descripcion || "",
+      activo: true, // Por defecto activo
+      inscritos_count: 0, // Se puede obtener de otro endpoint
+      horarios_count: parseInt(taller.horarios_count) || 0,
+      alumnos_count: parseInt(taller.alumnos_count) || 0,
+      profesores: taller.profesores || [],
+      profesor: taller.profesores?.[0]?.nombre || "Sin asignar", // Para compatibilidad
+    }));
+  },
 
-    crear: async (taller: Omit<Taller, 'id'>): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/talleres.php?action=crear`, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(taller),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  getById: async (id: number): Promise<Taller> => {
+    const response = await api.get(`/api/talleres.php?action=obtener&id=${id}`);
+    const data = response.data.datos || response.data;
 
-    actualizar: async (id: number, data: Partial<Taller>): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/talleres.php?action=actualizar`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify({ id, ...data }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+    // Mapear campos del backend al formato del frontend
+    return {
+      id: parseInt(data.id),
+      nombre: data.nombre,
+      descripcion: data.descripcion || "",
+      activo: data.activo === 1 || data.activo === true,
+      profesor: data.profesor || "Sin asignar",
+      ubicacion_principal: data.ubicacion_principal || "Sin ubicación",
+      inscritos_count: 0, // Se puede obtener de otro endpoint
+      horarios_count: 0, // Se puede obtener de otro endpoint
+      alumnos_count: 0, // Se puede obtener de otro endpoint
+    };
+  },
 
-    eliminar: async (id: number): Promise<ApiResponse<any>> => {
-        try {
-            const response = await fetch(`${API_URL}/api/talleres.php?action=eliminar`, {
-                method: 'DELETE',
-                headers: getHeaders(),
-                body: JSON.stringify({ id }),
-            });
-            return await handleApiResponse(response);
-        } catch (error) {
-            handleNetworkError(error);
-            throw error;
-        }
-    },
+  getHorarios: async (id: number) => {
+    const response = await api.get(
+      `/api/horarios.php?action=por_taller&taller_id=${id}`,
+    );
+
+    const data = response.data.datos || response.data;
+
+    return Array.isArray(data) ? data : [];
+  },
+
+  getAlumnos: async (id: number) => {
+    const response = await api.get(
+      `/api/inscripciones.php?action=por_taller&taller_id=${id}`,
+    );
+
+    const data = response.data.datos || response.data;
+
+    return Array.isArray(data) ? data : [];
+  },
+
+  getClases: async (id: number) => {
+    const response = await api.get(
+      `/api/clases.php?action=por_taller&taller_id=${id}`,
+    );
+
+    const data = response.data.datos || response.data;
+
+    return Array.isArray(data) ? data : [];
+  },
+
+  create: async (taller: Omit<Taller, "id">): Promise<Taller> => {
+    const response = await api.post("/api/talleres.php?action=crear", taller);
+
+    return response.data;
+  },
+
+  update: async (id: number, taller: Partial<Taller>): Promise<Taller> => {
+    const response = await api.put(
+      `/api/talleres.php?action=actualizar&id=${id}`,
+      taller,
+    );
+
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/talleres.php?action=eliminar&id=${id}`);
+  },
 };
