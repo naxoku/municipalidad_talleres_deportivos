@@ -143,17 +143,18 @@ export default function ProfesorAlumnosPage() {
               removeWrapper
               aria-label="Tabla de alumnos"
               classNames={{
-                th: "bg-default-100",
+                th: "bg-default-100 font-semibold",
+                td: "py-4",
               }}
             >
               <TableHeader>
-                <TableColumn>ALUMNO</TableColumn>
-                <TableColumn>RUT</TableColumn>
-                <TableColumn>EDAD</TableColumn>
-                <TableColumn>CONTACTO</TableColumn>
-                <TableColumn>APODERADO</TableColumn>
-                <TableColumn>TALLERES</TableColumn>
-                <TableColumn>ACCIONES</TableColumn>
+                <TableColumn width="20%">ALUMNO</TableColumn>
+                <TableColumn width="12%">RUT</TableColumn>
+                <TableColumn width="8%">EDAD</TableColumn>
+                <TableColumn width="18%">CONTACTO</TableColumn>
+                <TableColumn width="15%">APODERADO</TableColumn>
+                <TableColumn width="17%">TALLERES</TableColumn>
+                <TableColumn width="10%">ACCIONES</TableColumn>
               </TableHeader>
               <TableBody emptyContent="No hay alumnos para mostrar">
                 {filteredAlumnos.map((alumno) => (
@@ -164,10 +165,10 @@ export default function ProfesorAlumnosPage() {
                           showFallback
                           color="primary"
                           name={alumno.nombre}
-                          size="sm"
+                          size="md"
                         />
                         <div>
-                          <p className="font-semibold">
+                          <p className="font-semibold text-sm">
                             {alumno.nombre_completo}
                           </p>
                           <p className="text-xs text-default-400 capitalize">
@@ -180,22 +181,22 @@ export default function ProfesorAlumnosPage() {
                       <p className="font-mono text-sm">{alumno.rut}</p>
                     </TableCell>
                     <TableCell>
-                      <Chip size="sm" variant="flat">
+                      <Chip color="default" size="sm" variant="flat">
                         {alumno.edad} años
                       </Chip>
                     </TableCell>
                     <TableCell>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {alumno.telefono && (
-                          <div className="flex items-center gap-1 text-xs">
-                            <Phone size={12} />
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="text-default-400" size={14} />
                             <span>{alumno.telefono}</span>
                           </div>
                         )}
                         {alumno.email && (
-                          <div className="flex items-center gap-1 text-xs">
-                            <Mail size={12} />
-                            <span className="truncate max-w-[150px]">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="text-default-400" size={14} />
+                            <span className="truncate max-w-[180px]">
                               {alumno.email}
                             </span>
                           </div>
@@ -204,39 +205,45 @@ export default function ProfesorAlumnosPage() {
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        {alumno.nombre_apoderado && (
-                          <p className="text-sm font-medium">
-                            {alumno.nombre_apoderado}
-                          </p>
-                        )}
-                        {alumno.telefono_apoderado && (
-                          <div className="flex items-center gap-1 text-xs text-default-500">
-                            <Phone size={12} />
-                            <span>{alumno.telefono_apoderado}</span>
-                          </div>
+                        {alumno.nombre_apoderado ? (
+                          <>
+                            <p className="text-sm font-medium">
+                              {alumno.nombre_apoderado}
+                            </p>
+                            {alumno.telefono_apoderado && (
+                              <div className="flex items-center gap-2 text-xs text-default-500">
+                                <Phone size={12} />
+                                <span>{alumno.telefono_apoderado}</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-xs text-default-400">
+                            No registrado
+                          </span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <p className="text-sm max-w-[200px] truncate">
-                        {alumno.talleres}
-                      </p>
-                      {alumno.total_inscripciones > 1 && (
-                        <Chip color="primary" size="sm" variant="flat">
-                          {alumno.total_inscripciones} talleres
-                        </Chip>
-                      )}
+                      <div className="space-y-1">
+                        <p className="text-sm">{alumno.talleres}</p>
+                        {alumno.total_inscripciones > 1 && (
+                          <Chip color="primary" size="sm" variant="dot">
+                            {alumno.total_inscripciones} talleres
+                          </Chip>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Button
                         color="primary"
                         size="sm"
-                        variant="flat"
+                        variant="light"
                         onPress={() =>
                           (window.location.href = `/alumnos/${alumno.id}`)
                         }
                       >
-                        Ver Detalle
+                        Ver más
                       </Button>
                     </TableCell>
                   </TableRow>

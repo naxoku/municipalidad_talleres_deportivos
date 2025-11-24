@@ -9,6 +9,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function ReportsSection() {
   const navigate = useNavigate();
@@ -103,7 +104,7 @@ export function ReportsSection() {
                 variant="flat"
                 onPress={() => {
                   // placeholder action for generating reports
-                  console.debug("Generate report", report.title);
+                  toast.info(`Generando: ${report.title}`);
                 }}
               >
                 Generar Reporte

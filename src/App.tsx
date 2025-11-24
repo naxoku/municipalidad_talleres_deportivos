@@ -8,6 +8,8 @@ import TallerDetailPage from "@/pages/talleres/detail";
 import AlumnosPage from "@/pages/alumnos/index";
 import ProfesorTalleresPage from "@/pages/profesor/talleres";
 import ProfesorAlumnosPage from "@/pages/profesor/alumnos";
+import ProfesorPlanificacionPage from "@/pages/profesor/planificacion";
+import ProfesorAsistenciaPage from "@/pages/profesor/asistencia";
 import AlumnoViewPage from "@/pages/alumnos/[id]";
 import HorariosPage from "@/pages/horarios/index";
 import HorarioViewPage from "@/pages/horarios/[id]";
@@ -67,6 +69,22 @@ function App() {
           </AppProtectedRoute>
         }
         path="/profesor/alumnos"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
+            <ProfesorPlanificacionPage />
+          </AppProtectedRoute>
+        }
+        path="/profesor/planificacion"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
+            <ProfesorAsistenciaPage />
+          </AppProtectedRoute>
+        }
+        path="/profesor/asistencia"
       />
 
       {/* Rutas para talleres y alumnos (admin y profesor comparten) */}

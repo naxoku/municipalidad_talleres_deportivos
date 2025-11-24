@@ -42,8 +42,16 @@ export const Sidebar = () => {
           { name: "Mis Talleres", path: "/profesor/talleres", icon: BookOpen },
           { name: "Mis Alumnos", path: "/profesor/alumnos", icon: Users },
           { name: "Horarios", path: "/horarios", icon: Calendar },
-          { name: "Asistencia", path: "/asistencia", icon: CheckCircle },
-          { name: "Planificación", path: "/planificacion", icon: FileText },
+          {
+            name: "Asistencia",
+            path: "/profesor/asistencia",
+            icon: CheckCircle,
+          },
+          {
+            name: "Planificación",
+            path: "/profesor/planificacion",
+            icon: FileText,
+          },
         ];
 
   const toggleSidebar = () => setIsOpen(!isOpen);
@@ -66,8 +74,14 @@ export const Sidebar = () => {
       {/* Overlay for mobile */}
       {isOpen && (
         <div
+          aria-label="Cerrar menú"
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          role="button"
+          tabIndex={0}
           onClick={() => setIsOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" || e.key === "Enter") setIsOpen(false);
+          }}
         />
       )}
 

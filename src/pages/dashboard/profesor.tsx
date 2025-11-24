@@ -137,7 +137,7 @@ export default function ProfesorDashboard() {
               <BookOpen className="text-primary" size={24} />
             </div>
             <div>
-              <p className="text-sm text-default-500">Mis Talleres</p>
+              <p className="text-sm text-default-500">Mis talleres</p>
               <p className="text-2xl font-bold">{metrics.misTalleres}</p>
             </div>
           </CardBody>
@@ -149,7 +149,7 @@ export default function ProfesorDashboard() {
               <Users className="text-success" size={24} />
             </div>
             <div>
-              <p className="text-sm text-default-500">Total Alumnos</p>
+              <p className="text-sm text-default-500">Total alumnos</p>
               <p className="text-2xl font-bold">{metrics.totalAlumnos}</p>
             </div>
           </CardBody>
@@ -161,7 +161,7 @@ export default function ProfesorDashboard() {
               <Calendar className="text-warning" size={24} />
             </div>
             <div>
-              <p className="text-sm text-default-500">Clases Hoy</p>
+              <p className="text-sm text-default-500">Clases hoy</p>
               <p className="text-2xl font-bold">{metrics.clasesHoy}</p>
             </div>
           </CardBody>
@@ -185,7 +185,7 @@ export default function ProfesorDashboard() {
       {/* Acciones Rápidas */}
       <Card>
         <CardHeader>
-          <h2 className="text-xl font-bold">Acciones Rápidas</h2>
+          <h2 className="text-xl font-bold">Acciones rápidas</h2>
         </CardHeader>
         <CardBody>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -197,7 +197,7 @@ export default function ProfesorDashboard() {
             >
               <div className="flex flex-col items-center gap-2">
                 <BookOpen size={24} />
-                <span className="text-sm font-semibold">Ver Mis Talleres</span>
+                <span className="text-sm font-semibold">Ver mis talleres</span>
               </div>
             </Button>
 
@@ -209,7 +209,7 @@ export default function ProfesorDashboard() {
             >
               <div className="flex flex-col items-center gap-2">
                 <CheckCircle size={24} />
-                <span className="text-sm font-semibold">Pasar Asistencia</span>
+                <span className="text-sm font-semibold">Pasar asistencia</span>
               </div>
             </Button>
 
@@ -233,7 +233,7 @@ export default function ProfesorDashboard() {
             >
               <div className="flex flex-col items-center gap-2">
                 <Users size={24} />
-                <span className="text-sm font-semibold">Mis Alumnos</span>
+                <span className="text-sm font-semibold">Mis alumnos</span>
               </div>
             </Button>
           </div>
@@ -242,7 +242,7 @@ export default function ProfesorDashboard() {
 
       {/* Clases de Hoy */}
       <div className="space-y-4">
-        <h2 className="text-xl font-bold">Mis Clases de Hoy</h2>
+        <h2 className="text-xl font-bold">Mis clases de hoy</h2>
 
         {/* En Curso */}
         {currentClasses.length > 0 && (
