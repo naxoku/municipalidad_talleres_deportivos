@@ -33,10 +33,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 
 import { horariosApi } from "@/api/horarios";
-import { talleresApi } from "@/api/talleres";
-import { profesoresApi } from "@/api/profesores";
+import { talleresFeatureApi as talleresApi } from "@/features/talleres/api";
+import { profesoresFeatureApi as profesoresApi } from "@/features/profesores/api";
 import { ubicacionesApi } from "@/api/ubicaciones";
-import { inscripcionesApi } from "@/api/inscripciones";
+import { inscripcionesFeatureApi as inscripcionesApi } from "@/features/inscripciones/api";
 import WeekCalendar, { CalendarEvent } from "@/components/WeekCalendar";
 
 const columns = [

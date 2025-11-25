@@ -13,7 +13,7 @@ import {
 import { Edit } from "lucide-react";
 
 import { useAuth } from "@/context/auth";
-import { profesoresApi } from "@/api/profesores";
+import { profesoresFeatureApi as profesoresApi } from "@/features/profesores/api";
 
 export default function ProfesorHorariosPage() {
   const navigate = useNavigate();

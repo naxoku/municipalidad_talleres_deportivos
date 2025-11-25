@@ -43,7 +43,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 
-import { talleresApi } from "@/api/talleres";
+import { talleresFeatureApi as talleresApi } from "@/features/talleres/api";
 
 export default function TallerDetailPage() {
   const { id } = useParams();

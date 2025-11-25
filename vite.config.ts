@@ -12,6 +12,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
+      injectManifest: {
+        // incluir assets comunes además de los precache automáticos
+        globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+      },
       // incluir recursos públicos que ya existen (vite.svg está en /public)
       // incluir recursos públicos existentes bajo /assets y otros iconos
       includeAssets: [

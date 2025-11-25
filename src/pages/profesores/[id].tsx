@@ -43,7 +43,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 
-import { profesoresApi } from "@/api/profesores";
+import { profesoresFeatureApi as profesoresApi } from "@/features/profesores/api";
 import { Profesor } from "@/types/schema";
 
 export default function ProfesorDetailPage() {

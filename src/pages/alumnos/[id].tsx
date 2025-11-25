@@ -40,9 +40,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { parseDate } from "@internationalized/date";
 
-import { inscripcionesApi } from "@/api/inscripciones";
-import { talleresApi } from "@/api/talleres";
-import { alumnosApi } from "@/api/alumnos";
+import { inscripcionesFeatureApi as inscripcionesApi } from "@/features/inscripciones/api";
+import { talleresFeatureApi as talleresApi } from "@/features/talleres/api";
+import { alumnosFeatureApi as alumnosApi } from "@/features/alumnos/api";
 import { Alumno } from "@/types/schema";
 
 export default function AlumnoViewPage() {

@@ -20,9 +20,9 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 
-import { alumnosApi } from "@/api/alumnos";
-import { talleresApi } from "@/api/talleres";
-import { inscripcionesApi } from "@/api/inscripciones";
+import { alumnosFeatureApi as alumnosApi } from "@/features/alumnos/api";
+import { talleresFeatureApi as talleresApi } from "@/features/talleres/api";
+import { inscripcionesFeatureApi as inscripcionesApi } from "@/features/inscripciones/api";
 import { Alumno } from "@/types/schema";
 
 const columns = [

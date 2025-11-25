@@ -21,7 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 
 import { Taller } from "@/types/schema";
-import { talleresApi } from "@/api/talleres";
+import { talleresFeatureApi as talleresApi } from "@/features/talleres/api";
 
 const columns = [
   { name: "NOMBRE", uid: "nombre", sortable: true },

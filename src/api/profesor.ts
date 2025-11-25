@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "@/api/axios";
 
 const API_URL =
   import.meta.env.VITE_API_URL || "http://localhost/talleres_backend";
@@ -62,7 +62,7 @@ export interface ClaseHoy {
 export const profesorApi = {
   // Obtener talleres del profesor
   getTalleres: async (profesorId: number): Promise<TallerProfesor[]> => {
-    const response = await axios.get(
+    const response = await api.get(
       `${API_URL}/api/profesor_talleres.php?profesor_id=${profesorId}`,
     );
 
@@ -71,7 +71,7 @@ export const profesorApi = {
 
   // Obtener alumnos del profesor
   getAlumnos: async (profesorId: number): Promise<AlumnoProfesor[]> => {
-    const response = await axios.get(
+    const response = await api.get(
       `${API_URL}/api/profesor_alumnos.php?profesor_id=${profesorId}`,
     );
 
@@ -80,7 +80,7 @@ export const profesorApi = {
 
   // Obtener dashboard del profesor
   getDashboard: async (profesorId: number): Promise<DashboardProfesor> => {
-    const response = await axios.get(
+    const response = await api.get(
       `${API_URL}/api/profesor_dashboard.php?profesor_id=${profesorId}`,
     );
 

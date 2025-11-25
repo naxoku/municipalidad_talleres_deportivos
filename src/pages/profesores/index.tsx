@@ -20,8 +20,8 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 
-import { profesoresApi } from "@/api/profesores";
-import { talleresApi } from "@/api/talleres";
+import { profesoresFeatureApi as profesoresApi } from "@/features/profesores/api";
+import { talleresFeatureApi as talleresApi } from "@/features/talleres/api";
 import { Profesor } from "@/types/schema";
 
 const columns = [
