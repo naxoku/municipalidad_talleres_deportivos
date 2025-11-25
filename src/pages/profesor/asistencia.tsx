@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Card,
   CardBody,
@@ -24,18 +25,35 @@ import {
   Users,
   Clock,
   MapPin,
+  Lock,
+  AlertCircle,
+  Download,
+  Info,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
+import { showToast } from "@/lib/toast";
 import { useAuth } from "@/context/auth";
-import { asistenciaApi, HorarioAsistencia } from "@/api/asistencia";
+import {
+  asistenciaApi,
+  HorarioAsistencia,
+  AlumnoAsistencia,
+} from "@/api/asistencia";
+import { localIsoDate } from "@/utils/localDate";
 
 export default function ProfesorAsistenciaPage() {
   const { user } = useAuth();
+  // use centralized toast helper
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+
+  // Leer horario de la URL si viene del dashboard
+  const horarioFromUrl = searchParams.get("horario");
+
+  // No pre-seleccionar hasta que los horarios estén cargados
   const [horarioSeleccionado, setHorarioSeleccionado] = useState<number>(0);
   const [fecha, setFecha] = useState<string>("");
+  const [urlProcessed, setUrlProcessed] = useState(false);
   const [asistencias, setAsistencias] = useState<Map<number, boolean>>(
     new Map(),
   );
@@ -49,7 +67,7 @@ export default function ProfesorAsistenciaPage() {
 
   // Fetch asistencia para horario y fecha seleccionados
   const {
-    data: alumnos,
+    data: asistenciaData,
     isLoading: loadingAlumnos,
     refetch: refetchAsistencia,
   } = useQuery({
@@ -64,9 +82,28 @@ export default function ProfesorAsistenciaPage() {
     enabled: !!horarioSeleccionado && !!fecha,
   });
 
+  // Extraer alumnos y estado de editabilidad
+  const alumnos: AlumnoAsistencia[] = useMemo(() => {
+    if (!asistenciaData) return [];
+
+    return asistenciaData.alumnos || [];
+  }, [asistenciaData]);
+
+  const esEditable = useMemo(() => {
+    if (!asistenciaData) return true;
+
+    return asistenciaData.es_editable !== false;
+  }, [asistenciaData]);
+
+  const mensajeBloqueo = useMemo(() => {
+    if (!asistenciaData) return "";
+
+    return asistenciaData.mensaje || "";
+  }, [asistenciaData]);
+
   // Inicializar asistencias cuando se cargan los alumnos
-  useMemo(() => {
-    if (alumnos) {
+  useEffect(() => {
+    if (alumnos && alumnos.length > 0) {
       const newAsistencias = new Map<number, boolean>();
 
       alumnos.forEach((alumno) => {
@@ -93,33 +130,72 @@ export default function ProfesorAsistenciaPage() {
       queryClient.invalidateQueries({
         queryKey: ["profesor", "asistencia"],
       });
-      toast.success("Asistencia guardada exitosamente");
+      showToast({
+        title: "Asistencia guardada exitosamente",
+        color: "success",
+      });
       refetchAsistencia();
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Error al guardar asistencia");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+
+      showToast({
+        title: err.response?.data?.error || "Error al guardar asistencia",
+        color: "danger",
+      });
     },
   });
 
-  // Normalizar datos recibidos de la query: la API puede devolver
-  // directamente un arreglo o un objeto con la propiedad `datos` o `value`.
+  // Normalizar datos recibidos de la query
   const horariosList = useMemo<HorarioAsistencia[]>(() => {
     if (!horarios) return [];
 
     if (Array.isArray(horarios)) return horarios;
 
-    if (Array.isArray((horarios as any).datos)) return (horarios as any).datos;
+    if (Array.isArray((horarios as { datos?: unknown }).datos))
+      return (horarios as { datos: HorarioAsistencia[] }).datos;
 
-    if (Array.isArray((horarios as any).value)) return (horarios as any).value;
+    if (Array.isArray((horarios as { value?: unknown }).value))
+      return (horarios as { value: HorarioAsistencia[] }).value;
 
     return [];
   }, [horarios]);
+
+  // Efecto para sincronizar horario de URL cuando los datos estén listos
+  useEffect(() => {
+    if (horarioFromUrl && horariosList.length > 0 && !urlProcessed) {
+      const horarioId = parseInt(horarioFromUrl);
+      const existeHorario = horariosList.some((h) => h.id === horarioId);
+
+      if (existeHorario) {
+        setHorarioSeleccionado(horarioId);
+        // Use local date (avoid UTC shift)
+        setFecha(localIsoDate());
+      }
+      setUrlProcessed(true);
+    }
+  }, [horarioFromUrl, horariosList, urlProcessed]);
+
+  // Si la URL fue procesada y ya tenemos horario y fecha, forzar carga de asistencia
+  useEffect(() => {
+    if (urlProcessed && horarioSeleccionado && fecha) {
+      if (typeof refetchAsistencia === "function") refetchAsistencia();
+    }
+  }, [urlProcessed, horarioSeleccionado, fecha, refetchAsistencia]);
 
   const horarioInfo = useMemo(() => {
     return horariosList.find((h) => h.id === horarioSeleccionado);
   }, [horariosList, horarioSeleccionado]);
 
   const handleToggleAsistencia = (alumnoId: number) => {
+    if (!esEditable) {
+      showToast({
+        title: "No se puede modificar la asistencia de una clase pasada",
+        color: "danger",
+      });
+
+      return;
+    }
     setAsistencias((prev) => {
       const newMap = new Map(prev);
 
@@ -130,6 +206,14 @@ export default function ProfesorAsistenciaPage() {
   };
 
   const handleMarcarTodos = (presente: boolean) => {
+    if (!esEditable) {
+      showToast({
+        title: "No se puede modificar la asistencia de una clase pasada",
+        color: "danger",
+      });
+
+      return;
+    }
     if (!alumnos) return;
     setAsistencias((prev) => {
       const newMap = new Map(prev);
@@ -144,11 +228,46 @@ export default function ProfesorAsistenciaPage() {
 
   const handleGuardar = () => {
     if (!horarioSeleccionado || !fecha) {
-      toast.error("Selecciona un horario y una fecha");
+      showToast({
+        title: "Selecciona un horario y una fecha",
+        color: "danger",
+      });
+
+      return;
+    }
+    if (!esEditable) {
+      showToast({
+        title: "No se puede guardar la asistencia de una clase pasada",
+        color: "danger",
+      });
 
       return;
     }
     guardarMutation.mutate();
+  };
+
+  // Exportar a CSV
+  const handleExportarCSV = () => {
+    if (!alumnos || alumnos.length === 0) return;
+
+    const csv = [
+      ["RUT", "Nombre Completo", "Asistencia"],
+      ...alumnos.map((a) => [
+        a.rut,
+        a.nombre_completo,
+        asistencias.get(a.id) ? "Presente" : "Ausente",
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = `asistencia_${horarioInfo?.taller_nombre || "clase"}_${fecha}.csv`;
+    a.click();
   };
 
   const presentesCount = useMemo(() => {
@@ -224,14 +343,14 @@ export default function ProfesorAsistenciaPage() {
                     </span>
                   </div>
                 </SelectItem>
-              )) || []}
+              ))}
             </Select>
 
             {/* Input Fecha */}
             <Input
               isRequired
               label="Fecha de la Clase"
-              max={new Date().toISOString().split("T")[0]}
+              max={localIsoDate()}
               startContent={<Calendar size={18} />}
               type="date"
               value={fecha}
@@ -274,30 +393,76 @@ export default function ProfesorAsistenciaPage() {
         </CardBody>
       </Card>
 
+      {/* Banner de solo lectura */}
+      {horarioSeleccionado && fecha && !esEditable && (
+        <Card className="mb-6 border-l-4 border-l-warning bg-warning-50">
+          <CardBody className="flex-row items-center gap-4">
+            <div className="rounded-full bg-warning-100 p-3">
+              <Lock className="text-warning-600" size={24} />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-warning-800">
+                Asistencia de Solo Lectura
+              </h3>
+              <p className="text-sm text-warning-700">
+                {mensajeBloqueo ||
+                  "Esta clase ya finalizó. No es posible modificar la asistencia."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-warning-600">
+              <Info size={16} />
+              <span>Contacta al administrador si necesitas correcciones</span>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
       {/* Tabla de asistencia */}
       {horarioSeleccionado && fecha && (
         <Card>
           <CardHeader className="flex-col items-start gap-3 pb-4">
             <div className="flex w-full items-center justify-between">
-              <h2 className="text-lg font-semibold">Lista de Asistencia</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">Lista de Asistencia</h2>
+                {!esEditable && (
+                  <Chip color="warning" size="sm" variant="flat">
+                    <Lock className="mr-1" size={12} />
+                    Solo lectura
+                  </Chip>
+                )}
+              </div>
               {alumnos && alumnos.length > 0 && (
                 <div className="flex gap-2">
-                  <Button
-                    color="success"
-                    size="sm"
-                    variant="flat"
-                    onPress={() => handleMarcarTodos(true)}
-                  >
-                    Marcar todos presentes
-                  </Button>
-                  <Button
-                    color="danger"
-                    size="sm"
-                    variant="flat"
-                    onPress={() => handleMarcarTodos(false)}
-                  >
-                    Marcar todos ausentes
-                  </Button>
+                  {esEditable ? (
+                    <>
+                      <Button
+                        color="success"
+                        size="sm"
+                        variant="flat"
+                        onPress={() => handleMarcarTodos(true)}
+                      >
+                        Marcar todos presentes
+                      </Button>
+                      <Button
+                        color="danger"
+                        size="sm"
+                        variant="flat"
+                        onPress={() => handleMarcarTodos(false)}
+                      >
+                        Marcar todos ausentes
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      color="default"
+                      size="sm"
+                      startContent={<Download size={16} />}
+                      variant="flat"
+                      onPress={handleExportarCSV}
+                    >
+                      Descargar CSV
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -355,15 +520,31 @@ export default function ProfesorAsistenciaPage() {
                         </TableCell>
                         <TableCell>{alumno.rut}</TableCell>
                         <TableCell>
-                          <Checkbox
-                            color="success"
-                            isSelected={asistencias.get(alumno.id) || false}
-                            onValueChange={() =>
-                              handleToggleAsistencia(alumno.id)
-                            }
-                          >
-                            Presente
-                          </Checkbox>
+                          {esEditable ? (
+                            <Checkbox
+                              color="success"
+                              isSelected={asistencias.get(alumno.id) || false}
+                              onValueChange={() =>
+                                handleToggleAsistencia(alumno.id)
+                              }
+                            >
+                              Presente
+                            </Checkbox>
+                          ) : (
+                            <Chip
+                              color={
+                                asistencias.get(alumno.id)
+                                  ? "success"
+                                  : "danger"
+                              }
+                              size="sm"
+                              variant="flat"
+                            >
+                              {asistencias.get(alumno.id)
+                                ? "✓ Presente"
+                                : "✗ Ausente"}
+                            </Chip>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -389,34 +570,75 @@ export default function ProfesorAsistenciaPage() {
                               </p>
                             )}
                           </div>
-                          <Checkbox
-                            color="success"
-                            isSelected={asistencias.get(alumno.id) || false}
-                            size="lg"
-                            onValueChange={() =>
-                              handleToggleAsistencia(alumno.id)
-                            }
-                          >
-                            Presente
-                          </Checkbox>
+                          {esEditable ? (
+                            <Checkbox
+                              color="success"
+                              isSelected={asistencias.get(alumno.id) || false}
+                              size="lg"
+                              onValueChange={() =>
+                                handleToggleAsistencia(alumno.id)
+                              }
+                            >
+                              Presente
+                            </Checkbox>
+                          ) : (
+                            <Chip
+                              color={
+                                asistencias.get(alumno.id)
+                                  ? "success"
+                                  : "danger"
+                              }
+                              size="sm"
+                              variant="flat"
+                            >
+                              {asistencias.get(alumno.id)
+                                ? "✓ Presente"
+                                : "✗ Ausente"}
+                            </Chip>
+                          )}
                         </div>
                       </CardBody>
                     </Card>
                   ))}
                 </div>
 
-                {/* Botón guardar */}
-                <div className="mt-6 flex justify-end">
-                  <Button
-                    color="primary"
-                    isLoading={guardarMutation.isPending}
-                    size="lg"
-                    startContent={<Save size={20} />}
-                    onPress={handleGuardar}
-                  >
-                    Guardar Asistencia
-                  </Button>
+                {/* Botón guardar o mensaje de solo lectura */}
+                <div className="mt-6 flex justify-end gap-3">
+                  {!esEditable && (
+                    <Button
+                      color="default"
+                      size="lg"
+                      startContent={<Download size={20} />}
+                      variant="flat"
+                      onPress={handleExportarCSV}
+                    >
+                      Descargar CSV
+                    </Button>
+                  )}
+                  {esEditable && (
+                    <Button
+                      color="primary"
+                      isLoading={guardarMutation.isPending}
+                      size="lg"
+                      startContent={<Save size={20} />}
+                      onPress={handleGuardar}
+                    >
+                      Guardar Asistencia
+                    </Button>
+                  )}
                 </div>
+
+                {/* Mensaje informativo para clase pasada */}
+                {!esEditable && (
+                  <div className="mt-4 flex items-center gap-2 rounded-lg bg-default-100 p-3 text-sm text-default-600">
+                    <AlertCircle size={16} />
+                    <span>
+                      Los datos mostrados corresponden a la asistencia
+                      registrada el día de la clase. Si necesitas hacer
+                      correcciones, contacta al administrador del sistema.
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </CardBody>

@@ -41,7 +41,7 @@ export const Sidebar = () => {
           { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
           { name: "Mis Talleres", path: "/profesor/talleres", icon: BookOpen },
           { name: "Mis Alumnos", path: "/profesor/alumnos", icon: Users },
-          { name: "Horarios", path: "/horarios", icon: Calendar },
+          { name: "Horarios", path: "/profesor/horarios", icon: Calendar },
           {
             name: "Asistencia",
             path: "/profesor/asistencia",

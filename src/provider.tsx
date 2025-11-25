@@ -1,8 +1,8 @@
 import type { NavigateOptions } from "react-router-dom";
 
-import { HeroUIProvider } from "@heroui/system";
 import { useHref, useNavigate } from "react-router-dom";
-import { Toaster } from "sonner";
+import { HeroUIProvider } from "@heroui/system";
+import { ToastProvider } from "@heroui/toast";
 
 import { AuthProvider } from "@/context/auth";
 
@@ -17,10 +17,9 @@ export function Provider({ children }: { children: React.ReactNode }) {
 
   return (
     <HeroUIProvider navigate={navigate} useHref={useHref}>
-      <AuthProvider>
-        <Toaster richColors position="top-right" />
-        {children}
-      </AuthProvider>
+      {/* Force toasts to appear top-center on all viewports */}
+      <ToastProvider placement="top-center" toastOffset={8} />
+      <AuthProvider>{children}</AuthProvider>
     </HeroUIProvider>
   );
 }

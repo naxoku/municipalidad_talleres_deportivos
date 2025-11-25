@@ -23,6 +23,13 @@ export interface AlumnoAsistencia {
   telefono_emergencia?: string;
 }
 
+export interface AsistenciaResponse {
+  alumnos: AlumnoAsistencia[];
+  es_editable: boolean;
+  fecha: string;
+  mensaje: string;
+}
+
 export interface GuardarAsistenciaRequest {
   horario_id: number;
   fecha: string;
@@ -56,12 +63,37 @@ export const asistenciaApi = {
   getAsistenciaFecha: async (
     horario_id: number,
     fecha: string,
-  ): Promise<AlumnoAsistencia[]> => {
+  ): Promise<AsistenciaResponse> => {
     const response = await api.get(
       `/api/profesor_asistencia.php?action=asistencia_fecha&horario_id=${horario_id}&fecha=${fecha}`,
     );
 
-    return response.data.datos || response.data;
+    const data = response.data.datos || response.data;
+
+    // Manejar formato antiguo (array) y nuevo (objeto con alumnos)
+    if (Array.isArray(data)) {
+      // usar fecha local para coherencia con frontend
+      const hoy = (() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+
+        return `${y}-${m}-${dd}`;
+      })();
+
+      return {
+        alumnos: data,
+        es_editable: fecha >= hoy,
+        fecha,
+        mensaje:
+          fecha < hoy
+            ? "Esta clase ya pasó. Los datos son de solo lectura."
+            : "",
+      };
+    }
+
+    return data;
   },
 
   guardarAsistencia: async (

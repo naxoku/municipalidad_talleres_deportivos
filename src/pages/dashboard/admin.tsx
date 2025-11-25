@@ -31,6 +31,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { dashboardApi } from "@/api/dashboard";
+import { localIsoDate } from "@/utils/localDate";
 
 const formatTimeHHMM = (timeString: string) => {
   if (!timeString) return "-";
@@ -81,7 +82,7 @@ export default function DashboardPage() {
     if (!data?.clases_hoy) return { currentClasses: [], upcomingClasses: [] };
 
     const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
+    const todayStr = localIsoDate(now);
     const currentTime = now.getHours() * 60 + now.getMinutes();
 
     // Las clases de hoy no incluyen fecha, son las del día actual
@@ -490,8 +491,8 @@ function ModalsSection({
               </ModalHeader>
               <ModalBody>
                 <Select
-                  label="Estudiante"
-                  placeholder="Selecciona un estudiante"
+                  label="Alumno"
+                  placeholder="Selecciona un alumno"
                   variant="bordered"
                 >
                   <SelectItem key="1">Juan Pérez</SelectItem>
@@ -624,6 +625,7 @@ function ModalsSection({
                     </p>
                     <div className="flex items-center gap-2">
                       <Progress
+                        aria-label={`Asistencia: ${selectedClass?.total_asistentes} de ${selectedClass?.cupos_max}`}
                         className="flex-1"
                         color="primary"
                         size="sm"

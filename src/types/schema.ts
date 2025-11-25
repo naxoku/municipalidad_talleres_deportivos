@@ -71,7 +71,7 @@ export interface Taller {
   ubicacion_principal?: string;
 }
 
-export interface Estudiante {
+export interface Alumno {
   id: number;
   rut: string;
   nombre: string;
@@ -96,11 +96,11 @@ export interface Estudiante {
 }
 
 export interface Inscripcion {
-  estudiante_id: string; // RUT
+  alumno_id: string; // RUT
   taller_id: number;
   fecha_inscripcion: string;
   estado: "Activa" | "Pausada" | "Retirado";
-  estudiante?: Estudiante;
+  alumno?: Alumno;
 }
 
 export interface Clase {
@@ -113,6 +113,6 @@ export interface Clase {
 
 export interface Asistencia {
   clase_id: number;
-  estudiante_id: string;
+  alumno_id: string;
   presente: boolean;
 }

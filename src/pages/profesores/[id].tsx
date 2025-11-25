@@ -252,9 +252,7 @@ export default function ProfesorDetailPage() {
           {(alumno: any) => (
             <TableRow key={alumno.id || alumno.rut}>
               <TableCell>
-                {alumno.nombre_completo ||
-                  alumno.estudiante_nombre ||
-                  "Sin nombre"}
+                {alumno.nombre_completo || alumno.alumno_nombre || "Sin nombre"}
               </TableCell>
               <TableCell>{alumno.rut}</TableCell>
               <TableCell>{alumno.taller?.nombre || "Sin taller"}</TableCell>

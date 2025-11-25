@@ -9,10 +9,12 @@ import {
   FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+
+import { showToast } from "@/lib/toast";
 
 export function ReportsSection() {
   const navigate = useNavigate();
+  // use showToast wrapper for toasts
 
   const reportTypes = [
     {
@@ -102,10 +104,12 @@ export function ReportsSection() {
                 color={report.color}
                 size="sm"
                 variant="flat"
-                onPress={() => {
-                  // placeholder action for generating reports
-                  toast.info(`Generando: ${report.title}`);
-                }}
+                onPress={() =>
+                  showToast({
+                    title: `Generando: ${report.title}`,
+                    color: "primary",
+                  })
+                }
               >
                 Generar Reporte
               </Button>

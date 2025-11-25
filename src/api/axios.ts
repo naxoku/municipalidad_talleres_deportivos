@@ -38,9 +38,21 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Token expirado o inválido
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      // Token expirado o inválido: eliminar user y emitir evento para que el
+      // AuthProvider maneje el logout / redirección de forma centralizada.
+      // (Esto evita redirecciones globales impredecibles al abrir la app en
+      // otra pestaña mientras el provider se inicializa.)
+      try {
+        localStorage.removeItem("user");
+      } catch {
+        /* ignored */
+      }
+
+      try {
+        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+      } catch {
+        // Fallback: no hacer navegación forzada aquí
+      }
     }
 
     return Promise.reject(error);

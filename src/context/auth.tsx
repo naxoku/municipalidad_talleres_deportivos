@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
+import { showToast } from "@/lib/toast";
 import { User, Role } from "@/types/schema";
 import { authApi, LoginCredentials } from "@/api/auth";
 
@@ -10,6 +10,8 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  // indica si el proveedor ya leyó el localStorage y está listo
+  isAuthReady: boolean;
   isLoading: boolean;
   hasPermission: (permission: string) => boolean;
 }
@@ -18,6 +20,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -32,7 +35,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem("user");
       }
     }
+    // Ya terminamos la carga inicial
+    setIsAuthReady(true);
   }, []);
+
+  // use showToast wrapper
+
+  // Escuchar eventos globales de expiración/invalidación del token (disparados por axios)
+  useEffect(() => {
+    const onUnauthorized = () => {
+      // Limpiar estado local y redirigir a login
+      setUser(null);
+      try {
+        localStorage.removeItem("user");
+      } catch {
+        /* ignored */
+      }
+
+      showToast({
+        title: "Tu sesión expiró",
+        description: "Por favor inicia sesión de nuevo",
+        color: "primary",
+      });
+      navigate("/login");
+    };
+
+    window.addEventListener("auth:unauthorized", onUnauthorized);
+
+    return () => {
+      window.removeEventListener("auth:unauthorized", onUnauthorized);
+    };
+  }, [navigate]);
 
   const login = async (credentials: LoginCredentials) => {
     try {
@@ -52,14 +85,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
 
-        toast.success(`Bienvenido, ${userData.nombre}`);
+        showToast({
+          title: `Bienvenido, ${userData.nombre}`,
+          color: "success",
+        });
         navigate("/dashboard");
       }
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.error || "Error al iniciar sesión";
 
-      toast.error(errorMessage);
+      showToast({ title: errorMessage, color: "danger" });
       throw error;
     } finally {
       setIsLoading(false);
@@ -75,7 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     setUser(null);
     localStorage.removeItem("user");
-    toast.info("Sesión cerrada");
+    showToast({ title: "Sesión cerrada", color: "primary" });
     navigate("/login");
   };
 
@@ -117,6 +153,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         logout,
         isAuthenticated: !!user,
+        isAuthReady,
         isLoading,
         hasPermission,
       }}

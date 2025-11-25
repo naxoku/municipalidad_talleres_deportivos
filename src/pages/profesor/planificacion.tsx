@@ -27,12 +27,15 @@ import {
   BookOpen,
   Target,
   ListChecks,
-  FileText,
   Clock,
+  Lock,
+  Eye,
+  Copy,
+  AlertCircle,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
+import { showToast } from "@/lib/toast";
 import { useAuth } from "@/context/auth";
 import {
   detalleClaseApi,
@@ -41,13 +44,35 @@ import {
 } from "@/api/detalle_clase";
 import { profesorApi } from "@/api/profesor";
 import { horariosApi } from "@/api/horarios";
+import { localIsoDate } from "@/utils/localDate";
+
+// Función helper para verificar si una fecha es pasada
+const esFechaPasada = (fecha: string): boolean => {
+  const hoy = new Date();
+
+  hoy.setHours(0, 0, 0, 0);
+  const fechaClase = new Date(fecha + "T00:00:00");
+
+  return fechaClase < hoy;
+};
+
+// Función helper para obtener fecha mínima (hoy)
+const getFechaMinima = (): string => {
+  return localIsoDate();
+};
 
 export default function ProfesorPlanificacionPage() {
   const { user } = useAuth();
+  // use the centralized HeroUI addToast wrapper
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTaller, setSelectedTaller] = useState<string>("");
   const [selectedDetalle, setSelectedDetalle] = useState<DetalleClase | null>(
+    null,
+  );
+  const [modoVisualizacion, setModoVisualizacion] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<number | null>(
     null,
   );
 
@@ -95,14 +120,18 @@ export default function ProfesorPlanificacionPage() {
       queryClient.invalidateQueries({
         queryKey: ["profesor", "planificaciones"],
       });
-      toast.success("Planificación creada exitosamente");
+      showToast({
+        title: "Planificación creada exitosamente",
+        color: "success",
+      });
       onClose();
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.error || "Error al crear planificación",
-      );
+      showToast({
+        title: error.response?.data?.error || "Error al crear planificación",
+        color: "danger",
+      });
     },
   });
 
@@ -117,14 +146,19 @@ export default function ProfesorPlanificacionPage() {
       queryClient.invalidateQueries({
         queryKey: ["profesor", "planificaciones"],
       });
-      toast.success("Planificación actualizada exitosamente");
+      showToast({
+        title: "Planificación actualizada exitosamente",
+        color: "success",
+      });
       onClose();
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.error || "Error al actualizar planificación",
-      );
+      showToast({
+        title:
+          error.response?.data?.error || "Error al actualizar planificación",
+        color: "danger",
+      });
     },
   });
 
@@ -136,12 +170,16 @@ export default function ProfesorPlanificacionPage() {
       queryClient.invalidateQueries({
         queryKey: ["profesor", "planificaciones"],
       });
-      toast.success("Planificación eliminada exitosamente");
+      showToast({
+        title: "Planificación eliminada exitosamente",
+        color: "success",
+      });
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.error || "Error al eliminar planificación",
-      );
+      showToast({
+        title: error.response?.data?.error || "Error al eliminar planificación",
+        color: "danger",
+      });
     },
   });
 
@@ -171,15 +209,28 @@ export default function ProfesorPlanificacionPage() {
       observaciones: "",
     });
     setSelectedDetalle(null);
+    setModoVisualizacion(false);
   };
 
   const handleCreate = () => {
     resetForm();
+    setModoVisualizacion(false);
     onOpen();
   };
 
   const handleEdit = (detalle: DetalleClase) => {
+    // Verificar si la fecha es pasada
+    if (esFechaPasada(detalle.fecha_clase)) {
+      showToast({
+        title: "No se puede editar esta planificación porque la clase ya pasó",
+        color: "danger",
+      });
+
+      return;
+    }
+
     setSelectedDetalle(detalle);
+    setModoVisualizacion(false);
     setFormData({
       horario_id: detalle.horario_id,
       taller_id: detalle.taller_id,
@@ -191,15 +242,71 @@ export default function ProfesorPlanificacionPage() {
     onOpen();
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("¿Estás seguro de eliminar esta planificación?")) {
-      deleteMutation.mutate(id);
+  const handleView = (detalle: DetalleClase) => {
+    setSelectedDetalle(detalle);
+    setModoVisualizacion(true);
+    setFormData({
+      horario_id: detalle.horario_id,
+      taller_id: detalle.taller_id,
+      fecha_clase: detalle.fecha_clase,
+      objetivo: detalle.objetivo,
+      actividades: detalle.actividades,
+      observaciones: detalle.observaciones,
+    });
+    onOpen();
+  };
+
+  const handleCopyToNew = (detalle: DetalleClase) => {
+    setSelectedDetalle(null);
+    setModoVisualizacion(false);
+    setFormData({
+      horario_id: 0,
+      taller_id: detalle.taller_id,
+      fecha_clase: "", // Se debe seleccionar nueva fecha
+      objetivo: detalle.objetivo,
+      actividades: detalle.actividades,
+      observaciones: detalle.observaciones,
+    });
+    showToast({
+      title: "Contenido copiado. Selecciona una nueva fecha para la clase.",
+      color: "primary",
+    });
+    onOpen();
+  };
+
+  const handleDelete = (id: number, fechaClase: string) => {
+    // Verificar si la fecha es pasada
+    if (esFechaPasada(fechaClase)) {
+      showToast({
+        title:
+          "No se puede eliminar esta planificación porque la clase ya pasó",
+        color: "danger",
+      });
+
+      return;
     }
+
+    // Abrir modal de confirmación en vez de usar confirm() nativo
+    setDeleteIdToConfirm(id);
+    setIsDeleteConfirmOpen(true);
   };
 
   const handleSubmit = () => {
     if (!formData.horario_id || !formData.taller_id || !formData.fecha_clase) {
-      toast.error("Por favor completa los campos requeridos");
+      showToast({
+        title: "Por favor completa los campos requeridos",
+        color: "danger",
+      });
+
+      return;
+    }
+
+    // Validar que la fecha no sea pasada
+    if (esFechaPasada(formData.fecha_clase)) {
+      showToast({
+        title: "No puedes crear una planificación para una fecha pasada",
+        color: "danger",
+      });
 
       return;
     }
@@ -287,90 +394,170 @@ export default function ProfesorPlanificacionPage() {
             </CardBody>
           </Card>
         ) : (
-          filteredPlanificaciones.map((detalle) => (
-            <Card key={detalle.id} className="border-l-4 border-l-primary">
-              <CardHeader className="flex-col items-start gap-2">
-                <div className="flex w-full items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-bold">{detalle.taller_nombre}</h3>
-                    <p className="text-xs text-default-400 capitalize">
-                      {detalle.dia_semana} {detalle.hora_inicio} -{" "}
-                      {detalle.hora_fin}
-                    </p>
-                  </div>
-                  <Chip color="primary" size="sm" variant="flat">
-                    {new Date(detalle.fecha_clase).toLocaleDateString("es-CL")}
-                  </Chip>
-                </div>
-              </CardHeader>
-              <CardBody className="gap-3">
-                {detalle.objetivo && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Target className="text-primary" size={14} />
-                      <p className="text-xs font-semibold text-default-600">
-                        Objetivo
+          filteredPlanificaciones.map((detalle) => {
+            const esPasada = esFechaPasada(detalle.fecha_clase);
+
+            return (
+              <Card
+                key={detalle.id}
+                className={`border-l-4 ${esPasada ? "border-l-default-300" : "border-l-primary"}`}
+              >
+                <CardHeader className="flex-col items-start gap-2">
+                  <div className="flex w-full items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold">{detalle.taller_nombre}</h3>
+                        {esPasada && (
+                          <Lock className="text-default-400" size={14} />
+                        )}
+                      </div>
+                      <p className="text-xs text-default-400 capitalize">
+                        {detalle.dia_semana} {detalle.hora_inicio} -{" "}
+                        {detalle.hora_fin}
                       </p>
                     </div>
-                    <p className="text-sm text-default-700 line-clamp-2">
-                      {detalle.objetivo}
-                    </p>
+                    <div className="flex flex-col items-end gap-1">
+                      <Chip
+                        color={esPasada ? "default" : "primary"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {new Date(detalle.fecha_clase).toLocaleDateString(
+                          "es-CL",
+                        )}
+                      </Chip>
+                      {esPasada && (
+                        <span className="text-xs text-default-400">
+                          Solo lectura
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
-
-                {detalle.actividades && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <ListChecks className="text-secondary" size={14} />
-                      <p className="text-xs font-semibold text-default-600">
-                        Actividades
+                </CardHeader>
+                <CardBody className="gap-3">
+                  {detalle.objetivo && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Target className="text-primary" size={14} />
+                        <p className="text-xs font-semibold text-default-600">
+                          Objetivo
+                        </p>
+                      </div>
+                      <p className="text-sm text-default-700 line-clamp-2">
+                        {detalle.objetivo}
                       </p>
                     </div>
-                    <p className="text-sm text-default-700 line-clamp-2">
-                      {detalle.actividades}
-                    </p>
-                  </div>
-                )}
+                  )}
 
-                <Divider />
+                  {detalle.actividades && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <ListChecks className="text-secondary" size={14} />
+                        <p className="text-xs font-semibold text-default-600">
+                          Actividades
+                        </p>
+                      </div>
+                      <p className="text-sm text-default-700 line-clamp-2">
+                        {detalle.actividades}
+                      </p>
+                    </div>
+                  )}
 
-                <div className="flex gap-2">
-                  <Button
-                    fullWidth
-                    color="primary"
-                    size="sm"
-                    startContent={<Edit size={14} />}
-                    variant="flat"
-                    onPress={() => handleEdit(detalle)}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    isIconOnly
-                    color="danger"
-                    size="sm"
-                    variant="light"
-                    onPress={() => handleDelete(detalle.id)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </CardBody>
-            </Card>
-          ))
+                  <Divider />
+
+                  {esPasada ? (
+                    /* Botones para planificación pasada */
+                    <div className="flex gap-2">
+                      <Button
+                        fullWidth
+                        color="default"
+                        size="sm"
+                        startContent={<Eye size={14} />}
+                        variant="flat"
+                        onPress={() => handleView(detalle)}
+                      >
+                        Ver Detalle
+                      </Button>
+                      <Button
+                        color="primary"
+                        size="sm"
+                        startContent={<Copy size={14} />}
+                        variant="flat"
+                        onPress={() => handleCopyToNew(detalle)}
+                      >
+                        Reutilizar
+                      </Button>
+                    </div>
+                  ) : (
+                    /* Botones para planificación editable */
+                    <div className="flex gap-2">
+                      <Button
+                        fullWidth
+                        color="primary"
+                        size="sm"
+                        startContent={<Edit size={14} />}
+                        variant="flat"
+                        onPress={() => handleEdit(detalle)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        isIconOnly
+                        aria-label="Eliminar detalle"
+                        color="danger"
+                        size="sm"
+                        variant="light"
+                        onPress={() =>
+                          handleDelete(detalle.id, detalle.fecha_clase)
+                        }
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            );
+          })
         )}
       </div>
 
-      {/* Modal Create/Edit */}
+      {/* Modal Create/Edit/View */}
       <Modal isOpen={isOpen} size="2xl" onClose={onClose}>
         <ModalContent>
-          <ModalHeader>
-            {selectedDetalle ? "Editar" : "Nueva"} Planificación
+          <ModalHeader className="flex items-center gap-2">
+            {modoVisualizacion ? (
+              <>
+                <Lock className="text-default-400" size={18} />
+                Planificación (Solo Lectura)
+              </>
+            ) : selectedDetalle ? (
+              "Editar Planificación"
+            ) : (
+              "Nueva Planificación"
+            )}
           </ModalHeader>
           <ModalBody className="gap-4">
+            {/* Banner de solo lectura */}
+            {modoVisualizacion && (
+              <div className="flex items-center gap-3 rounded-lg bg-warning-50 p-3 border-l-4 border-l-warning">
+                <AlertCircle className="text-warning-600" size={20} />
+                <div>
+                  <p className="text-sm font-medium text-warning-800">
+                    Esta planificación es de solo lectura
+                  </p>
+                  <p className="text-xs text-warning-600">
+                    La clase ya pasó. Puedes copiar el contenido para una nueva
+                    planificación.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Taller Select */}
             <Select
               isRequired
+              isDisabled={modoVisualizacion}
               label="Taller"
               placeholder="Selecciona un taller"
               selectedKeys={
@@ -399,7 +586,7 @@ export default function ProfesorPlanificacionPage() {
             {/* Horario Select */}
             <Select
               isRequired
-              isDisabled={!formData.taller_id}
+              isDisabled={!formData.taller_id || modoVisualizacion}
               label="Horario"
               placeholder="Selecciona un horario"
               selectedKeys={
@@ -418,7 +605,6 @@ export default function ProfesorPlanificacionPage() {
                 <SelectItem
                   key={horario.id.toString()}
                   textValue={`${horario.dia_semana} ${horario.hora_inicio} - ${horario.hora_fin}`}
-                  // use 'key' + textValue for selection; value prop isn't supported by the Listbox item
                 >
                   <span className="capitalize">
                     {horario.dia_semana} {horario.hora_inicio} -{" "}
@@ -431,7 +617,14 @@ export default function ProfesorPlanificacionPage() {
             {/* Fecha */}
             <Input
               isRequired
+              description={
+                !modoVisualizacion
+                  ? "Solo puedes seleccionar fechas de hoy en adelante"
+                  : undefined
+              }
+              isDisabled={modoVisualizacion}
               label="Fecha de la Clase"
+              min={getFechaMinima()}
               startContent={<Calendar size={18} />}
               type="date"
               value={formData.fecha_clase}
@@ -442,10 +635,10 @@ export default function ProfesorPlanificacionPage() {
 
             {/* Objetivo */}
             <Textarea
+              isReadOnly={modoVisualizacion}
               label="Objetivo de la Clase"
               minRows={2}
               placeholder="Describe el objetivo principal de la clase..."
-              startContent={<Target size={18} />}
               value={formData.objetivo}
               onChange={(e) =>
                 setFormData({ ...formData, objetivo: e.target.value })
@@ -454,10 +647,10 @@ export default function ProfesorPlanificacionPage() {
 
             {/* Actividades */}
             <Textarea
+              isReadOnly={modoVisualizacion}
               label="Actividades"
               minRows={3}
               placeholder="Lista las actividades y ejercicios a realizar..."
-              startContent={<ListChecks size={18} />}
               value={formData.actividades}
               onChange={(e) =>
                 setFormData({ ...formData, actividades: e.target.value })
@@ -466,10 +659,10 @@ export default function ProfesorPlanificacionPage() {
 
             {/* Observaciones */}
             <Textarea
+              isReadOnly={modoVisualizacion}
               label="Observaciones"
               minRows={2}
               placeholder="Notas adicionales, materiales necesarios, etc..."
-              startContent={<FileText size={18} />}
               value={formData.observaciones}
               onChange={(e) =>
                 setFormData({ ...formData, observaciones: e.target.value })
@@ -478,16 +671,77 @@ export default function ProfesorPlanificacionPage() {
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={onClose}>
-              Cancelar
+              {modoVisualizacion ? "Cerrar" : "Cancelar"}
             </Button>
-            <Button
-              color="primary"
-              isLoading={createMutation.isPending || updateMutation.isPending}
-              onPress={handleSubmit}
-            >
-              {selectedDetalle ? "Actualizar" : "Crear"}
-            </Button>
+            {modoVisualizacion ? (
+              <Button
+                color="primary"
+                startContent={<Copy size={16} />}
+                onPress={() => {
+                  onClose();
+                  if (selectedDetalle) {
+                    handleCopyToNew(selectedDetalle);
+                  }
+                }}
+              >
+                Copiar para nueva clase
+              </Button>
+            ) : (
+              <Button
+                color="primary"
+                isLoading={createMutation.isPending || updateMutation.isPending}
+                onPress={handleSubmit}
+              >
+                {selectedDetalle ? "Actualizar" : "Crear"}
+              </Button>
+            )}
           </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Confirmación eliminar planificación */}
+      <Modal isOpen={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>
+                <h3 className="text-lg font-semibold">
+                  Eliminar planificación
+                </h3>
+                <p className="text-sm text-default-500">
+                  ¿Estás seguro de eliminar esta planificación?
+                </p>
+              </ModalHeader>
+              <ModalBody>
+                <div className="text-sm">
+                  Esta acción no se puede deshacer desde esta pantalla.
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <div className="flex gap-2">
+                  <Button variant="light" onPress={() => onClose()}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    color="danger"
+                    isLoading={deleteMutation.isPending}
+                    onPress={() => {
+                      if (deleteIdToConfirm) {
+                        deleteMutation.mutate(deleteIdToConfirm, {
+                          onSuccess: () => {
+                            onClose();
+                            setDeleteIdToConfirm(null);
+                          },
+                        });
+                      }
+                    }}
+                  >
+                    Eliminar
+                  </Button>
+                </div>
+              </ModalFooter>
+            </>
+          )}
         </ModalContent>
       </Modal>
 

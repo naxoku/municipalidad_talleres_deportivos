@@ -1,9 +1,9 @@
 import api from "./axios";
 
-import { Estudiante } from "@/types/schema";
+import { Alumno } from "@/types/schema";
 
 export const alumnosApi = {
-  getAll: async (): Promise<Estudiante[]> => {
+  getAll: async (): Promise<Alumno[]> => {
     const response = await api.get("/api/alumnos.php?action=listar");
     const data = response.data.datos || response.data;
 
@@ -31,7 +31,7 @@ export const alumnosApi = {
     }));
   },
 
-  getById: async (id: number): Promise<Estudiante> => {
+  getById: async (id: number): Promise<Alumno> => {
     const response = await api.get(`/api/alumnos.php?action=obtener&id=${id}`);
     const alumno = response.data.datos || response.data;
 
@@ -160,16 +160,13 @@ export const alumnosApi = {
     return response.data.datos || response.data;
   },
 
-  create: async (alumno: Estudiante): Promise<Estudiante> => {
+  create: async (alumno: Alumno): Promise<Alumno> => {
     const response = await api.post("/api/alumnos.php?action=crear", alumno);
 
     return response.data;
   },
 
-  update: async (
-    id: number,
-    alumno: Partial<Estudiante>,
-  ): Promise<Estudiante> => {
+  update: async (id: number, alumno: Partial<Alumno>): Promise<Alumno> => {
     const response = await api.put(
       `/api/alumnos.php?action=actualizar&id=${id}`,
       alumno,

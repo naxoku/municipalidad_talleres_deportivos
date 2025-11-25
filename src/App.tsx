@@ -7,6 +7,7 @@ import TalleresPage from "@/pages/talleres/index";
 import TallerDetailPage from "@/pages/talleres/detail";
 import AlumnosPage from "@/pages/alumnos/index";
 import ProfesorTalleresPage from "@/pages/profesor/talleres";
+import ProfesorHorariosPage from "@/pages/profesor/horarios";
 import ProfesorAlumnosPage from "@/pages/profesor/alumnos";
 import ProfesorPlanificacionPage from "@/pages/profesor/planificacion";
 import ProfesorAsistenciaPage from "@/pages/profesor/asistencia";
@@ -17,7 +18,7 @@ import ProfesoresPage from "@/pages/profesores/index";
 import ProfesorViewPage from "@/pages/profesores/[id]";
 import MainLayout from "@/layouts/main";
 import { useAuth } from "@/context/auth";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute, AuthLoader } from "@/components/ProtectedRoute";
 
 const AppProtectedRoute = ({
   children,
@@ -26,7 +27,10 @@ const AppProtectedRoute = ({
   children: React.ReactNode;
   requiredRole?: "admin" | "profesor" | ("admin" | "profesor")[];
 }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthReady } = useAuth();
+
+  // Si el proveedor de auth aún no terminó de inicializar, mostrar loader
+  if (!isAuthReady) return <AuthLoader />;
 
   if (!isAuthenticated) {
     return <Navigate replace to="/login" />;
@@ -61,6 +65,14 @@ function App() {
           </AppProtectedRoute>
         }
         path="/profesor/talleres"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
+            <ProfesorHorariosPage />
+          </AppProtectedRoute>
+        }
+        path="/profesor/horarios"
       />
       <Route
         element={

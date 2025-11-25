@@ -1,0 +1,14 @@
+{
+  "name": "Oficina municipal de deportes - Gestión de Talleres",
+  "short_name": "OMD",
+  "description": "Sistema de gestión de talleres deportivos municipales",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "/assets/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/assets/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

@@ -5,7 +5,6 @@ import {
   CardHeader,
   Button,
   Spinner,
-  Chip,
   Progress,
 } from "@heroui/react";
 import {
@@ -205,7 +204,7 @@ export default function ProfesorDashboard() {
               className="h-20"
               color="success"
               variant="flat"
-              onPress={() => navigate("/asistencia")}
+              onPress={() => navigate("/profesor/asistencia")}
             >
               <div className="flex flex-col items-center gap-2">
                 <CheckCircle size={24} />
@@ -217,7 +216,7 @@ export default function ProfesorDashboard() {
               className="h-20"
               color="warning"
               variant="flat"
-              onPress={() => navigate("/planificacion")}
+              onPress={() => navigate("/profesor/planificacion")}
             >
               <div className="flex flex-col items-center gap-2">
                 <FileText size={24} />
@@ -318,7 +317,9 @@ function ProfesorClassCard({
     <Card
       isPressable
       className={`border-l-4 ${isCurrent ? "border-l-success" : "border-l-primary"} hover:shadow-md transition-shadow`}
-      onPress={() => navigate(`/asistencia?horario=${clase.horario_id}`)}
+      onPress={() =>
+        navigate(`/profesor/asistencia?horario=${clase.horario_id}`)
+      }
     >
       <CardBody className="flex flex-row p-0 overflow-hidden">
         {/* Horario */}
@@ -336,11 +337,6 @@ function ProfesorClassCard({
           >
             {formatTimeHHMM(clase.hora_fin)}
           </span>
-          {isCurrent && (
-            <Chip className="mt-2" color="success" size="sm" variant="flat">
-              Ahora
-            </Chip>
-          )}
         </div>
 
         {/* Info */}
@@ -358,6 +354,7 @@ function ProfesorClassCard({
               {clase.total_inscritos || 0} / {clase.cupos_max || 0} alumnos
             </span>
             <Progress
+              aria-label={`Ocupación: ${clase.total_inscritos} de ${clase.cupos_max}`}
               className="flex-1"
               color="primary"
               size="sm"

@@ -15,8 +15,13 @@ export const ProtectedRoute = ({
   requiredRole,
   requiredPermission,
 }: ProtectedRouteProps) => {
-  const { isAuthenticated, user, hasPermission } = useAuth();
+  const { isAuthenticated, user, hasPermission, isAuthReady } = useAuth();
   const location = useLocation();
+
+  // Si el proveedor aún no terminó de inicializar (ej. leyendo localStorage), mostrar loader
+  if (!isAuthReady) {
+    return <AuthLoader />;
+  }
 
   if (!isAuthenticated || !user) {
     // Redirigir al login guardando la ubicación actual

@@ -98,6 +98,32 @@ src/
 - ✅ Diseño responsivo con HeroUI
 - ✅ PWA (Progressive Web App)
 
+## 🔔 Notificaciones (Toast)
+
+Usamos exclusivamente toasts en el proyecto — no se usan `alert()` ni `confirm()` nativos.
+
+- Posición: en móviles se muestran top-center; en desktop se ubican top-right.
+- El proveedor central está en `src/context/notifications.tsx`.
+ - Forma recomendada: use la API oficial `addToast` (o el wrapper `showToast`) y asegúrese de incluir `ToastProvider`.
+
+```ts
+import { addToast } from "@heroui/react"; // o use showToast desde '@/lib/toast'
+
+addToast({
+	title: 'Operación exitosa',
+	description: 'La acción se completó',
+	color: 'success', // default | primary | secondary | success | warning | danger
+});
+
+// O usando el wrapper local:
+import showToast from '@/lib/toast';
+showToast({ title: 'Operación exitosa', color: 'success' });
+```
+
+Los colores disponibles son: default, primary, secondary, success, warning y danger. Las llamadas legacy con `variant: 'success'|'error'|'info'|'warning'` siguen funcionando por compatibilidad y se mapearán a los colores mencionados.
+
+Nota: según la librería oficial de HeroUI, es necesario añadir `ToastProvider` a tus providers (por ejemplo `src/provider.tsx`) antes de usar `addToast`.
+
 ## Licencia
 
 MIT

@@ -23,7 +23,7 @@ import { useState, useMemo } from "react";
 import { alumnosApi } from "@/api/alumnos";
 import { talleresApi } from "@/api/talleres";
 import { inscripcionesApi } from "@/api/inscripciones";
-import { Estudiante } from "@/types/schema";
+import { Alumno } from "@/types/schema";
 
 const columns = [
   { name: "NOMBRE", uid: "nombre_completo", sortable: true },
@@ -47,7 +47,7 @@ export default function AlumnosPage() {
   );
 
   const {
-    data: estudiantes,
+    data: alumnos,
     isLoading,
     error,
   } = useQuery({
@@ -72,31 +72,31 @@ export default function AlumnosPage() {
   });
 
   // Calcular estadísticas para cada alumno
-  const estudiantesConEstadisticas = useMemo(() => {
-    if (!estudiantes) return estudiantes || [];
+  const alumnosConEstadisticas = useMemo(() => {
+    if (!alumnos) return alumnos || [];
 
-    return (estudiantes || []).map((estudiante) => {
+    return (alumnos || []).map((alumno) => {
       // Calcular edad
       const edad =
         new Date().getFullYear() -
-        new Date(estudiante.fecha_nacimiento).getFullYear();
+        new Date(alumno.fecha_nacimiento).getFullYear();
 
       // Talleres inscritos (desde las inscripciones)
       const talleresInscritos =
         inscripciones
-          ?.filter((i: { alumno_id: number }) => i.alumno_id === estudiante.id)
+          ?.filter((i: { alumno_id: number }) => i.alumno_id === alumno.id)
           .map((i: { taller_nombre: any }) => i.taller_nombre) || [];
 
       return {
-        ...estudiante,
+        ...alumno,
         edad,
         talleres_inscritos: talleresInscritos,
-      } as Estudiante;
+      } as Alumno;
     });
-  }, [estudiantes, inscripciones]);
+  }, [alumnos, inscripciones]);
 
-  const filteredEstudiantes = useMemo(() => {
-    let filtered = estudiantesConEstadisticas || [];
+  const filteredAlumnos = useMemo(() => {
+    let filtered = alumnosConEstadisticas || [];
 
     // Filtro por nombre, apellido o RUT
     if (filterValue) {
@@ -108,19 +108,17 @@ export default function AlumnosPage() {
       const normalizedFilter = normalizeText(filterValue);
 
       filtered = filtered.filter(
-        (estudiante) =>
-          normalizeText(estudiante.nombre).includes(normalizedFilter) ||
-          normalizeText(estudiante.apellidos || "").includes(
-            normalizedFilter,
-          ) ||
-          normalizeText(estudiante.rut).includes(normalizedFilter),
+        (alumno) =>
+          normalizeText(alumno.nombre).includes(normalizedFilter) ||
+          normalizeText(alumno.apellidos || "").includes(normalizedFilter) ||
+          normalizeText(alumno.rut).includes(normalizedFilter),
       );
     }
 
     // Filtro por sexo
     if (sexoFilter.length > 0) {
-      filtered = filtered.filter((estudiante) =>
-        sexoFilter.includes(estudiante.genero),
+      filtered = filtered.filter((alumno) =>
+        sexoFilter.includes(alumno.genero),
       );
     }
 
@@ -128,8 +126,8 @@ export default function AlumnosPage() {
 
     // Filtro por taller inscrito
     if (tallerFilter.length > 0) {
-      filtered = filtered.filter((estudiante) =>
-        estudiante.talleres_inscritos?.some((taller: string) => {
+      filtered = filtered.filter((alumno) =>
+        alumno.talleres_inscritos?.some((taller: string) => {
           const tallerKey = taller.toLowerCase().replace(/\s+/g, "_");
 
           return tallerFilter.includes(tallerKey);
@@ -157,7 +155,7 @@ export default function AlumnosPage() {
 
     return filtered;
   }, [
-    estudiantesConEstadisticas,
+    alumnosConEstadisticas,
     filterValue,
     sexoFilter,
     tallerFilter,
@@ -184,29 +182,29 @@ export default function AlumnosPage() {
 
   // Colegio options removed
 
-  const renderCell = (estudiante: any, columnKey: React.Key) => {
-    const cellValue = estudiante[columnKey as keyof typeof estudiante];
+  const renderCell = (alumno: any, columnKey: React.Key) => {
+    const cellValue = alumno[columnKey as keyof typeof alumno];
 
     switch (columnKey) {
       case "nombre_completo":
         return (
           <div className="flex flex-col">
             <p className="text-bold text-sm capitalize">
-              {estudiante.nombre} {estudiante.apellidos}
+              {alumno.nombre} {alumno.apellidos}
             </p>
           </div>
         );
       case "rut":
         return (
           <div className="flex flex-col">
-            <p className="text-sm">{estudiante.rut}</p>
+            <p className="text-sm">{alumno.rut}</p>
           </div>
         );
       case "edad":
         return (
           <div className="flex flex-col">
             <Chip className="w-fit" color="warning" size="sm" variant="flat">
-              {estudiante.edad || 0} años
+              {alumno.edad || 0} años
             </Chip>
           </div>
         );
@@ -214,9 +212,9 @@ export default function AlumnosPage() {
         return (
           <div className="flex flex-col">
             <p className="text-sm">
-              {estudiante.genero === "M"
+              {alumno.genero === "M"
                 ? "Masculino"
-                : estudiante.genero === "F"
+                : alumno.genero === "F"
                   ? "Femenino"
                   : "No especificado"}
             </p>
@@ -225,20 +223,20 @@ export default function AlumnosPage() {
       case "telefono":
         return (
           <div className="flex flex-col">
-            <p className="text-sm">{estudiante.telefono || "Sin teléfono"}</p>
+            <p className="text-sm">{alumno.telefono || "Sin teléfono"}</p>
           </div>
         );
       case "correo":
         return (
           <div className="flex flex-col">
             <p className="text-sm">
-              {estudiante.correo_electronico || "Sin correo"}
+              {alumno.correo_electronico || "Sin correo"}
             </p>
           </div>
         );
       case "tutor":
-        const tutorInfo = estudiante.tutor_nombre
-          ? `${estudiante.tutor_nombre}${estudiante.tutor_telefono ? ` (${estudiante.tutor_telefono})` : ""}`
+        const tutorInfo = alumno.tutor_nombre
+          ? `${alumno.tutor_nombre}${alumno.tutor_telefono ? ` (${alumno.tutor_telefono})` : ""}`
           : "Sin tutor";
 
         return (
@@ -248,7 +246,7 @@ export default function AlumnosPage() {
         );
       case "talleres_inscritos":
         const talleresText =
-          estudiante.talleres_inscritos?.join(", ") || "Sin talleres";
+          alumno.talleres_inscritos?.join(", ") || "Sin talleres";
 
         return (
           <div className="flex flex-col">
@@ -263,7 +261,7 @@ export default function AlumnosPage() {
               aria-label="Editar alumno"
               size="sm"
               variant="light"
-              onPress={() => navigate(`/alumnos/${estudiante.id}`)}
+              onPress={() => navigate(`/alumnos/${alumno.id}`)}
             >
               <Edit className="text-default-400" size={16} />
             </Button>
@@ -459,7 +457,7 @@ export default function AlumnosPage() {
         </TableHeader>
         <TableBody
           emptyContent={"No hay alumnos registrados."}
-          items={filteredEstudiantes}
+          items={filteredAlumnos}
         >
           {(item) => (
             <TableRow key={item.id}>

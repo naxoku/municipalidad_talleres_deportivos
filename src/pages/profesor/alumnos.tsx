@@ -12,21 +12,13 @@ import {
   TableRow,
   TableCell,
   Input,
-  Avatar,
 } from "@heroui/react";
-import {
-  Users,
-  Search,
-  Download,
-  Phone,
-  Mail,
-  User,
-  Calendar,
-} from "lucide-react";
+import { Users, Search, Download, Phone, Mail, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/context/auth";
 import { profesorApi } from "@/api/profesor";
+import { localIsoDate } from "@/utils/localDate";
 
 export default function ProfesorAlumnosPage() {
   const { user } = useAuth();
@@ -50,6 +42,11 @@ export default function ProfesorAlumnosPage() {
         alumno.talleres.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [alumnos, searchQuery]);
+
+  const averageAge =
+    alumnos && alumnos.length > 0
+      ? Math.round(alumnos.reduce((sum, a) => sum + a.edad, 0) / alumnos.length)
+      : 0;
 
   const handleExport = () => {
     if (!alumnos) return;
@@ -86,7 +83,7 @@ export default function ProfesorAlumnosPage() {
     const a = document.createElement("a");
 
     a.href = url;
-    a.download = `alumnos_${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `alumnos_${localIsoDate()}.csv`;
     a.click();
   };
 
@@ -148,8 +145,7 @@ export default function ProfesorAlumnosPage() {
               }}
             >
               <TableHeader>
-                <TableColumn width="20%">ALUMNO</TableColumn>
-                <TableColumn width="12%">RUT</TableColumn>
+                <TableColumn width="25%">ALUMNO</TableColumn>
                 <TableColumn width="8%">EDAD</TableColumn>
                 <TableColumn width="18%">CONTACTO</TableColumn>
                 <TableColumn width="15%">APODERADO</TableColumn>
@@ -160,26 +156,16 @@ export default function ProfesorAlumnosPage() {
                 {filteredAlumnos.map((alumno) => (
                   <TableRow key={alumno.id}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar
-                          showFallback
-                          color="primary"
-                          name={alumno.nombre}
-                          size="md"
-                        />
-                        <div>
-                          <p className="font-semibold text-sm">
-                            {alumno.nombre_completo}
-                          </p>
-                          <p className="text-xs text-default-400 capitalize">
-                            {alumno.genero}
-                          </p>
-                        </div>
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {alumno.nombre_completo}
+                        </p>
+                        <p className="text-xs text-default-400 font-mono">
+                          {alumno.rut}
+                        </p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <p className="font-mono text-sm">{alumno.rut}</p>
-                    </TableCell>
+
                     <TableCell>
                       <Chip color="default" size="sm" variant="flat">
                         {alumno.edad} años
@@ -270,12 +256,6 @@ export default function ProfesorAlumnosPage() {
                   {/* Header */}
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <Avatar
-                        showFallback
-                        color="primary"
-                        name={alumno.nombre}
-                        size="sm"
-                      />
                       <div>
                         <p className="font-semibold">
                           {alumno.nombre_completo}
@@ -383,8 +363,8 @@ export default function ProfesorAlumnosPage() {
         <Card>
           <CardBody>
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-success-100 p-3">
-                <User className="text-success" size={24} />
+              <div className="rounded-lg bg-success-100 p-3 flex items-center justify-center">
+                <div className="text-success font-bold">{averageAge}</div>
               </div>
               <div>
                 <p className="text-sm text-default-500">Promedio Edad</p>

@@ -104,7 +104,7 @@ export const detalleClaseApi = {
     }
 
     const response = await axios.delete<{ success: boolean; message: string }>(
-      `/detalle_clase.php?${params.toString()}`,
+      `/api/detalle_clase.php?${params.toString()}`,
     );
 
     return response.data;

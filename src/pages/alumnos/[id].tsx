@@ -43,17 +43,17 @@ import { parseDate } from "@internationalized/date";
 import { inscripcionesApi } from "@/api/inscripciones";
 import { talleresApi } from "@/api/talleres";
 import { alumnosApi } from "@/api/alumnos";
-import { Estudiante } from "@/types/schema";
+import { Alumno } from "@/types/schema";
 
 export default function AlumnoViewPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState<Partial<Estudiante>>({});
+  const [formData, setFormData] = useState<Partial<Alumno>>({});
 
   const {
-    data: estudiante,
+    data: alumno,
     isLoading,
     error,
   } = useQuery({
@@ -83,6 +83,7 @@ export default function AlumnoViewPage() {
   const [inscripcionToDelete, setInscripcionToDelete] = useState<number | null>(
     null,
   );
+  const [isDeleteAlumnoOpen, setIsDeleteAlumnoOpen] = useState(false);
 
   // Query para asistencia
   const { data: asistencia, isLoading: isLoadingAsistencia } = useQuery({
@@ -91,12 +92,12 @@ export default function AlumnoViewPage() {
     enabled: !!id,
   });
 
-  // Initialize form data when estudiante loads
+  // Initialize form data when alumno loads
   useEffect(() => {
-    if (estudiante) {
-      setFormData(estudiante);
+    if (alumno) {
+      setFormData(alumno);
     }
-  }, [estudiante]);
+  }, [alumno]);
 
   // Debug: log talleresInscritos
   useEffect(() => {
@@ -173,8 +174,7 @@ export default function AlumnoViewPage() {
   }, [talleresOptions]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<Estudiante>) =>
-      alumnosApi.update(Number(id), data),
+    mutationFn: (data: Partial<Alumno>) => alumnosApi.update(Number(id), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alumno", id] });
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
@@ -195,7 +195,7 @@ export default function AlumnoViewPage() {
   };
 
   const handleCancel = () => {
-    setFormData(estudiante || {});
+    setFormData(alumno || {});
     setEditMode(false);
   };
 
@@ -210,9 +210,8 @@ export default function AlumnoViewPage() {
   };
 
   const handleDelete = () => {
-    if (confirm("¿Estás seguro de que quieres eliminar este alumno?")) {
-      deleteMutation.mutate();
-    }
+    // Abrir modal de confirmación en vez de usar confirm()
+    setIsDeleteAlumnoOpen(true);
   };
 
   const inscripcionUpdateMutation = useMutation({
@@ -280,7 +279,7 @@ export default function AlumnoViewPage() {
     );
   }
 
-  if (error || !estudiante) {
+  if (error || !alumno) {
     return (
       <div className="text-center text-danger p-4">
         <h3 className="text-lg font-semibold mb-2">
@@ -315,9 +314,9 @@ export default function AlumnoViewPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
-              {estudiante.nombre} {estudiante.apellidos}
+              {alumno.nombre} {alumno.apellidos}
             </h1>
-            <p className="text-default-500">RUT: {estudiante.rut}</p>
+            <p className="text-default-500">RUT: {alumno.rut}</p>
           </div>
         </div>
 
@@ -1079,6 +1078,49 @@ export default function AlumnoViewPage() {
                       }}
                     >
                       Guardar cambios
+                    </Button>
+                  </div>
+                </ModalFooter>
+              </>
+            )}
+          </ModalContent>
+        </Modal>
+        {/* Confirmación eliminar alumno */}
+        <Modal isOpen={isDeleteAlumnoOpen} onOpenChange={setIsDeleteAlumnoOpen}>
+          <ModalContent>
+            {(onCloseConfirm) => (
+              <>
+                <ModalHeader>
+                  <h3 className="text-lg font-semibold">Eliminar alumno</h3>
+                  <p className="text-sm text-default-500">
+                    ¿Estás seguro de que quieres eliminar este alumno? Esta
+                    acción no se puede deshacer.
+                  </p>
+                </ModalHeader>
+                <ModalBody>
+                  <div className="text-sm">
+                    Si confirmas, el alumno será eliminado y no podrás
+                    recuperarlo desde esta interfaz.
+                  </div>
+                </ModalBody>
+                <ModalFooter>
+                  <div className="flex gap-2">
+                    <Button variant="light" onPress={() => onCloseConfirm()}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      color="danger"
+                      isLoading={deleteMutation.isPending}
+                      onPress={() => {
+                        deleteMutation.mutate(undefined, {
+                          onSuccess: () => {
+                            onCloseConfirm();
+                            setIsDeleteAlumnoOpen(false);
+                          },
+                        });
+                      }}
+                    >
+                      Eliminar alumno
                     </Button>
                   </div>
                 </ModalFooter>
