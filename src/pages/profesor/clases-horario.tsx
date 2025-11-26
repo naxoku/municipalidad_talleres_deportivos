@@ -5,7 +5,6 @@ import {
   Button,
   Spinner,
   Chip,
-  Progress,
   Tabs,
   Tab,
 } from "@heroui/react";
@@ -30,24 +29,12 @@ const formatTimeHHMM = (timeString: string) => {
   return timeString.slice(0, 5);
 };
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString + "T00:00:00");
-
-  return date.toLocaleDateString("es-CL", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-};
-
 const formatShortDate = (dateString: string) => {
   const date = new Date(dateString + "T00:00:00");
 
   return date.toLocaleDateString("es-CL", {
     day: "numeric",
     month: "short",
-    year: "numeric",
   });
 };
 
@@ -57,14 +44,12 @@ export default function ClasesHorarioPage() {
   const horarioIdNum = Number(horarioId);
   const [selectedTab, setSelectedTab] = useState("recientes");
 
-  // Fetch clases del horario
   const { data: clasesData, isLoading } = useQuery({
     queryKey: ["profesor", "clases_horario", horarioIdNum],
     queryFn: () => detalleClaseApi.getClasesPorHorario(horarioIdNum),
     enabled: Number.isFinite(horarioIdNum) && horarioIdNum > 0,
   });
 
-  // Separar clases por fecha
   const { clasesRecientes, clasesProximas } = useMemo(() => {
     if (!clasesData?.clases) {
       return { clasesRecientes: [], clasesProximas: [] };
@@ -75,14 +60,12 @@ export default function ClasesHorarioPage() {
 
     hoy.setHours(0, 0, 0, 0);
 
-    // Ordenar por fecha descendente (más recientes primero)
     const clasesOrdenadas = [...clases].sort((a, b) => {
       return (
         new Date(b.fecha_clase).getTime() - new Date(a.fecha_clase).getTime()
       );
     });
 
-    // Clases recientes: últimas 10 clases pasadas
     const recientes = clasesOrdenadas
       .filter((clase) => {
         const fechaClase = new Date(clase.fecha_clase + "T00:00:00");
@@ -91,7 +74,6 @@ export default function ClasesHorarioPage() {
       })
       .slice(0, 10);
 
-    // Clases próximas: clases futuras
     const proximas = clasesOrdenadas.filter((clase) => {
       const fechaClase = new Date(clase.fecha_clase + "T00:00:00");
 
@@ -115,20 +97,26 @@ export default function ClasesHorarioPage() {
   if (!clasesData) {
     return (
       <div className="text-center p-8">
-        <AlertCircle className="mx-auto text-warning mb-4" size={48} />
-        <h3 className="text-lg font-semibold mb-2">
-          No se encontró el horario
-        </h3>
-        <p className="text-default-500 mb-4">
-          El horario solicitado no existe o no tienes acceso.
-        </p>
-        <Button
-          color="primary"
-          startContent={<ArrowLeft size={18} />}
-          onPress={() => navigate("/profesor/horarios")}
-        >
-          Volver a Horarios
-        </Button>
+        <Card className="border-none shadow-sm">
+          <CardBody className="py-16">
+            <div className="w-16 h-16 rounded-2xl bg-warning/10 flex items-center justify-center mb-4 mx-auto">
+              <AlertCircle className="text-warning" size={32} />
+            </div>
+            <h3 className="text-lg font-bold mb-2">
+              No se encontró el horario
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              El horario solicitado no existe o no tienes acceso.
+            </p>
+            <Button
+              color="primary"
+              startContent={<ArrowLeft size={18} />}
+              onPress={() => navigate("/profesor/horarios")}
+            >
+              Volver a Horarios
+            </Button>
+          </CardBody>
+        </Card>
       </div>
     );
   }
@@ -136,12 +124,12 @@ export default function ClasesHorarioPage() {
   const { horario } = clasesData;
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+      <div className="flex items-start gap-3">
         <Button
           isIconOnly
-          className="self-start"
+          className="mt-1"
           size="sm"
           variant="flat"
           onPress={() => navigate("/profesor/horarios")}
@@ -149,15 +137,31 @@ export default function ClasesHorarioPage() {
           <ArrowLeft size={20} />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {horario.taller_nombre}
-          </h1>
-          <div className="flex flex-wrap gap-3 mt-2">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Calendar className="text-primary" size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {horario.taller_nombre}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Clases del horario
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Info del horario */}
+      <Card className="border-l-4 border-l-primary">
+        <CardBody className="p-4">
+          <div className="flex flex-wrap gap-2">
             <Chip
               className="capitalize"
               color="primary"
               size="sm"
-              startContent={<Clock size={12} />}
+              startContent={<Clock size={14} />}
               variant="flat"
             >
               {horario.dia_semana} {formatTimeHHMM(horario.hora_inicio)} -{" "}
@@ -166,28 +170,21 @@ export default function ClasesHorarioPage() {
             <Chip
               color="default"
               size="sm"
-              startContent={<MapPin size={12} />}
+              startContent={<MapPin size={14} />}
               variant="flat"
             >
               {horario.ubicacion_nombre}
             </Chip>
           </div>
-          <p className="text-default-500 mt-2">
-            Selecciona una clase para ver su planificación, alumnos y asistencia
-          </p>
-        </div>
-      </div>
+        </CardBody>
+      </Card>
 
       {/* Tabs de clases */}
       <Tabs
         aria-label="Clases del horario"
-        classNames={{
-          tabList: "w-full",
-          tab: "flex-1",
-        }}
         color="primary"
         selectedKey={selectedTab}
-        size="lg"
+        size="md"
         variant="underlined"
         onSelectionChange={(key) => setSelectedTab(key as string)}
       >
@@ -195,8 +192,8 @@ export default function ClasesHorarioPage() {
           key="recientes"
           title={
             <div className="flex items-center gap-2">
-              <Calendar className="text-primary" size={18} />
-              <span>Clases Recientes</span>
+              <Calendar size={18} />
+              <span>Recientes</span>
               {clasesRecientes.length > 0 && (
                 <Chip color="primary" size="sm" variant="flat">
                   {clasesRecientes.length}
@@ -205,23 +202,20 @@ export default function ClasesHorarioPage() {
             </div>
           }
         >
-          <div className="mt-4">
+          <div className="mt-2 space-y-3">
             {clasesRecientes.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4">
-                {clasesRecientes.map((clase) => (
-                  <ClaseCard key={clase.id} clase={clase} />
-                ))}
-              </div>
+              clasesRecientes.map((clase) => (
+                <ClaseCard key={clase.id} clase={clase} />
+              ))
             ) : (
-              <Card className="w-full">
+              <Card>
                 <CardBody className="flex flex-col items-center justify-center p-12">
                   <Calendar className="text-default-300 mb-4" size={48} />
                   <p className="text-default-500 font-medium">
                     No hay clases recientes
                   </p>
                   <p className="text-sm text-default-400 text-center mt-2">
-                    Las clases recientes aparecerán aquí una vez que se
-                    realicen.
+                    Las clases aparecerán aquí una vez que se realicen.
                   </p>
                 </CardBody>
               </Card>
@@ -232,8 +226,8 @@ export default function ClasesHorarioPage() {
           key="proximas"
           title={
             <div className="flex items-center gap-2">
-              <Clock className="text-secondary" size={18} />
-              <span>Próximas Clases</span>
+              <Clock size={18} />
+              <span>Próximas</span>
               {clasesProximas.length > 0 && (
                 <Chip color="secondary" size="sm" variant="flat">
                   {clasesProximas.length}
@@ -242,22 +236,20 @@ export default function ClasesHorarioPage() {
             </div>
           }
         >
-          <div className="mt-4">
+          <div className="mt-2 space-y-3">
             {clasesProximas.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4">
-                {clasesProximas.map((clase) => (
-                  <ClaseCard key={clase.id} clase={clase} />
-                ))}
-              </div>
+              clasesProximas.map((clase) => (
+                <ClaseCard key={clase.id} clase={clase} />
+              ))
             ) : (
-              <Card className="w-full">
+              <Card>
                 <CardBody className="flex flex-col items-center justify-center p-12">
                   <Clock className="text-default-300 mb-4" size={48} />
                   <p className="text-default-500 font-medium">
-                    No hay clases próximas programadas
+                    No hay clases próximas
                   </p>
                   <p className="text-sm text-default-400 text-center mt-2">
-                    Las próximas clases aparecerán aquí cuando se programen.
+                    Las próximas clases aparecerán cuando se programen.
                   </p>
                 </CardBody>
               </Card>
@@ -269,7 +261,6 @@ export default function ClasesHorarioPage() {
   );
 }
 
-// Componente de tarjeta de clase
 function ClaseCard({ clase }: { clase: DetalleClase }) {
   const navigate = useNavigate();
 
@@ -282,138 +273,136 @@ function ClaseCard({ clase }: { clase: DetalleClase }) {
 
   const tienePlanificacion = !!(clase.objetivo || clase.actividades);
   const tieneAsistencia = (clase.asistentes_presentes || 0) > 0;
-
-  const getEstadoChip = () => {
-    if (esHoy) {
-      return (
-        <Chip color="success" size="sm" variant="flat">
-          Hoy
-        </Chip>
-      );
-    }
-    if (esFutura) {
-      return (
-        <Chip color="primary" size="sm" variant="flat">
-          Próxima
-        </Chip>
-      );
-    }
-
-    return (
-      <Chip color="default" size="sm" variant="flat">
-        Pasada
-      </Chip>
-    );
-  };
+  const porcentajeAsistencia = clase.asistentes_total
+    ? Math.round(
+        ((clase.asistentes_presentes || 0) / clase.asistentes_total) * 100,
+      )
+    : 0;
 
   const borderColor = esHoy
     ? "border-l-success"
     : esFutura
       ? "border-l-primary"
-      : "border-l-default-200";
+      : "border-l-default-300";
 
   return (
     <Card
       isPressable
-      className={`w-full border-l-4 ${borderColor}`}
+      className={`w-full border-none shadow-md hover:shadow-lg transition-all ${borderColor} border-l-4`}
       onPress={() => navigate(`/profesor/clases/${clase.id}`)}
     >
-      <CardBody className="flex flex-col sm:flex-row gap-4 p-4">
-        {/* Fecha */}
-        <div className="flex flex-col justify-center items-center sm:min-w-[100px] bg-default-100 rounded-lg p-3">
-          <span className="text-xs text-default-500 uppercase font-semibold">
-            {clase.dia_semana}
-          </span>
-          <span className="text-2xl font-bold">
-            {new Date(clase.fecha_clase + "T00:00:00").getDate()}
-          </span>
-          <span className="text-xs text-default-500">
-            {formatShortDate(clase.fecha_clase).split(" ").slice(1).join(" ")}
-          </span>
-        </div>
-
-        {/* Info */}
-        <div className="flex-grow space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h4 className="font-bold text-lg">{clase.taller_nombre}</h4>
-              <p className="text-sm text-default-500 capitalize">
-                {formatDate(clase.fecha_clase)}
-              </p>
-            </div>
-            {getEstadoChip()}
-          </div>
-
-          <div className="flex flex-wrap gap-3 text-sm text-default-500">
-            <div className="flex items-center gap-1">
-              <Clock size={14} />
-              <span>
-                {formatTimeHHMM(clase.hora_inicio)} -{" "}
-                {formatTimeHHMM(clase.hora_fin)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MapPin size={14} />
-              <span>{clase.ubicacion_nombre}</span>
-            </div>
-          </div>
-
-          {/* Estado de planificación y asistencia */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Chip
-              color={tienePlanificacion ? "success" : "default"}
-              size="sm"
-              startContent={<FileText size={12} />}
-              variant="flat"
+      <CardBody className="p-0 overflow-hidden">
+        <div className="flex">
+          {/* Fecha visual */}
+          <div
+            className={`px-4 py-4 flex flex-col items-center justify-center min-w-[80px] ${
+              esHoy
+                ? "bg-success/10"
+                : esFutura
+                  ? "bg-primary/10"
+                  : "bg-default-100"
+            }`}
+          >
+            <Calendar
+              className={`mb-1 ${
+                esHoy
+                  ? "text-success"
+                  : esFutura
+                    ? "text-primary"
+                    : "text-default-400"
+              }`}
+              size={18}
+            />
+            <span
+              className={`text-sm font-bold leading-none ${
+                esHoy
+                  ? "text-success"
+                  : esFutura
+                    ? "text-primary"
+                    : "text-default-700"
+              }`}
             >
-              {tienePlanificacion ? "Con planificación" : "Sin planificación"}
-            </Chip>
-            <Chip
-              color={tieneAsistencia ? "success" : "default"}
-              size="sm"
-              startContent={<CheckSquare size={12} />}
-              variant="flat"
+              {fechaClase.getDate()}
+            </span>
+            <span
+              className={`text-[10px] mt-0.5 ${
+                esHoy
+                  ? "text-success/60"
+                  : esFutura
+                    ? "text-primary/60"
+                    : "text-default-500"
+              }`}
             >
-              {tieneAsistencia
-                ? `${clase.asistentes_presentes}/${clase.asistentes_total} asistencia`
-                : "Sin asistencia"}
-            </Chip>
+              {formatShortDate(clase.fecha_clase)}
+            </span>
           </div>
 
-          {/* Barra de asistencia */}
-          {tieneAsistencia && (
-            <div className="flex items-center gap-2">
-              <Users className="text-default-400" size={14} />
-              <Progress
-                aria-label="Asistencia"
-                className="flex-1"
-                color={
-                  clase.asistentes_total
-                    ? (clase.asistentes_presentes || 0) /
-                        clase.asistentes_total >
-                      0.8
-                      ? "success"
-                      : (clase.asistentes_presentes || 0) /
-                            clase.asistentes_total >
-                          0.5
-                        ? "warning"
-                        : "danger"
-                    : "default"
-                }
-                size="sm"
-                value={
-                  clase.asistentes_total
-                    ? ((clase.asistentes_presentes || 0) /
-                        clase.asistentes_total) *
-                      100
-                    : 0
-                }
-              />
-              <span className="text-xs text-default-500 min-w-[60px] text-right">
-                {clase.asistentes_presentes || 0}/{clase.asistentes_total || 0}
-              </span>
+          {/* Info */}
+          <div className="flex-1 p-4 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-base line-clamp-1">
+                  {clase.taller_nombre}
+                </h4>
+                {esHoy && (
+                  <Chip color="success" size="sm" variant="flat">
+                    Hoy
+                  </Chip>
+                )}
+              </div>
             </div>
-          )}
+
+            <div className="flex flex-wrap gap-2 text-xs">
+              <div className="flex items-center gap-1 text-default-500">
+                <Clock size={12} />
+                <span>
+                  {formatTimeHHMM(clase.hora_inicio)} -{" "}
+                  {formatTimeHHMM(clase.hora_fin)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-default-500">
+                <MapPin size={12} />
+                <span className="truncate max-w-[150px]">
+                  {clase.ubicacion_nombre}
+                </span>
+              </div>
+            </div>
+
+            {/* Chips de estado */}
+            <div className="flex flex-wrap gap-2">
+              {tienePlanificacion && (
+                <Chip
+                  color="success"
+                  size="sm"
+                  startContent={<FileText size={12} />}
+                  variant="flat"
+                >
+                  Planificación
+                </Chip>
+              )}
+              {tieneAsistencia && (
+                <Chip
+                  color="success"
+                  size="sm"
+                  startContent={<Users size={12} />}
+                  variant="flat"
+                >
+                  {clase.asistentes_presentes}/{clase.asistentes_total} (
+                  {porcentajeAsistencia}%)
+                </Chip>
+              )}
+              {!tieneAsistencia && !esFutura && (
+                <Chip
+                  color="default"
+                  size="sm"
+                  startContent={<CheckSquare size={12} />}
+                  variant="flat"
+                >
+                  Sin asistencia
+                </Chip>
+              )}
+            </div>
+          </div>
         </div>
       </CardBody>
     </Card>

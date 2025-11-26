@@ -317,11 +317,7 @@ function ProfesorClassCard({
 
   return (
     <Card
-      isPressable
-      className={`border-l-4 ${isCurrent ? "border-l-success" : "border-l-primary"} hover:shadow-md transition-shadow`}
-      onPress={() =>
-        navigate(`/profesor/clases-asistencia?horario=${clase.horario_id}`)
-      }
+      className={`border-l-4 ${isCurrent ? "border-l-success" : "border-l-primary"}`}
     >
       <CardBody className="flex flex-row p-0 overflow-hidden">
         {/* Horario */}
@@ -365,8 +361,18 @@ function ProfesorClassCard({
           </div>
 
           {isCurrent && (
-            <Button className="mt-2" color="success" size="sm" variant="flat">
-              Pasar asistenciaa
+            <Button
+              fullWidth
+              className="mt-2"
+              color="success"
+              size="sm"
+              onPress={() =>
+                navigate(
+                  `/profesor/asistencia?horario=${clase.horario_id}&fecha=${new Date().toISOString().split("T")[0]}`,
+                )
+              }
+            >
+              Pasar asistencia
             </Button>
           )}
         </div>
