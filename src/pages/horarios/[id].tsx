@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import { horariosApi } from "@/api/horarios";
 import { talleresFeatureApi as talleresApi } from "@/features/talleres/api";
@@ -68,6 +68,19 @@ export default function HorarioDetailPage() {
     queryKey: ["talleres"],
     queryFn: talleresApi.getAll,
   });
+
+  const talleresList = useMemo(() => {
+    if (!talleres) return [] as any[];
+    if (Array.isArray(talleres)) return talleres as any[];
+    if (Array.isArray((talleres as any).datos))
+      return (talleres as any).datos as any[];
+    if (Array.isArray((talleres as any).value))
+      return (talleres as any).value as any[];
+    if (Array.isArray((talleres as any).data?.datos))
+      return (talleres as any).data.datos as any[];
+
+    return [] as any[];
+  }, [talleres]);
 
   const { data: profesores } = useQuery({
     queryKey: ["profesores"],
@@ -211,7 +224,7 @@ export default function HorarioDetailPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-primary-50 p-4 rounded-xl border border-primary-100">
         <div>
-          <h3 className="text-lg font-bold text-primary-900">Próxima Clase</h3>
+          <h3 className="text-lg font-bold text-primary-900">Próxima clase</h3>
           <p className="text-primary-700 text-sm">
             {horario.dia_semana} - {horario.hora_inicio?.slice(0, 5)}
           </p>
@@ -396,7 +409,7 @@ export default function HorarioDetailPage() {
                           });
                         }}
                       >
-                        {talleres?.map((taller) => (
+                        {talleresList?.map((taller) => (
                           <SelectItem key={taller.id.toString()}>
                             {taller.nombre}
                           </SelectItem>
@@ -561,7 +574,7 @@ export default function HorarioDetailPage() {
             title={
               <div className="flex items-center space-x-2">
                 <ClipboardCheck size={18} />
-                <span>Asistencia</span>
+                <span>Clases</span>
               </div>
             }
           >

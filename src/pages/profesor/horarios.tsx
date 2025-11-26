@@ -1,17 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-  Button,
-  Spinner,
-} from "@heroui/react";
-import { Edit } from "lucide-react";
+"use client";
 
+import { useQuery, useQueries } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { Spinner, Card, CardBody, Chip } from "@heroui/react";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  ChevronRight,
+  Users,
+  CheckCircle,
+} from "lucide-react";
+import { useMemo } from "react";
+import { Button } from "@heroui/react";
+
+import { detalleClaseApi, type DetalleClase } from "@/api/detalle_clase";
 import { useAuth } from "@/context/auth";
 import { profesoresFeatureApi as profesoresApi } from "@/features/profesores/api";
 
@@ -20,6 +23,16 @@ export default function ProfesorHorariosPage() {
   const { user } = useAuth();
 
   const profesorId = user?.profesor_id;
+
+  const diasSemana = [
+    "lunes",
+    "martes",
+    "miércoles",
+    "jueves",
+    "viernes",
+    "sábado",
+    "domingo",
+  ];
 
   const {
     data: horarios,
@@ -31,63 +44,291 @@ export default function ProfesorHorariosPage() {
     enabled: !!profesorId,
   });
 
+  const horariosAgrupados = useMemo(() => {
+    if (!horarios) return {};
+
+    const agrupados: any = {};
+
+    // Agrupar por día
+    horarios.forEach((h: any) => {
+      const dia = h.dia_semana?.toLowerCase() || "sin día";
+
+      if (!agrupados[dia]) agrupados[dia] = [];
+      agrupados[dia].push(h);
+    });
+
+    // Ordenar cada grupo por hora
+    Object.keys(agrupados).forEach((dia) => {
+      agrupados[dia].sort((a: any, b: any) =>
+        a.hora_inicio.localeCompare(b.hora_inicio),
+      );
+    });
+
+    return agrupados;
+  }, [horarios]);
+
+  // Mostrar clase en curso (buscar entre horarios de hoy)
+  const dias = [
+    "domingo",
+    "lunes",
+    "martes",
+    "miercoles",
+    "jueves",
+    "viernes",
+    "sabado",
+  ];
+  const diaHoy = dias[new Date().getDay()];
+  const horariosDelDia = (horarios || []).filter(
+    (h: any) => String(h.dia_semana).toLowerCase() === diaHoy,
+  );
+
+  const clasesQueries = useQueries({
+    queries: (horariosDelDia || []).map((h: any) => ({
+      queryKey: ["profesor", "clases_horario", h.id],
+      queryFn: () => detalleClaseApi.getClasesPorHorario(h.id),
+      enabled: !!profesorId,
+    })),
+  });
+
+  const clasesPorHorario = (clasesQueries || [])
+    .map((q: any) => q.data)
+    .filter(Boolean);
+
+  const claseActual: DetalleClase | undefined = clasesPorHorario
+    .flatMap((c: any) => c.clases || [])
+    .find(
+      (cl: any) =>
+        (cl.estado === "en_curso" || cl.estado === "margen_extra") &&
+        cl.puede_pasar_asistencia,
+    );
+
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-64">
-        <Spinner label="Cargando horarios..." />
+        <Spinner color="primary" label="Cargando horarios..." size="lg" />
       </div>
     );
 
   if (error)
     return (
-      <div className="text-center text-danger p-4">
-        <h3 className="text-lg font-semibold mb-2">Error al cargar horarios</h3>
-        <p className="text-sm text-default-500">{String(error)}</p>
+      <div className="text-center p-8">
+        <Card className="border-none shadow-sm">
+          <CardBody className="py-16">
+            <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mb-4 mx-auto">
+              <Calendar className="text-destructive" size={32} />
+            </div>
+            <h3 className="text-lg font-bold mb-2">Error al cargar horarios</h3>
+            <p className="text-sm text-muted-foreground">{String(error)}</p>
+          </CardBody>
+        </Card>
       </div>
     );
 
+  const handleRowClick = (horarioId: number) => {
+    navigate(`/profesor/horarios/${horarioId}/clases`);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Mis Horarios</h1>
+    <div className="space-y-5 pb-10">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
+            <Calendar className="text-secondary" size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Mis horarios
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Toca un horario para ver sus clases
+            </p>
+          </div>
+        </div>
       </div>
-      <Table aria-label="Tabla de horarios">
-        <TableHeader>
-          <TableColumn>TALLER</TableColumn>
-          <TableColumn>DÍA / HORA</TableColumn>
-          <TableColumn>UBICACIÓN</TableColumn>
-          <TableColumn align="end">ACCIONES</TableColumn>
-        </TableHeader>
-        <TableBody
-          emptyContent="No hay horarios asignados."
-          items={horarios || []}
-        >
-          {(h: any) => (
-            <TableRow key={h.id}>
-              <TableCell>
-                {h.taller?.nombre || h.taller_nombre || "Sin taller"}
-              </TableCell>
-              <TableCell>{`${h.dia_semana || ""} ${h.hora_inicio?.slice(0, 5) || ""}-${h.hora_fin?.slice(0, 5) || ""}`}</TableCell>
-              <TableCell>
-                {h.ubicacion?.nombre || h.ubicacion_nombre || "Sin ubicación"}
-              </TableCell>
-              <TableCell>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    isIconOnly
-                    aria-label="Editar horario"
-                    size="sm"
-                    variant="light"
-                    onPress={() => navigate(`/horarios/${h.id}`)}
-                  >
-                    <Edit size={16} />
-                  </Button>
+
+      {/* Clase en curso */}
+      {claseActual && (
+        <Card className="border-l-4 border-l-success">
+          <CardBody className="flex flex-col sm:flex-row gap-4 p-4">
+            {/* Fecha */}
+            <div className="flex flex-col justify-center items-center sm:min-w-[120px] bg-success/10 rounded-lg p-3">
+              <span className="text-xs text-success uppercase font-semibold">
+                {claseActual.dia_semana}
+              </span>
+              <span className="text-2xl font-bold">
+                {new Date(claseActual.fecha_clase + "T00:00:00").getDate()}
+              </span>
+              <span className="text-xs text-success">
+                {new Date(
+                  claseActual.fecha_clase + "T00:00:00",
+                ).toLocaleDateString("es-CL", {
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+
+            {/* Info */}
+            <div className="flex-grow space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h4 className="font-bold text-lg">
+                    {claseActual.taller_nombre}
+                  </h4>
                 </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+                <Chip color="success" size="sm" variant="solid">
+                  En curso
+                </Chip>
+              </div>
+
+              <div className="flex flex-wrap gap-3 text-sm text-default-500">
+                <div className="flex items-center gap-1">
+                  <Clock size={14} />
+                  <span>
+                    {claseActual.hora_inicio?.slice(0, 5)}
+                    {" - "}
+                    {claseActual.hora_fin?.slice(0, 5)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MapPin size={14} />
+                  <span>{claseActual.ubicacion_nombre}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Chip
+                  color="success"
+                  size="sm"
+                  startContent={<Users size={12} />}
+                  variant="flat"
+                >
+                  {claseActual.asistentes_presentes || 0} /{" "}
+                  {claseActual.asistentes_total || 0} presentes
+                </Chip>
+                {claseActual.puede_pasar_asistencia && (
+                  <div className="ml-auto">
+                    <Button
+                      color="success"
+                      size="md"
+                      startContent={<CheckCircle size={16} />}
+                      onPress={() =>
+                        navigate(
+                          `/profesor/asistencia?horario=${claseActual.horario_id}&fecha=${claseActual.fecha_clase}`,
+                        )
+                      }
+                    >
+                      Pasar asistencia
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+      <div className="space-y-5">
+        {!horarios || horarios.length === 0 ? (
+          <Card className="w-full border-none shadow-sm">
+            <CardBody className="text-center py-16">
+              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4 mx-auto">
+                <Calendar className="text-muted-foreground" size={32} />
+              </div>
+              <p className="font-bold text-lg mb-1">
+                No hay horarios asignados
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Contacta al administrador
+              </p>
+            </CardBody>
+          </Card>
+        ) : (
+          diasSemana.map((dia) => {
+            const horariosDelDia = horariosAgrupados[dia];
+
+            if (!horariosDelDia || horariosDelDia.length === 0) return null;
+
+            return (
+              <div key={dia}>
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <div className="w-2 h-2 bg-primary rounded-full" />
+                  <h3 className="font-bold text-base capitalize">{dia}</h3>
+                  <Chip color="primary" size="sm" variant="flat">
+                    {horariosDelDia.length}
+                  </Chip>
+                </div>
+                <div className="space-y-3">
+                  {horariosDelDia.map((h: any) => (
+                    <Card
+                      key={h.id}
+                      isPressable
+                      className="w-full border-none shadow-md hover:shadow-lg transition-all"
+                      onPress={() => handleRowClick(h.id)}
+                    >
+                      <CardBody className="p-0 overflow-hidden">
+                        <div className="flex">
+                          {/* Horario visual */}
+                          <div className="bg-primary/10 px-4 py-4 flex flex-col items-center justify-center min-w-[80px]">
+                            <Clock className="text-primary mb-1" size={18} />
+                            <span className="text-sm font-bold text-primary leading-none">
+                              {h.hora_inicio?.slice(0, 5)}
+                            </span>
+                            <span className="text-[10px] text-primary/60 my-0.5">
+                              a
+                            </span>
+                            <span className="text-sm font-bold text-primary leading-none">
+                              {h.hora_fin?.slice(0, 5)}
+                            </span>
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-base line-clamp-2">
+                                  {h.taller?.nombre ||
+                                    h.taller_nombre ||
+                                    "Sin taller"}
+                                </h4>
+
+                                {(h.ubicacion?.nombre ||
+                                  h.ubicacion_nombre) && (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                                    <MapPin size={14} />
+                                    <span className="font-medium">
+                                      {h.ubicacion?.nombre ||
+                                        h.ubicacion_nombre}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <ChevronRight
+                                className="text-primary shrink-0"
+                                size={20}
+                              />
+                            </div>
+
+                            {(h.alumnos_inscritos || 0) > 0 && (
+                              <Chip
+                                color="success"
+                                size="sm"
+                                startContent={<Users size={12} />}
+                                variant="flat"
+                              >
+                                {h.alumnos_inscritos} alumnos
+                              </Chip>
+                            )}
+                          </div>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

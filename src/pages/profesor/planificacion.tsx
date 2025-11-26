@@ -109,6 +109,35 @@ export default function ProfesorPlanificacionPage() {
     enabled: !!user?.profesor_id,
   });
 
+  // Normalizar la respuesta de la API a un array de planificaciones
+  const planificacionesList = useMemo(() => {
+    if (!planificaciones) return [] as DetalleClase[];
+    if (Array.isArray(planificaciones))
+      return planificaciones as DetalleClase[];
+    if (Array.isArray((planificaciones as any).datos))
+      return (planificaciones as any).datos as DetalleClase[];
+    if (Array.isArray((planificaciones as any).value))
+      return (planificaciones as any).value as DetalleClase[];
+    if (Array.isArray((planificaciones as any).data?.datos))
+      return (planificaciones as any).data.datos as DetalleClase[];
+
+    return [] as DetalleClase[];
+  }, [planificaciones]);
+
+  // Normalizar la respuesta de la API a un array de talleres
+  const talleresList = useMemo(() => {
+    if (!talleres) return [] as any[];
+    if (Array.isArray(talleres)) return talleres as any[];
+    if (Array.isArray((talleres as any).datos))
+      return (talleres as any).datos as any[];
+    if (Array.isArray((talleres as any).value))
+      return (talleres as any).value as any[];
+    if (Array.isArray((talleres as any).data?.datos))
+      return (talleres as any).data.datos as any[];
+
+    return [] as any[];
+  }, [talleres]);
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: DetalleClaseForm) =>
@@ -184,9 +213,9 @@ export default function ProfesorPlanificacionPage() {
   });
 
   const filteredPlanificaciones = useMemo(() => {
-    if (!planificaciones) return [];
+    if (!planificacionesList) return [] as DetalleClase[];
 
-    return planificaciones.filter((p) => {
+    return planificacionesList.filter((p) => {
       const matchesSearch =
         p.taller_nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.objetivo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -197,7 +226,7 @@ export default function ProfesorPlanificacionPage() {
 
       return matchesSearch && matchesTaller;
     });
-  }, [planificaciones, searchQuery, selectedTaller]);
+  }, [planificacionesList, searchQuery, selectedTaller]);
 
   const resetForm = () => {
     setFormData({
@@ -374,7 +403,7 @@ export default function ProfesorPlanificacionPage() {
             setSelectedTaller(Array.from(keys)[0]?.toString() || "")
           }
         >
-          {talleres?.map((taller) => (
+          {talleresList?.map((taller) => (
             <SelectItem key={taller.id.toString()} textValue={taller.nombre}>
               {taller.nombre}
             </SelectItem>
@@ -573,7 +602,7 @@ export default function ProfesorPlanificacionPage() {
                 });
               }}
             >
-              {talleres?.map((taller) => (
+              {talleresList?.map((taller) => (
                 <SelectItem
                   key={taller.id.toString()}
                   textValue={taller.nombre}
@@ -758,7 +787,7 @@ export default function ProfesorPlanificacionPage() {
                   Total Planificaciones
                 </p>
                 <p className="text-2xl font-bold">
-                  {planificaciones?.length || 0}
+                  {planificacionesList?.length || 0}
                 </p>
               </div>
             </div>
@@ -774,7 +803,7 @@ export default function ProfesorPlanificacionPage() {
               <div>
                 <p className="text-sm text-default-500">Este Mes</p>
                 <p className="text-2xl font-bold">
-                  {planificaciones?.filter((p) => {
+                  {planificacionesList?.filter((p) => {
                     const fecha = new Date(p.fecha_clase);
                     const hoy = new Date();
 
@@ -798,7 +827,7 @@ export default function ProfesorPlanificacionPage() {
               <div>
                 <p className="text-sm text-default-500">Próximas 7 Días</p>
                 <p className="text-2xl font-bold">
-                  {planificaciones?.filter((p) => {
+                  {planificacionesList?.filter((p) => {
                     const fecha = new Date(p.fecha_clase);
                     const hoy = new Date();
                     const siete = new Date();

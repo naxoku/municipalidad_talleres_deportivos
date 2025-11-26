@@ -15,6 +15,11 @@ export interface DetalleClase {
   hora_inicio: string;
   hora_fin: string;
   ubicacion_nombre?: string;
+  asistentes_presentes?: number;
+  asistentes_total?: number;
+  estado?: "en_curso" | "margen_extra" | "editable" | "pasada";
+  tiempo_restante_segundos?: number | null;
+  puede_pasar_asistencia?: boolean;
 }
 
 export interface DetalleClaseForm {
@@ -32,6 +37,25 @@ export interface DetalleClaseFilters {
   horario_id?: number;
   fecha_desde?: string;
   fecha_hasta?: string;
+}
+
+export interface ClasesPorHorarioResponse {
+  horario: {
+    id: number;
+    taller_id: number;
+    profesor_id: number;
+    dia_semana: string;
+    hora_inicio: string;
+    hora_fin: string;
+    taller_nombre: string;
+    ubicacion_nombre: string;
+  };
+  clases: DetalleClase[];
+}
+
+export interface ClaseHistorial extends Omit<DetalleClase, "id"> {
+  id: number | null;
+  tiene_detalle: boolean;
 }
 
 export const detalleClaseApi = {
@@ -55,6 +79,14 @@ export const detalleClaseApi = {
 
     const response = await axios.get<DetalleClase[]>(
       `/api/detalle_clase.php?${params.toString()}`,
+    );
+
+    return response.data;
+  },
+
+  getHistorial: async (profesor_id: number): Promise<ClaseHistorial[]> => {
+    const response = await axios.get<ClaseHistorial[]>(
+      `/api/detalle_clase.php?action=historial&profesor_id=${profesor_id}`,
     );
 
     return response.data;
@@ -108,5 +140,32 @@ export const detalleClaseApi = {
     );
 
     return response.data;
+  },
+
+  getClasesPorHorario: async (
+    horario_id: number,
+  ): Promise<ClasesPorHorarioResponse> => {
+    // Si el horario_id no es válido, evitar llamar al backend y retornar una estructura vacía
+    if (!Number.isFinite(horario_id) || horario_id <= 0) {
+      return {
+        horario: {
+          id: 0,
+          taller_id: 0,
+          profesor_id: 0,
+          dia_semana: "",
+          hora_inicio: "",
+          hora_fin: "",
+          taller_nombre: "",
+          ubicacion_nombre: "",
+        },
+        clases: [],
+      } as ClasesPorHorarioResponse;
+    }
+
+    const response = await axios.get<{ datos: ClasesPorHorarioResponse }>(
+      `/api/clases.php?action=por_horario&horario_id=${horario_id}`,
+    );
+
+    return response.data.datos;
   },
 };

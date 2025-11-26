@@ -21,6 +21,7 @@ export interface AlumnoAsistencia {
   asistencia_id?: number;
   telefono?: string;
   telefono_emergencia?: string;
+  edad: number;
 }
 
 export interface AsistenciaResponse {

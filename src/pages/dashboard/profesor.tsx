@@ -129,7 +129,7 @@ export default function ProfesorDashboard() {
       </div>
 
       {/* Métricas Rápidas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-primary">
           <CardBody className="flex flex-row items-center gap-4">
             <div className="p-3 bg-primary-100 rounded-lg">
@@ -187,7 +187,7 @@ export default function ProfesorDashboard() {
           <h2 className="text-xl font-bold">Acciones rápidas</h2>
         </CardHeader>
         <CardBody>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Button
               className="h-20"
               color="primary"
@@ -204,11 +204,13 @@ export default function ProfesorDashboard() {
               className="h-20"
               color="success"
               variant="flat"
-              onPress={() => navigate("/profesor/asistencia")}
+              onPress={() => navigate("/profesor/clases-asistencia")}
             >
               <div className="flex flex-col items-center gap-2">
                 <CheckCircle size={24} />
-                <span className="text-sm font-semibold">Pasar asistencia</span>
+                <span className="text-sm font-semibold">
+                  Registros de asistencia
+                </span>
               </div>
             </Button>
 
@@ -291,9 +293,9 @@ export default function ProfesorDashboard() {
             <CardBody className="flex flex-col items-center justify-center p-12">
               <Sun className="text-default-300 mb-4" size={48} />
               <p className="text-default-500 font-medium">
-                No tienes clases programadas para hoy
+                Nada programado para hoy
               </p>
-              <p className="text-sm text-default-400">Disfruta tu día libre</p>
+              <p className="text-sm text-default-400">Disfruta tu día</p>
             </CardBody>
           </Card>
         )}
@@ -318,7 +320,7 @@ function ProfesorClassCard({
       isPressable
       className={`border-l-4 ${isCurrent ? "border-l-success" : "border-l-primary"} hover:shadow-md transition-shadow`}
       onPress={() =>
-        navigate(`/profesor/asistencia?horario=${clase.horario_id}`)
+        navigate(`/profesor/clases-asistencia?horario=${clase.horario_id}`)
       }
     >
       <CardBody className="flex flex-row p-0 overflow-hidden">
@@ -364,7 +366,7 @@ function ProfesorClassCard({
 
           {isCurrent && (
             <Button className="mt-2" color="success" size="sm" variant="flat">
-              Pasar Asistencia
+              Pasar asistenciaa
             </Button>
           )}
         </div>

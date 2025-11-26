@@ -62,8 +62,9 @@ export interface ClaseHoy {
 export const profesorApi = {
   // Obtener talleres del profesor
   getTalleres: async (profesorId: number): Promise<TallerProfesor[]> => {
+    // El endpoint espera el parámetro `id` en la query (ver profesor_talleres.php)
     const response = await api.get(
-      `${API_URL}/api/profesor_talleres.php?profesor_id=${profesorId}`,
+      `${API_URL}/api/profesor_talleres.php?id=${profesorId}`,
     );
 
     return response.data;

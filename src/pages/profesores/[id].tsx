@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import { profesoresFeatureApi as profesoresApi } from "@/features/profesores/api";
 import { Profesor } from "@/types/schema";
@@ -71,6 +71,20 @@ export default function ProfesorDetailPage() {
     queryFn: () => profesoresApi.getTalleres(profesorId),
     enabled: !!profesorId,
   });
+
+  // Normalizar respuesta de talleres
+  const talleresList = useMemo(() => {
+    if (!talleres) return [] as any[];
+    if (Array.isArray(talleres)) return talleres as any[];
+    if (Array.isArray((talleres as any).datos))
+      return (talleres as any).datos as any[];
+    if (Array.isArray((talleres as any).value))
+      return (talleres as any).value as any[];
+    if (Array.isArray((talleres as any).data?.datos))
+      return (talleres as any).data.datos as any[];
+
+    return [] as any[];
+  }, [talleres]);
 
   const { data: horarios } = useQuery({
     queryKey: ["profesor_horarios", profesorId],
@@ -159,7 +173,7 @@ export default function ProfesorDetailPage() {
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {talleres?.map((t: any) => (
+        {talleresList?.map((t: any) => (
           <Card key={t.id} className="border border-default-200">
             <CardBody className="flex flex-row items-center justify-between">
               <div className="flex flex-col gap-1">

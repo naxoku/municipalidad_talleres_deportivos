@@ -1,20 +1,7 @@
 import { useState, useMemo } from "react";
-import {
-  Card,
-  CardBody,
-  Button,
-  Spinner,
-  Chip,
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-  Input,
-} from "@heroui/react";
-import { Users, Search, Download, Phone, Mail, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Card, CardBody, Button, Spinner, Chip, Input } from "@heroui/react";
+import { Users, Search, Download, Eye, BookOpen } from "lucide-react";
 
 import { useAuth } from "@/context/auth";
 import { profesorApi } from "@/api/profesor";
@@ -30,10 +17,23 @@ export default function ProfesorAlumnosPage() {
     enabled: !!user?.profesor_id,
   });
 
-  const filteredAlumnos = useMemo(() => {
-    if (!alumnos) return [];
+  const alumnosList = useMemo(() => {
+    if (!alumnos) return [] as any[];
+    if (Array.isArray(alumnos)) return alumnos as any[];
+    if (Array.isArray((alumnos as any).datos))
+      return (alumnos as any).datos as any[];
+    if (Array.isArray((alumnos as any).value))
+      return (alumnos as any).value as any[];
+    if (Array.isArray((alumnos as any).data?.datos))
+      return (alumnos as any).data.datos as any[];
 
-    return alumnos.filter(
+    return [] as any[];
+  }, [alumnos]);
+
+  const filteredAlumnos = useMemo(() => {
+    if (!alumnosList) return [];
+
+    return alumnosList.filter(
       (alumno) =>
         alumno.nombre_completo
           .toLowerCase()
@@ -41,15 +41,10 @@ export default function ProfesorAlumnosPage() {
         alumno.rut.toLowerCase().includes(searchQuery.toLowerCase()) ||
         alumno.talleres.toLowerCase().includes(searchQuery.toLowerCase()),
     );
-  }, [alumnos, searchQuery]);
-
-  const averageAge =
-    alumnos && alumnos.length > 0
-      ? Math.round(alumnos.reduce((sum, a) => sum + a.edad, 0) / alumnos.length)
-      : 0;
+  }, [alumnosList, searchQuery]);
 
   const handleExport = () => {
-    if (!alumnos) return;
+    if (!alumnosList) return;
 
     const csv = [
       [
@@ -59,19 +54,15 @@ export default function ProfesorAlumnosPage() {
         "Género",
         "Teléfono",
         "Email",
-        "Apoderado",
-        "Teléfono Apoderado",
         "Talleres",
       ],
-      ...alumnos.map((a) => [
+      ...alumnosList.map((a) => [
         a.rut,
         a.nombre_completo,
         a.edad,
         a.genero,
         a.telefono || "",
         a.email || "",
-        a.nombre_apoderado || "",
-        a.telefono_apoderado || "",
         a.talleres,
       ]),
     ]
@@ -90,28 +81,50 @@ export default function ProfesorAlumnosPage() {
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <Spinner label="Cargando alumnos..." size="lg" />
+        <Spinner color="primary" label="Cargando alumnos..." size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Mis Alumnos</h1>
-          <p className="text-default-500">
-            Listado completo de alumnos en tus talleres
-          </p>
-        </div>
+    <div className="space-y-5 pb-10">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <Chip color="primary" size="lg" variant="flat">
-            {alumnos?.length || 0} Alumnos
+          <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
+            <Users className="text-success" size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Mis alumnos
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Lista completa de tus estudiantes
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <Input
+          classNames={{
+            base: "w-full",
+            inputWrapper: "h-12 bg-card shadow-sm",
+          }}
+          placeholder="Buscar por nombre, RUT o taller..."
+          radius="lg"
+          size="lg"
+          startContent={<Search className="text-muted-foreground" size={20} />}
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+        />
+        <div className="flex items-center justify-between gap-3">
+          <Chip className="font-bold" color="primary" size="lg" variant="flat">
+            {filteredAlumnos?.length || 0} Alumnos
           </Chip>
           <Button
             color="success"
-            startContent={<Download size={18} />}
+            size="sm"
+            startContent={<Download size={16} />}
             variant="flat"
             onPress={handleExport}
           >
@@ -120,286 +133,70 @@ export default function ProfesorAlumnosPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <Input
-        classNames={{
-          base: "max-w-full sm:max-w-[400px]",
-        }}
-        placeholder="Buscar por nombre, RUT o taller..."
-        startContent={<Search size={18} />}
-        value={searchQuery}
-        onValueChange={setSearchQuery}
-      />
-
-      {/* Alumnos List */}
-      <div className="space-y-4">
-        {/* Desktop Table */}
-        <Card className="hidden md:block">
-          <CardBody className="p-0">
-            <Table
-              removeWrapper
-              aria-label="Tabla de alumnos"
-              classNames={{
-                th: "bg-default-100 font-semibold",
-                td: "py-4",
-              }}
+      <div className="space-y-3">
+        {filteredAlumnos.length === 0 ? (
+          <Card className="w-full border-none shadow-sm">
+            <CardBody className="flex flex-col items-center justify-center py-16">
+              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                <Users className="text-muted-foreground" size={32} />
+              </div>
+              <p className="font-bold text-lg mb-1">No hay alumnos</p>
+              <p className="text-sm text-muted-foreground text-center px-4">
+                No se encontraron alumnos con ese criterio
+              </p>
+            </CardBody>
+          </Card>
+        ) : (
+          filteredAlumnos.map((alumno) => (
+            <Card
+              key={alumno.id}
+              isPressable
+              className="w-full hover:border-primary/20 hover:shadow-sm transition-all duration-200"
+              onPress={() => (window.location.href = `/alumnos/${alumno.id}`)}
             >
-              <TableHeader>
-                <TableColumn width="25%">ALUMNO</TableColumn>
-                <TableColumn width="8%">EDAD</TableColumn>
-                <TableColumn width="18%">CONTACTO</TableColumn>
-                <TableColumn width="15%">APODERADO</TableColumn>
-                <TableColumn width="17%">TALLERES</TableColumn>
-                <TableColumn width="10%">ACCIONES</TableColumn>
-              </TableHeader>
-              <TableBody emptyContent="No hay alumnos para mostrar">
-                {filteredAlumnos.map((alumno) => (
-                  <TableRow key={alumno.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-semibold text-sm">
-                          {alumno.nombre_completo}
-                        </p>
-                        <p className="text-xs text-default-400 font-mono">
-                          {alumno.rut}
-                        </p>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <Chip color="default" size="sm" variant="flat">
-                        {alumno.edad} años
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1.5">
-                        {alumno.telefono && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Phone className="text-default-400" size={14} />
-                            <span>{alumno.telefono}</span>
-                          </div>
-                        )}
-                        {alumno.email && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="text-default-400" size={14} />
-                            <span className="truncate max-w-[180px]">
-                              {alumno.email}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {alumno.nombre_apoderado ? (
-                          <>
-                            <p className="text-sm font-medium">
-                              {alumno.nombre_apoderado}
-                            </p>
-                            {alumno.telefono_apoderado && (
-                              <div className="flex items-center gap-2 text-xs text-default-500">
-                                <Phone size={12} />
-                                <span>{alumno.telefono_apoderado}</span>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-xs text-default-400">
-                            No registrado
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <p className="text-sm">{alumno.talleres}</p>
-                        {alumno.total_inscripciones > 1 && (
-                          <Chip color="primary" size="sm" variant="dot">
-                            {alumno.total_inscripciones} talleres
-                          </Chip>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        color="primary"
-                        size="sm"
-                        variant="light"
-                        onPress={() =>
-                          (window.location.href = `/alumnos/${alumno.id}`)
-                        }
-                      >
-                        Ver más
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardBody>
-        </Card>
-
-        {/* Mobile Cards */}
-        <div className="grid gap-3 md:hidden">
-          {filteredAlumnos.length === 0 ? (
-            <Card>
-              <CardBody>
-                <p className="text-center text-default-500">
-                  No hay alumnos para mostrar
-                </p>
-              </CardBody>
-            </Card>
-          ) : (
-            filteredAlumnos.map((alumno) => (
-              <Card key={alumno.id}>
-                <CardBody className="gap-3">
-                  {/* Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-semibold">
-                          {alumno.nombre_completo}
-                        </p>
-                        <p className="text-xs text-default-400 font-mono">
-                          {alumno.rut}
-                        </p>
-                      </div>
-                    </div>
-                    <Chip size="sm" variant="flat">
-                      {alumno.edad} años
-                    </Chip>
+              <CardBody className="p-4">
+                <div className="flex items-center gap-3">
+                  {/* Icono con colores */}
+                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+                    <Users className="text-success" size={18} />
                   </div>
 
-                  {/* Info Grid */}
-                  <div className="space-y-2 text-sm">
-                    {(alumno.telefono || alumno.email) && (
-                      <div>
-                        <p className="text-xs text-default-400 mb-1">
-                          Contacto
+                  {/* Contenido principal */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base mb-1 truncate">
+                          {alumno.nombre_completo}
+                        </h3>
+                        <p className="text-xs text-muted-foreground font-mono mb-2">
+                          {alumno.rut}
                         </p>
-                        <div className="space-y-1">
-                          {alumno.telefono && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="text-default-400" size={14} />
-                              <span>{alumno.telefono}</span>
-                            </div>
-                          )}
-                          {alumno.email && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="text-default-400" size={14} />
-                              <span className="truncate">{alumno.email}</span>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium text-foreground">
+                              {alumno.edad}
+                            </span>
+                            <span>años</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <BookOpen className="text-primary" size={14} />
+                            <span className="font-medium text-foreground">
+                              {alumno.total_inscripciones}
+                            </span>
+                            <span>talleres</span>
+                          </div>
                         </div>
                       </div>
-                    )}
-
-                    {alumno.nombre_apoderado && (
-                      <div>
-                        <p className="text-xs text-default-400 mb-1">
-                          Apoderado
-                        </p>
-                        <p className="font-medium">{alumno.nombre_apoderado}</p>
-                        {alumno.telefono_apoderado && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <Phone className="text-default-400" size={14} />
-                            <span>{alumno.telefono_apoderado}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div>
-                      <p className="text-xs text-default-400 mb-1">Talleres</p>
-                      <p className="text-sm">{alumno.talleres}</p>
-                      {alumno.total_inscripciones > 1 && (
-                        <Chip
-                          className="mt-1"
-                          color="primary"
-                          size="sm"
-                          variant="flat"
-                        >
-                          {alumno.total_inscripciones} talleres
-                        </Chip>
-                      )}
                     </div>
                   </div>
 
-                  {/* Action */}
-                  <Button
-                    fullWidth
-                    color="primary"
-                    size="sm"
-                    variant="flat"
-                    onPress={() =>
-                      (window.location.href = `/alumnos/${alumno.id}`)
-                    }
-                  >
-                    Ver Detalle
-                  </Button>
-                </CardBody>
-              </Card>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-primary-100 p-3">
-                <Users className="text-primary" size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-default-500">Total Alumnos</p>
-                <p className="text-2xl font-bold">{alumnos?.length || 0}</p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-success-100 p-3 flex items-center justify-center">
-                <div className="text-success font-bold">{averageAge}</div>
-              </div>
-              <div>
-                <p className="text-sm text-default-500">Promedio Edad</p>
-                <p className="text-2xl font-bold">
-                  {alumnos && alumnos.length > 0
-                    ? Math.round(
-                        alumnos.reduce((sum, a) => sum + a.edad, 0) /
-                          alumnos.length,
-                      )
-                    : 0}{" "}
-                  años
-                </p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-warning-100 p-3">
-                <Calendar className="text-warning" size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-default-500">Inscripciones</p>
-                <p className="text-2xl font-bold">
-                  {alumnos?.reduce(
-                    (sum, a) => sum + a.total_inscripciones,
-                    0,
-                  ) || 0}
-                </p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+                  {/* Flecha de navegación */}
+                  <Eye className="text-primary" size={16} />
+                </div>
+              </CardBody>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );

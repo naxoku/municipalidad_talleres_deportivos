@@ -8,9 +8,12 @@ import TallerDetailPage from "@/pages/talleres/detail";
 import AlumnosPage from "@/pages/alumnos/index";
 import ProfesorTalleresPage from "@/pages/profesor/talleres";
 import ProfesorHorariosPage from "@/pages/profesor/horarios";
+import ClasesHorarioPage from "@/pages/profesor/clases-horario";
+import DetalleClasePage from "@/pages/profesor/detalle-clase";
 import ProfesorAlumnosPage from "@/pages/profesor/alumnos";
 import ProfesorPlanificacionPage from "@/pages/profesor/planificacion";
 import ProfesorAsistenciaPage from "@/pages/profesor/asistencia";
+import ClasesAsistenciaPage from "@/pages/profesor/clases-asistencia";
 import AlumnoViewPage from "@/pages/alumnos/[id]";
 import HorariosPage from "@/pages/horarios/index";
 import HorarioViewPage from "@/pages/horarios/[id]";
@@ -77,6 +80,22 @@ function App() {
       <Route
         element={
           <AppProtectedRoute requiredRole="profesor">
+            <ClasesHorarioPage />
+          </AppProtectedRoute>
+        }
+        path="/profesor/horarios/:horarioId/clases"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
+            <DetalleClasePage />
+          </AppProtectedRoute>
+        }
+        path="/profesor/clases/:claseId"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
             <ProfesorAlumnosPage />
           </AppProtectedRoute>
         }
@@ -97,6 +116,14 @@ function App() {
           </AppProtectedRoute>
         }
         path="/profesor/asistencia"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
+            <ClasesAsistenciaPage />
+          </AppProtectedRoute>
+        }
+        path="/profesor/clases-asistencia"
       />
 
       {/* Rutas para talleres y alumnos (admin y profesor comparten) */}
