@@ -346,7 +346,7 @@ export default function TallerDetailPage() {
               "gap-6 w-full relative rounded-none p-0 border-b border-divider",
             cursor: "w-full bg-primary",
             tab: "flex-1 px-0 h-12",
-            tabContent: "group-data-[selected=true]:text-primary",
+            tabContent: "text-primary",
           }}
           color="primary"
           variant="underlined"
@@ -479,7 +479,9 @@ export default function TallerDetailPage() {
                         isDisabled={!editMode}
                         label="Estado del taller"
                         selectedKeys={
-                          formData.activo ? ["activo"] : ["inactivo"]
+                          formData.activo
+                            ? new Set(["activo"])
+                            : new Set(["inactivo"])
                         }
                         onSelectionChange={(keys) => {
                           const selected = Array.from(keys)[0] as string;

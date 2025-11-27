@@ -14,6 +14,7 @@ import ProfesorAlumnosPage from "@/pages/profesor/alumnos";
 import ProfesorPlanificacionPage from "@/pages/profesor/planificacion";
 import ProfesorAsistenciaPage from "@/pages/profesor/asistencia";
 import ClasesAsistenciaPage from "@/pages/profesor/clases-asistencia";
+import ProfesorClasesPage from "@/pages/profesor/clases";
 import AlumnoViewPage from "@/pages/alumnos/[id]";
 import HorariosPage from "@/pages/horarios/index";
 import HorarioViewPage from "@/pages/horarios/[id]";
@@ -116,6 +117,14 @@ function App() {
           </AppProtectedRoute>
         }
         path="/profesor/asistencia"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
+            <ProfesorClasesPage />
+          </AppProtectedRoute>
+        }
+        path="/profesor/clases"
       />
       <Route
         element={

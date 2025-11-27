@@ -24,7 +24,6 @@ import {
   TableCell,
 } from "@heroui/react";
 import {
-  ArrowLeft,
   Edit,
   Save,
   X,
@@ -290,7 +289,6 @@ export default function AlumnoViewPage() {
         </p>
         <Button
           className="mt-4"
-          startContent={<ArrowLeft size={16} />}
           onPress={() => navigate("/alumnos")}
         >
           Volver a alumnos
@@ -303,21 +301,11 @@ export default function AlumnoViewPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button
-            isIconOnly
-            aria-label="Volver a la lista de alumnos"
-            variant="light"
-            onPress={() => navigate("/alumnos")}
-          >
-            <ArrowLeft size={20} />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {alumno.nombre} {alumno.apellidos}
-            </h1>
-            <p className="text-default-500">RUT: {alumno.rut}</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold">
+            {alumno.nombre} {alumno.apellidos}
+          </h1>
+          <p className="text-default-500">RUT: {alumno.rut}</p>
         </div>
 
         <div className="flex gap-2">
@@ -355,7 +343,7 @@ export default function AlumnoViewPage() {
               "gap-6 w-full relative rounded-none p-0 border-b border-divider",
             cursor: "w-full bg-primary",
             tab: "flex-1 px-0 h-12 justify-center",
-            tabContent: "group-data-[selected=true]:text-primary",
+            tabContent: "text-primary",
           }}
           color="primary"
           variant="underlined"
@@ -472,7 +460,11 @@ export default function AlumnoViewPage() {
                         aria-label="Seleccionar género"
                         id="genero-select"
                         isDisabled={!editMode}
-                        selectedKeys={formData.genero ? [formData.genero] : []}
+                        selectedKeys={
+                          formData.genero
+                            ? new Set([formData.genero])
+                            : new Set()
+                        }
                         onSelectionChange={(keys) =>
                           setFormData({
                             ...formData,
@@ -664,8 +656,8 @@ export default function AlumnoViewPage() {
                         isDisabled={!editMode}
                         selectedKeys={
                           formData.autorizo_imagenes !== undefined
-                            ? [formData.autorizo_imagenes ? "si" : "no"]
-                            : []
+                            ? new Set([formData.autorizo_imagenes ? "si" : "no"])
+                            : new Set()
                         }
                         onSelectionChange={(keys) =>
                           setFormData({
@@ -692,8 +684,8 @@ export default function AlumnoViewPage() {
                         isDisabled={!editMode}
                         selectedKeys={
                           formData.notificaciones_movil !== undefined
-                            ? [formData.notificaciones_movil ? "si" : "no"]
-                            : []
+                            ? new Set([formData.notificaciones_movil ? "si" : "no"])
+                            : new Set()
                         }
                         onSelectionChange={(keys) =>
                           setFormData({
@@ -972,7 +964,9 @@ export default function AlumnoViewPage() {
                             id="modal-taller-select"
                             isDisabled={isLoadingTalleresList}
                             selectedKeys={
-                              selectedTallerId ? [String(selectedTallerId)] : []
+                              selectedTallerId
+                                ? new Set([String(selectedTallerId)])
+                                : new Set()
                             }
                             onSelectionChange={(keys) => {
                               const newTallerId = Number(Array.from(keys)[0]);
@@ -1010,8 +1004,8 @@ export default function AlumnoViewPage() {
                             }
                             selectedKeys={
                               selectedHorarioId
-                                ? [String(selectedHorarioId)]
-                                : []
+                                ? new Set([String(selectedHorarioId)])
+                                : new Set()
                             }
                             onSelectionChange={(keys) =>
                               setSelectedHorarioId(Number(Array.from(keys)[0]))

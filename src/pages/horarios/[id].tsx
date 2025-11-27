@@ -32,7 +32,6 @@ import {
   Edit,
   Save,
   X,
-  ArrowLeft,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -149,7 +148,6 @@ export default function HorarioDetailPage() {
         </p>
         <Button
           className="mt-4"
-          startContent={<ArrowLeft size={16} />}
           onPress={() => navigate("/horarios")}
         >
           Volver a Horarios
@@ -302,14 +300,6 @@ export default function HorarioDetailPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
-          <Button
-            isIconOnly
-            aria-label="Volver a la lista de horarios"
-            variant="light"
-            onPress={() => navigate("/horarios")}
-          >
-            <ArrowLeft size={20} />
-          </Button>
           <h1 className="text-3xl font-bold">
             {taller?.nombre || "Horario"} - {horario.dia_semana}
           </h1>
@@ -329,7 +319,7 @@ export default function HorarioDetailPage() {
               "gap-6 w-full relative rounded-none p-0 border-b border-divider",
             cursor: "w-full bg-primary",
             tab: "flex-1 px-0 h-12",
-            tabContent: "group-data-[selected=true]:text-primary",
+            tabContent: "text-primary",
           }}
           color="primary"
           variant="underlined"
@@ -397,8 +387,8 @@ export default function HorarioDetailPage() {
                         label="Seleccionar taller"
                         selectedKeys={
                           formData.taller_id
-                            ? [formData.taller_id.toString()]
-                            : []
+                            ? new Set([formData.taller_id.toString()])
+                            : new Set()
                         }
                         onSelectionChange={(keys) => {
                           const selected = Array.from(keys)[0] as string;

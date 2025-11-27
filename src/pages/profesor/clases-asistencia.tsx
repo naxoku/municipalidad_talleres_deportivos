@@ -16,7 +16,6 @@ import {
   MapPin,
   Users,
   AlertCircle,
-  ArrowLeft,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -145,24 +144,14 @@ export default function ClasesAsistenciaPage() {
     <div className="space-y-6 pb-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button
-            isIconOnly
-            size="sm"
-            variant="flat"
-            onPress={() => navigate("/profesor")}
-          >
-            <ArrowLeft size={20} />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Pasar Asistencia
-            </h1>
-            <p className="text-default-500">
-              Selecciona un horario y haz clic en una clase para marcar
-              asistencia
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Pasar Asistencia
+          </h1>
+          <p className="text-default-500">
+            Selecciona un horario y haz clic en una clase para marcar
+            asistencia
+          </p>
         </div>
       </div>
 

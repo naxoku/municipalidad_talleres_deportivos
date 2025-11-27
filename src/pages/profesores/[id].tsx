@@ -36,7 +36,6 @@ import {
   Edit,
   Save,
   X,
-  ArrowLeft,
   BookOpen,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -148,7 +147,6 @@ export default function ProfesorDetailPage() {
         </p>
         <Button
           className="mt-4"
-          startContent={<ArrowLeft size={16} />}
           onPress={() => navigate("/profesores")}
         >
           Volver a Profesores
@@ -372,14 +370,6 @@ export default function ProfesorDetailPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
-          <Button
-            isIconOnly
-            aria-label="Volver a la lista de profesores"
-            variant="light"
-            onPress={() => navigate("/profesores")}
-          >
-            <ArrowLeft size={20} />
-          </Button>
           <h1 className="text-3xl font-bold">{profesor.nombre}</h1>
           <Chip
             color={profesor.estado === "Activo" ? "success" : "default"}
@@ -400,7 +390,7 @@ export default function ProfesorDetailPage() {
               "gap-6 w-full relative rounded-none p-0 border-b border-divider",
             cursor: "w-full bg-primary",
             tab: "flex-1 px-0 h-12",
-            tabContent: "group-data-[selected=true]:text-primary",
+            tabContent: "text-primary",
           }}
           color="primary"
           variant="underlined"
@@ -519,7 +509,7 @@ export default function ProfesorDetailPage() {
                         className="w-full"
                         id="estado-select"
                         isDisabled={!editMode}
-                        selectedKeys={formData.estado ? [formData.estado] : []}
+                        selectedKeys={formData.estado ? new Set([formData.estado]) : new Set()}
                         onSelectionChange={(keys) =>
                           setFormData({
                             ...formData,

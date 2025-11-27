@@ -14,7 +14,6 @@ import {
   MapPin,
   Users,
   AlertCircle,
-  ArrowLeft,
   FileText,
   CheckSquare,
 } from "lucide-react";
@@ -42,7 +41,7 @@ export default function ClasesHorarioPage() {
   const navigate = useNavigate();
   const { horarioId } = useParams<{ horarioId: string }>();
   const horarioIdNum = Number(horarioId);
-  const [selectedTab, setSelectedTab] = useState("recientes");
+  const [selectedTab, setSelectedTab] = useState("todos");
 
   const { data: clasesData, isLoading } = useQuery({
     queryKey: ["profesor", "clases_horario", horarioIdNum],
@@ -50,9 +49,9 @@ export default function ClasesHorarioPage() {
     enabled: Number.isFinite(horarioIdNum) && horarioIdNum > 0,
   });
 
-  const { clasesRecientes, clasesProximas } = useMemo(() => {
+  const { clasesRecientes, clasesProximas, clasesTodas } = useMemo(() => {
     if (!clasesData?.clases) {
-      return { clasesRecientes: [], clasesProximas: [] };
+      return { clasesRecientes: [], clasesProximas: [], clasesTodas: [] };
     }
 
     const clases = clasesData.clases;
@@ -83,6 +82,7 @@ export default function ClasesHorarioPage() {
     return {
       clasesRecientes: recientes,
       clasesProximas: proximas,
+      clasesTodas: clasesOrdenadas,
     };
   }, [clasesData]);
 
@@ -110,7 +110,6 @@ export default function ClasesHorarioPage() {
             </p>
             <Button
               color="primary"
-              startContent={<ArrowLeft size={18} />}
               onPress={() => navigate("/profesor/horarios")}
             >
               Volver a Horarios
@@ -127,15 +126,6 @@ export default function ClasesHorarioPage() {
     <div className="space-y-5 pb-10">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <Button
-          isIconOnly
-          className="mt-1"
-          size="sm"
-          variant="flat"
-          onPress={() => navigate("/profesor/horarios")}
-        >
-          <ArrowLeft size={20} />
-        </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -188,6 +178,40 @@ export default function ClasesHorarioPage() {
         variant="underlined"
         onSelectionChange={(key) => setSelectedTab(key as string)}
       >
+        <Tab
+          key="todos"
+          title={
+            <div className="flex items-center gap-2">
+              <Calendar size={18} />
+              <span>Todos</span>
+              {clasesTodas.length > 0 && (
+                <Chip color="default" size="sm" variant="flat">
+                  {clasesTodas.length}
+                </Chip>
+              )}
+            </div>
+          }
+        >
+          <div className="mt-2 space-y-3">
+            {clasesTodas.length > 0 ? (
+              clasesTodas.map((clase) => (
+                <ClaseCard key={clase.id} clase={clase} />
+              ))
+            ) : (
+              <Card>
+                <CardBody className="flex flex-col items-center justify-center p-12">
+                  <Calendar className="text-default-300 mb-4" size={48} />
+                  <p className="text-default-500 font-medium">
+                    No hay clases programadas
+                  </p>
+                  <p className="text-sm text-default-400 text-center mt-2">
+                    Las clases aparecerán aquí cuando se programen.
+                  </p>
+                </CardBody>
+              </Card>
+            )}
+          </div>
+        </Tab>
         <Tab
           key="recientes"
           title={

@@ -6,7 +6,6 @@ import {
   Users,
   FileText,
   LogOut,
-  Menu,
   X,
   Calendar,
   User,
@@ -14,16 +13,15 @@ import {
   Moon,
   Shield,
   CheckCircle,
+  ClipboardCheck,
 } from "lucide-react";
-import { useState } from "react";
 import { useTheme } from "@heroui/use-theme";
 
 import { useAuth } from "@/context/auth";
 
-export const Sidebar = () => {
+export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [isOpen, setIsOpen] = useState(false); // For mobile
   const { theme, setTheme } = useTheme();
 
   // Definir menú según el rol
@@ -39,13 +37,18 @@ export const Sidebar = () => {
         ]
       : [
           { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-          { name: "Mis Talleres", path: "/profesor/talleres", icon: BookOpen },
-          { name: "Mis Alumnos", path: "/profesor/alumnos", icon: Users },
+          { name: "Mis talleres", path: "/profesor/talleres", icon: BookOpen },
+          { name: "Mis alumnos", path: "/profesor/alumnos", icon: Users },
           { name: "Horarios", path: "/profesor/horarios", icon: Calendar },
           {
-            name: "Asistencia",
+            name: "Marcar Asistencia",
             path: "/profesor/asistencia",
             icon: CheckCircle,
+          },
+          {
+            name: "Historial de Clases",
+            path: "/profesor/clases",
+            icon: ClipboardCheck,
           },
           {
             name: "Planificación",
@@ -54,23 +57,8 @@ export const Sidebar = () => {
           },
         ];
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
-
   return (
     <>
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          isIconOnly
-          aria-label="Abrir menú"
-          className={isOpen ? "hidden" : ""}
-          variant="flat"
-          onPress={toggleSidebar}
-        >
-          <Menu />
-        </Button>
-      </div>
-
       {/* Overlay for mobile */}
       {isOpen && (
         <div
@@ -78,9 +66,9 @@ export const Sidebar = () => {
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           role="button"
           tabIndex={0}
-          onClick={() => setIsOpen(false)}
+          onClick={() => onClose()}
           onKeyDown={(e) => {
-            if (e.key === "Escape" || e.key === "Enter") setIsOpen(false);
+            if (e.key === "Escape" || e.key === "Enter") onClose();
           }}
         />
       )}
@@ -91,7 +79,8 @@ export const Sidebar = () => {
         fixed lg:static inset-y-0 left-0 z-50
         h-full w-64 bg-content1 border-r border-divider
         transform transition-transform duration-200 ease-in-out
-        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        lg:translate-x-0
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
         flex flex-col
       `}
       >
@@ -108,7 +97,7 @@ export const Sidebar = () => {
             aria-label="Cerrar menú"
             className="ml-auto lg:hidden"
             variant="light"
-            onPress={() => setIsOpen(false)}
+            onPress={() => onClose()}
           >
             <X size={20} />
           </Button>
@@ -132,7 +121,7 @@ export const Sidebar = () => {
                                 }
                             `}
                   to={item.path}
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => onClose()}
                 >
                   <item.icon size={20} />
                   <span>{item.name}</span>
