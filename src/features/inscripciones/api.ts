@@ -7,6 +7,14 @@ export const inscripcionesFeatureApi = {
     return response.data.datos || response.data;
   },
 
+  getByTaller: async (tallerId: number) => {
+    const response = await api.get(
+      `/api/inscripciones.php?action=por_taller&taller_id=${tallerId}`,
+    );
+
+    return response.data.datos || response.data;
+  },
+
   crear: async (data: {
     alumno_id: number;
     taller_id: number;

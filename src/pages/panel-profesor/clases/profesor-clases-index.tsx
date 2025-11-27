@@ -91,13 +91,17 @@ export default function ProfesorClasesPage() {
 
     if (filtroFechaDesde) {
       filtradas = filtradas.filter(
-        (clase: any) => new Date(clase.fecha) >= new Date(filtroFechaDesde),
+        (clase: any) =>
+          new Date(clase.fecha + "T00:00:00") >=
+          new Date(filtroFechaDesde + "T00:00:00"),
       );
     }
 
     if (filtroFechaHasta) {
       filtradas = filtradas.filter(
-        (clase: any) => new Date(clase.fecha) <= new Date(filtroFechaHasta),
+        (clase: any) =>
+          new Date(clase.fecha + "T00:00:00") <=
+          new Date(filtroFechaHasta + "T00:00:00"),
       );
     }
 

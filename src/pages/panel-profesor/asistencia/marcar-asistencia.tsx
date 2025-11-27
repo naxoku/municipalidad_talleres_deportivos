@@ -187,9 +187,15 @@ export default function ProfesorAsistenciaPage() {
         if (!cid || Number(cid) !== Number(histFiltroTaller)) return false;
       }
 
-      if (histFechaDesde && new Date(c.fecha) < new Date(histFechaDesde))
+      if (
+        histFechaDesde &&
+        new Date(c.fecha + "T00:00:00") < new Date(histFechaDesde + "T00:00:00")
+      )
         return false;
-      if (histFechaHasta && new Date(c.fecha) > new Date(histFechaHasta))
+      if (
+        histFechaHasta &&
+        new Date(c.fecha + "T00:00:00") > new Date(histFechaHasta + "T00:00:00")
+      )
         return false;
 
       return true;

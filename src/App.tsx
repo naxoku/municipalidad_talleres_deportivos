@@ -1,25 +1,26 @@
 import { Route, Routes, Navigate } from "react-router-dom";
 
 import LoginPage from "@/pages/login";
-import DashboardPage from "@/pages/dashboard";
+import DashboardPage from "@/pages/dashboard/dashboard-index";
 import ReportsPage from "@/pages/reportes";
-import TalleresPage from "@/pages/talleres/index";
+import TalleresPage from "@/pages/talleres/talleres-index";
 import TallerDetailPage from "@/pages/talleres/detail";
-import AlumnosPage from "@/pages/alumnos/index";
-import ProfesorTalleresPage from "@/pages/panel-profesor/talleres";
-import ProfesorTallerDetailPage from "@/pages/panel-profesor/talleres/[id]";
-import ProfesorHorariosPage from "@/pages/panel-profesor/horarios";
-import ClasesHorarioPage from "@/pages/panel-profesor/clases/horario";
+import AlumnosPage from "@/pages/alumnos/alumnos-index";
+import ProfesorTalleresPage from "@/pages/panel-profesor/talleres/profesor-talleres-index";
+import ProfesorTallerDetailPage from "@/pages/panel-profesor/talleres/[id]/talleres-id-taller";
+import ProfesorHorariosPage from "@/pages/panel-profesor/horarios/profesor-horarios-index";
+import ClasesHorarioPage from "@/pages/panel-profesor/clases/horario/clases-horario-index";
 import DetalleClasePage from "@/pages/panel-profesor/clases/[id]";
-import ProfesorAlumnosPage from "@/pages/panel-profesor/alumnos";
+import ProfesorAlumnosPage from "@/pages/panel-profesor/alumnos/profesor-alumnos-index";
+import ProfesorAlumnoDetailPage from "@/pages/panel-profesor/alumnos/[id]";
 import ProfesorPlanificacionPage from "@/pages/panel-profesor/planificacion";
 import ProfesorAsistenciaPage from "@/pages/panel-profesor/asistencia/marcar-asistencia";
-import ClasesAsistenciaPage from "@/pages/panel-profesor/clases/asistencia";
-import ProfesorClasesPage from "@/pages/panel-profesor/clases";
+import ClasesAsistenciaPage from "@/pages/panel-profesor/clases/asistencia/clases-asistencia-index";
+import ProfesorClasesPage from "@/pages/panel-profesor/clases/profesor-clases-index";
 import AlumnoViewPage from "@/pages/alumnos/[id]";
-import HorariosPage from "@/pages/horarios/index";
+import HorariosPage from "@/pages/horarios/horarios-index";
 import HorarioViewPage from "@/pages/horarios/[id]";
-import ProfesoresPage from "@/pages/profesores/index";
+import ProfesoresPage from "@/pages/profesores/profesores-index";
 import ProfesorViewPage from "@/pages/profesores/[id]";
 import MainLayout from "@/layouts/main";
 import { useAuth } from "@/context/auth";
@@ -110,6 +111,14 @@ function App() {
           </AppProtectedRoute>
         }
         path="/panel-profesor/alumnos"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
+            <ProfesorAlumnoDetailPage />
+          </AppProtectedRoute>
+        }
+        path="/panel-profesor/alumnos/:id"
       />
       <Route
         element={

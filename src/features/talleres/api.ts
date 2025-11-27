@@ -59,17 +59,33 @@ export const talleresFeatureApi = {
       `/api/clases.php?action=por_taller&taller_id=${id}`,
     );
     const data = response.data.datos || response.data;
-    console.log("[getClases] raw data sample:", data[0]);
 
-    // Mapear los datos para normalizar nombres de campos
+    // Mapear los datos para normalizar nombres de campos y exponer propiedades
     if (Array.isArray(data)) {
       return data.map((clase: any) => ({
         ...clase,
-        fecha: clase.fecha || clase.fecha_clase, // normalizar fecha
-        asistentes: clase.asistentes_presentes || clase.asistentes || 0,
-        total: clase.asistentes_total || clase.total || 0,
+        // mantener ambas propiedades para compatibilidad: `fecha_clase` y `fecha`
+        fecha_clase: clase.fecha_clase || clase.fecha || null,
+        fecha: clase.fecha || clase.fecha_clase || null,
+
+        // conservar horas si vienen desde la API
+        hora_inicio: clase.hora_inicio || null,
+        hora_fin: clase.hora_fin || null,
+
+        // normalizar conteos de asistentes
+        asistentes_presentes:
+          clase.asistentes_presentes ?? clase.asistentes ?? 0,
+        asistentes_total: clase.asistentes_total ?? clase.total ?? 0,
+
+        // mantener aliases antiguos por compatibilidad con UI
+        asistentes: clase.asistentes_presentes ?? clase.asistentes ?? 0,
+        total: clase.asistentes_total ?? clase.total ?? 0,
+
+        // estado (si viene)
+        estado: clase.estado || clase.estado_clase || null,
       }));
     }
+
     return [];
   },
 

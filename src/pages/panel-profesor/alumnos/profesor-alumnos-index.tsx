@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardBody, Button, Spinner, Chip, Input } from "@heroui/react";
 import { Users, Search, Download, Eye, BookOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/context/auth";
 import { profesorApi } from "@/api/profesor";
@@ -10,6 +11,7 @@ import { localIsoDate } from "@/utils/localDate";
 export default function ProfesorAlumnosPage() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
 
   const { data: alumnos, isLoading } = useQuery({
     queryKey: ["profesor", "alumnos", user?.profesor_id],
@@ -152,7 +154,7 @@ export default function ProfesorAlumnosPage() {
               key={alumno.id}
               isPressable
               className="w-full hover:border-primary/20 hover:shadow-sm transition-all duration-200"
-              onPress={() => (window.location.href = `/alumnos/${alumno.id}`)}
+              onPress={() => navigate(`/panel-profesor/alumnos/${alumno.id}`)}
             >
               <CardBody className="p-4">
                 <div className="flex items-center gap-3">

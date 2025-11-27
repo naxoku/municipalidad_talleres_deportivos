@@ -68,14 +68,27 @@ export default function DetalleClasePage() {
   const [isEditing, setIsEditing] = useState(false);
 
   // Fetch detalle de la clase
-  const { data: clase, isLoading, error: claseError } = useQuery({
+  const {
+    data: clase,
+    isLoading,
+    error: claseError,
+  } = useQuery({
     queryKey: ["profesor", "detalle_clase", id],
     queryFn: () => detalleClaseApi.getDetalleById(Number(id)),
     enabled: !!id,
   });
 
   // Debug
-  console.log("[DetalleClasePage] id:", id, "clase:", clase, "error:", claseError, "isLoading:", isLoading);
+  console.log(
+    "[DetalleClasePage] id:",
+    id,
+    "clase:",
+    clase,
+    "error:",
+    claseError,
+    "isLoading:",
+    isLoading,
+  );
 
   // Fetch asistencia de la clase
   const { data: asistenciaData, isLoading: asistenciaLoading } = useQuery({
