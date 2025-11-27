@@ -31,7 +31,6 @@ import {
   Copy,
   AlertCircle,
   FileText,
-  ChevronRight,
   ArrowLeft,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,15 +64,19 @@ const getFechaMinima = (): string => {
 export default function ProfesorPlanificacionPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   // Estados principales
   const [vistaActual, setVistaActual] = useState<"lista" | "crear">("lista");
   const [pasoActual, setPasoActual] = useState(1); // Pasos del wizard
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDetalle, setSelectedDetalle] = useState<DetalleClase | null>(null);
+  const [selectedDetalle, setSelectedDetalle] = useState<DetalleClase | null>(
+    null,
+  );
   const [modoVisualizacion, setModoVisualizacion] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<number | null>(null);
+  const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<number | null>(
+    null,
+  );
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -215,6 +218,7 @@ export default function ProfesorPlanificacionPage() {
     if (!planificacionesList) return [] as DetalleClase[];
 
     const hoy = new Date();
+
     hoy.setHours(0, 0, 0, 0);
 
     let filtered = planificacionesList.filter((p) => {
@@ -230,16 +234,16 @@ export default function ProfesorPlanificacionPage() {
     filtered.sort((a, b) => {
       const fechaA = new Date(a.fecha_clase + "T00:00:00");
       const fechaB = new Date(b.fecha_clase + "T00:00:00");
-      
+
       // Si una es futura y otra pasada, la futura va primero
       if (fechaA >= hoy && fechaB < hoy) return -1;
       if (fechaA < hoy && fechaB >= hoy) return 1;
-      
+
       // Si ambas son futuras, la más cercana primero
       if (fechaA >= hoy && fechaB >= hoy) {
         return fechaA.getTime() - fechaB.getTime();
       }
-      
+
       // Si ambas son pasadas, la más reciente primero
       return fechaB.getTime() - fechaA.getTime();
     });
@@ -389,10 +393,12 @@ export default function ProfesorPlanificacionPage() {
   }
 
   const hoy = new Date();
+
   hoy.setHours(0, 0, 0, 0);
 
   const proximasCount = planificacionesList.filter((p) => {
     const fechaClase = new Date(p.fecha_clase + "T00:00:00");
+
     return fechaClase >= hoy;
   }).length;
 
@@ -423,7 +429,9 @@ export default function ProfesorPlanificacionPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {selectedDetalle ? "Editar Planificación" : "Nueva Planificación"}
+                {selectedDetalle
+                  ? "Editar Planificación"
+                  : "Nueva Planificación"}
               </h1>
               <p className="text-sm text-muted-foreground">
                 Paso {pasoActual} de 3
@@ -474,6 +482,7 @@ export default function ProfesorPlanificacionPage() {
                     variant="bordered"
                     onSelectionChange={(keys) => {
                       const tallerId = Array.from(keys)[0]?.toString();
+
                       setFormData({
                         ...formData,
                         taller_id: tallerId ? parseInt(tallerId) : 0,
@@ -502,12 +511,15 @@ export default function ProfesorPlanificacionPage() {
                         : "Primero selecciona un taller"
                     }
                     selectedKeys={
-                      formData.horario_id ? [formData.horario_id.toString()] : []
+                      formData.horario_id
+                        ? [formData.horario_id.toString()]
+                        : []
                     }
                     size="lg"
                     variant="bordered"
                     onSelectionChange={(keys) => {
                       const horarioId = Array.from(keys)[0]?.toString();
+
                       setFormData({
                         ...formData,
                         horario_id: horarioId ? parseInt(horarioId) : 0,
@@ -522,7 +534,8 @@ export default function ProfesorPlanificacionPage() {
                         <div className="flex items-center gap-2">
                           <Clock size={14} />
                           <span className="capitalize">
-                            {horario.dia_semana} {horario.hora_inicio?.slice(0, 5)} -{" "}
+                            {horario.dia_semana}{" "}
+                            {horario.hora_inicio?.slice(0, 5)} -{" "}
                             {horario.hora_fin?.slice(0, 5)}
                           </span>
                         </div>
@@ -553,15 +566,19 @@ export default function ProfesorPlanificacionPage() {
               fullWidth
               color="primary"
               isDisabled={
-                !formData.taller_id || !formData.horario_id || !formData.fecha_clase
+                !formData.taller_id ||
+                !formData.horario_id ||
+                !formData.fecha_clase
               }
               size="lg"
               onPress={() => {
                 if (esFechaPasada(formData.fecha_clase)) {
                   showToast({
-                    title: "No puedes crear una planificación para una fecha pasada",
+                    title:
+                      "No puedes crear una planificación para una fecha pasada",
                     color: "danger",
                   });
+
                   return;
                 }
                 setPasoActual(2);
@@ -629,7 +646,10 @@ export default function ProfesorPlanificacionPage() {
             <Card className="border-l-4 border-l-secondary">
               <CardBody className="p-4 space-y-4">
                 <div className="flex items-start gap-3">
-                  <ListChecks className="text-secondary shrink-0 mt-1" size={20} />
+                  <ListChecks
+                    className="text-secondary shrink-0 mt-1"
+                    size={20}
+                  />
                   <div>
                     <h3 className="font-semibold text-base mb-1">
                       ¿Qué actividades harás?
@@ -789,7 +809,6 @@ export default function ProfesorPlanificacionPage() {
             return (
               <Card
                 key={detalle.id}
-                isPressable={!esPasada}
                 className={`shadow-none border border-default-200 transition-all ${
                   esPasada
                     ? "opacity-70 border-l-4 border-l-default-300"
@@ -797,6 +816,7 @@ export default function ProfesorPlanificacionPage() {
                       ? "border-l-4 border-l-success"
                       : "border-l-4 border-l-primary"
                 }`}
+                isPressable={!esPasada}
                 onPress={() => !esPasada && handleEdit(detalle)}
               >
                 <CardBody className="p-4">
@@ -847,7 +867,8 @@ export default function ProfesorPlanificacionPage() {
                           <div className="flex items-center gap-2 text-xs text-default-500 mt-1">
                             <Clock size={12} />
                             <span className="capitalize">
-                              {detalle.dia_semana} {detalle.hora_inicio?.slice(0, 5)}
+                              {detalle.dia_semana}{" "}
+                              {detalle.hora_inicio?.slice(0, 5)}
                             </span>
                           </div>
                         </div>
@@ -859,7 +880,9 @@ export default function ProfesorPlanificacionPage() {
                           )}
                           {!esHoy && !esPasada && diasHasta <= 7 && (
                             <Chip color="warning" size="sm" variant="flat">
-                              {diasHasta === 1 ? "Mañana" : `En ${diasHasta} días`}
+                              {diasHasta === 1
+                                ? "Mañana"
+                                : `En ${diasHasta} días`}
                             </Chip>
                           )}
                           {esPasada && (
@@ -940,7 +963,12 @@ export default function ProfesorPlanificacionPage() {
       )}
 
       {/* Modal de visualización para clases pasadas */}
-      <Modal isOpen={isOpen} scrollBehavior="inside" size="lg" onClose={onClose}>
+      <Modal
+        isOpen={isOpen}
+        scrollBehavior="inside"
+        size="lg"
+        onClose={onClose}
+      >
         <ModalContent>
           <ModalHeader className="flex items-center gap-2 border-b">
             <Lock className="text-default-400" size={18} />
@@ -950,13 +978,17 @@ export default function ProfesorPlanificacionPage() {
             <Card className="border-l-4 border-l-warning bg-warning-50/50">
               <CardBody className="p-4">
                 <div className="flex items-center gap-3">
-                  <AlertCircle className="text-warning-600 shrink-0" size={20} />
+                  <AlertCircle
+                    className="text-warning-600 shrink-0"
+                    size={20}
+                  />
                   <div>
                     <p className="text-sm font-medium text-warning-800">
                       Esta planificación es de solo lectura
                     </p>
                     <p className="text-xs text-warning-600">
-                      La clase ya pasó. Puedes copiar el contenido para reutilizarlo.
+                      La clase ya pasó. Puedes copiar el contenido para
+                      reutilizarlo.
                     </p>
                   </div>
                 </div>
@@ -979,7 +1011,7 @@ export default function ProfesorPlanificacionPage() {
                     Horario
                   </label>
                   <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-default-500" />
+                    <Clock className="text-default-500" size={16} />
                     <p className="text-base capitalize">
                       {selectedDetalle.dia_semana}{" "}
                       {selectedDetalle.hora_inicio?.slice(0, 5)} -{" "}
@@ -993,7 +1025,7 @@ export default function ProfesorPlanificacionPage() {
                     Fecha
                   </label>
                   <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-default-500" />
+                    <Calendar className="text-default-500" size={16} />
                     <p className="text-base">
                       {new Date(
                         selectedDetalle.fecha_clase + "T00:00:00",
@@ -1079,11 +1111,16 @@ export default function ProfesorPlanificacionPage() {
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                <h3 className="text-lg font-semibold">Eliminar planificación</h3>
+                <h3 className="text-lg font-semibold">
+                  Eliminar planificación
+                </h3>
               </ModalHeader>
               <ModalBody>
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="text-danger shrink-0 mt-1" size={20} />
+                  <AlertCircle
+                    className="text-danger shrink-0 mt-1"
+                    size={20}
+                  />
                   <div className="space-y-2">
                     <p className="text-sm font-medium">
                       ¿Estás seguro de eliminar esta planificación?

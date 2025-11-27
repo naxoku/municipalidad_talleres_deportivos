@@ -146,10 +146,7 @@ export default function HorarioDetailPage() {
         <p className="text-sm text-default-500">
           No se pudo encontrar el horario solicitado.
         </p>
-        <Button
-          className="mt-4"
-          onPress={() => navigate("/horarios")}
-        >
+        <Button className="mt-4" onPress={() => navigate("/horarios")}>
           Volver a Horarios
         </Button>
       </div>

@@ -27,11 +27,13 @@ import { profesoresFeatureApi } from "@/features/profesores/api";
 
 const formatTimeHHMM = (timeString: string) => {
   if (!timeString) return "-";
+
   return timeString.slice(0, 5);
 };
 
 const formatShortDate = (dateString: string) => {
   const date = new Date(dateString + "T00:00:00");
+
   return date.toLocaleDateString("es-CL", {
     day: "numeric",
     month: "short",
@@ -82,25 +84,27 @@ export default function ProfesorClasesPage() {
     if (filtroTaller) {
       filtradas = filtradas.filter((clase: any) => {
         const tallerId = clase.taller_id;
+
         return Number(tallerId) === Number(filtroTaller);
       });
     }
 
     if (filtroFechaDesde) {
-      filtradas = filtradas.filter((clase: any) =>
-        new Date(clase.fecha) >= new Date(filtroFechaDesde)
+      filtradas = filtradas.filter(
+        (clase: any) => new Date(clase.fecha) >= new Date(filtroFechaDesde),
       );
     }
 
     if (filtroFechaHasta) {
-      filtradas = filtradas.filter((clase: any) =>
-        new Date(clase.fecha) <= new Date(filtroFechaHasta)
+      filtradas = filtradas.filter(
+        (clase: any) => new Date(clase.fecha) <= new Date(filtroFechaHasta),
       );
     }
 
     // Ordenar por fecha descendente (más reciente primero)
-    return filtradas.sort((a: any, b: any) =>
-      new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    return filtradas.sort(
+      (a: any, b: any) =>
+        new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
     );
   }, [clases, filtroTaller, filtroFechaDesde, filtroFechaHasta]);
 
@@ -111,34 +115,49 @@ export default function ProfesorClasesPage() {
     }
 
     const hoy = new Date();
+
     hoy.setHours(0, 0, 0, 0);
     const now = new Date();
 
     const pasadas = clasesFiltradas
       .filter((clase) => {
         const fechaClase = new Date(clase.fecha + "T00:00:00");
+
         if (fechaClase < hoy) return true; // past
         if (fechaClase > hoy) return false; // future
         // today: check if ended
-        const [hours, minutes] = (clase.hora_fin || "23:59").split(':').map(Number);
+        const [hours, minutes] = (clase.hora_fin || "23:59")
+          .split(":")
+          .map(Number);
         const endTime = new Date(fechaClase);
+
         endTime.setHours(hours, minutes, 0, 0);
+
         return now > endTime;
       })
-      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      .sort(
+        (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+      );
 
     const proximas = clasesFiltradas
       .filter((clase) => {
         const fechaClase = new Date(clase.fecha + "T00:00:00");
+
         if (fechaClase < hoy) return false; // past
         if (fechaClase > hoy) return true; // future
         // today: check if not ended
-        const [hours, minutes] = (clase.hora_fin || "23:59").split(':').map(Number);
+        const [hours, minutes] = (clase.hora_fin || "23:59")
+          .split(":")
+          .map(Number);
         const endTime = new Date(fechaClase);
+
         endTime.setHours(hours, minutes, 0, 0);
+
         return now <= endTime;
       })
-      .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+      .sort(
+        (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime(),
+      );
 
     return {
       clasesPasadas: pasadas,
@@ -183,7 +202,7 @@ export default function ProfesorClasesPage() {
       <Card>
         <CardBody>
           <div className="flex items-center gap-2 mb-4">
-            <Filter size={20} className="text-default-500" />
+            <Filter className="text-default-500" size={20} />
             <h3 className="text-lg font-semibold">Filtros</h3>
           </div>
 
@@ -191,16 +210,17 @@ export default function ProfesorClasesPage() {
             <Select
               label="Taller"
               placeholder="Todos los talleres"
-              selectedKeys={filtroTaller ? new Set([String(filtroTaller)]) : new Set()}
+              selectedKeys={
+                filtroTaller ? new Set([String(filtroTaller)]) : new Set()
+              }
               onSelectionChange={(keys) => {
                 const selected = Array.from(keys)[0];
+
                 setFiltroTaller(selected ? Number(selected) : null);
               }}
             >
               {talleresUnicos.map((taller) => (
-                <SelectItem key={String(taller.id)}>
-                  {taller.nombre}
-                </SelectItem>
+                <SelectItem key={String(taller.id)}>{taller.nombre}</SelectItem>
               ))}
             </Select>
 
@@ -220,10 +240,10 @@ export default function ProfesorClasesPage() {
 
             <div className="flex items-end">
               <Button
+                className="w-full"
                 color="default"
                 variant="flat"
                 onPress={limpiarFiltros}
-                className="w-full"
               >
                 Limpiar filtros
               </Button>
@@ -234,11 +254,18 @@ export default function ProfesorClasesPage() {
 
       {/* Lista de clases */}
       <Tabs
+        fullWidth
         aria-label="Historial de clases"
-        color="primary"
+        classNames={{
+          base: "w-full",
+          tabList: "w-full gap-2 p-1 bg-default-100 rounded-lg",
+          cursor: "bg-primary",
+          tab: "h-12 px-4",
+          tabContent: "group-data-[selected=true]:text-primary-foreground",
+        }}
         selectedKey={selectedTab}
-        size="md"
-        variant="underlined"
+        size="lg"
+        variant="solid"
         onSelectionChange={(key) => setSelectedTab(key as string)}
       >
         <Tab
@@ -247,11 +274,6 @@ export default function ProfesorClasesPage() {
             <div className="flex items-center gap-2">
               <ClipboardCheck size={18} />
               <span>Clases pasadas</span>
-              {clasesPasadas.length > 0 && (
-                <Chip color="primary" size="sm" variant="flat">
-                  {clasesPasadas.length}
-                </Chip>
-              )}
             </div>
           }
         >
@@ -281,11 +303,6 @@ export default function ProfesorClasesPage() {
             <div className="flex items-center gap-2">
               <Calendar size={18} />
               <span>Próximas clases</span>
-              {clasesProximas.length > 0 && (
-                <Chip color="secondary" size="sm" variant="flat">
-                  {clasesProximas.length}
-                </Chip>
-              )}
             </div>
           }
         >
@@ -316,18 +333,21 @@ export default function ProfesorClasesPage() {
 
 function ClaseCard({ clase }: { clase: any }) {
   const hoy = new Date();
+
   hoy.setHours(0, 0, 0, 0);
   const now = new Date();
   const fechaClase = new Date(clase.fecha + "T00:00:00");
   const esHoy = fechaClase.toDateString() === hoy.toDateString();
 
   let esFutura = false;
+
   if (fechaClase > hoy) {
     esFutura = true;
   } else if (esHoy) {
     // today: check if not ended
-    const [hours, minutes] = (clase.hora_fin || "23:59").split(':').map(Number);
+    const [hours, minutes] = (clase.hora_fin || "23:59").split(":").map(Number);
     const endTime = new Date(fechaClase);
+
     endTime.setHours(hours, minutes, 0, 0);
     esFutura = now <= endTime;
   }
@@ -349,7 +369,7 @@ function ClaseCard({ clase }: { clase: any }) {
       className={`w-full border-none shadow-md hover:shadow-lg transition-all ${borderColor} border-l-4`}
       onPress={() => {
         // Navegar al detalle de la clase
-        window.location.href = `/profesor/clases/${clase.id}`;
+        window.location.href = `/panel-profesor/clases/${clase.id}`;
       }}
     >
       <CardBody className="p-0 overflow-hidden">

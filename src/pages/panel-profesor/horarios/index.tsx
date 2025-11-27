@@ -18,6 +18,14 @@ import { detalleClaseApi, type DetalleClase } from "@/api/detalle_clase";
 import { useAuth } from "@/context/auth";
 import { profesoresFeatureApi as profesoresApi } from "@/features/profesores/api";
 
+// Función para normalizar strings (remover acentos)
+const normalizeString = (str: string) => {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+};
+
 export default function ProfesorHorariosPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -51,7 +59,7 @@ export default function ProfesorHorariosPage() {
 
     // Agrupar por día
     horarios.forEach((h: any) => {
-      const dia = h.dia_semana?.toLowerCase() || "sin día";
+      const dia = normalizeString(h.dia_semana || "sin día");
 
       if (!agrupados[dia]) agrupados[dia] = [];
       agrupados[dia].push(h);
@@ -68,18 +76,10 @@ export default function ProfesorHorariosPage() {
   }, [horarios]);
 
   // Mostrar clase en curso (buscar entre horarios de hoy)
-  const dias = [
-    "domingo",
-    "lunes",
-    "martes",
-    "miercoles",
-    "jueves",
-    "viernes",
-    "sabado",
-  ];
-  const diaHoy = dias[new Date().getDay()];
+  const diaIndex = new Date().getDay();
+  const diaHoy = diasSemana[diaIndex === 0 ? 6 : diaIndex - 1];
   const horariosDelDia = (horarios || []).filter(
-    (h: any) => String(h.dia_semana).toLowerCase() === diaHoy,
+    (h: any) => normalizeString(h.dia_semana || "") === normalizeString(diaHoy),
   );
 
   const clasesQueries = useQueries({
@@ -125,7 +125,7 @@ export default function ProfesorHorariosPage() {
     );
 
   const handleRowClick = (horarioId: number) => {
-    navigate(`/profesor/horarios/${horarioId}/clases`);
+    navigate(`/panel-profesor/horarios/${horarioId}/clases`);
   };
 
   return (
@@ -214,7 +214,7 @@ export default function ProfesorHorariosPage() {
                       startContent={<CheckCircle size={16} />}
                       onPress={() =>
                         navigate(
-                          `/profesor/asistencia?horario=${claseActual.horario_id}&fecha=${claseActual.fecha_clase}`,
+                          `/panel-profesor/marcar-asistencia?horario=${claseActual.horario_id}&fecha=${claseActual.fecha_clase}`,
                         )
                       }
                     >
@@ -244,7 +244,8 @@ export default function ProfesorHorariosPage() {
           </Card>
         ) : (
           diasSemana.map((dia) => {
-            const horariosDelDia = horariosAgrupados[dia];
+            const diaNormalizado = normalizeString(dia);
+            const horariosDelDia = horariosAgrupados[diaNormalizado];
 
             if (!horariosDelDia || horariosDelDia.length === 0) return null;
 

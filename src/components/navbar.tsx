@@ -66,7 +66,7 @@ export const Navbar = () => {
           {siteConfig.navItems.map((item) => {
             const href =
               item.href === "/horarios" && user?.rol === "profesor"
-                ? "/profesor/horarios"
+                ? "/panel-profesor/horarios"
                 : item.href;
 
             return (
@@ -132,7 +132,7 @@ export const Navbar = () => {
           {siteConfig.navMenuItems.map((item, index) => {
             const href =
               item.href === "/horarios" && user?.rol === "profesor"
-                ? "/profesor/horarios"
+                ? "/panel-profesor/horarios"
                 : item.href;
 
             return (

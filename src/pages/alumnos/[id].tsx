@@ -287,10 +287,7 @@ export default function AlumnoViewPage() {
         <p className="text-sm text-default-500">
           No se pudo encontrar el alumno solicitado.
         </p>
-        <Button
-          className="mt-4"
-          onPress={() => navigate("/alumnos")}
-        >
+        <Button className="mt-4" onPress={() => navigate("/alumnos")}>
           Volver a alumnos
         </Button>
       </div>
@@ -656,7 +653,9 @@ export default function AlumnoViewPage() {
                         isDisabled={!editMode}
                         selectedKeys={
                           formData.autorizo_imagenes !== undefined
-                            ? new Set([formData.autorizo_imagenes ? "si" : "no"])
+                            ? new Set([
+                                formData.autorizo_imagenes ? "si" : "no",
+                              ])
                             : new Set()
                         }
                         onSelectionChange={(keys) =>
@@ -684,7 +683,9 @@ export default function AlumnoViewPage() {
                         isDisabled={!editMode}
                         selectedKeys={
                           formData.notificaciones_movil !== undefined
-                            ? new Set([formData.notificaciones_movil ? "si" : "no"])
+                            ? new Set([
+                                formData.notificaciones_movil ? "si" : "no",
+                              ])
                             : new Set()
                         }
                         onSelectionChange={(keys) =>

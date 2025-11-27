@@ -14,12 +14,19 @@ import {
   Shield,
   CheckCircle,
   ClipboardCheck,
+  GraduationCap,
 } from "lucide-react";
 import { useTheme } from "@heroui/use-theme";
 
 import { useAuth } from "@/context/auth";
 
-export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+export const Sidebar = ({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
@@ -37,22 +44,30 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         ]
       : [
           { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-          { name: "Mis talleres", path: "/profesor/talleres", icon: BookOpen },
-          { name: "Mis alumnos", path: "/profesor/alumnos", icon: Users },
-          { name: "Horarios", path: "/profesor/horarios", icon: Calendar },
           {
-            name: "Marcar Asistencia",
-            path: "/profesor/asistencia",
+            name: "Mis talleres",
+            path: "/panel-profesor/talleres",
+            icon: BookOpen,
+          },
+          { name: "Mis alumnos", path: "/panel-profesor/alumnos", icon: Users },
+          {
+            name: "Horarios",
+            path: "/panel-profesor/horarios",
+            icon: Calendar,
+          },
+          {
+            name: "Marcar asistencia",
+            path: "/panel-profesor/marcar-asistencia",
             icon: CheckCircle,
           },
           {
-            name: "Historial de Clases",
-            path: "/profesor/clases",
+            name: "Historial de clases",
+            path: "/panel-profesor/clases",
             icon: ClipboardCheck,
           },
           {
-            name: "Planificación",
-            path: "/profesor/planificacion",
+            name: "Crear planificación",
+            path: "/panel-profesor/planificacion",
             icon: FileText,
           },
         ];
@@ -133,13 +148,16 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
         {/* User Profile / Footer */}
         <div className="p-4 border-t border-divider">
-          <div className="bg-default-50 rounded-lg p-3 mb-4 flex flex-col items-center gap-2">
-            <Shield className="text-primary" size={20} />
-            <div className="text-center">
-              <p className="text-sm font-medium">{user?.nombre}</p>
-              <p className="text-xs text-default-500 capitalize">
-                {user?.rol === "admin" ? "Administrador" : "Profesor"}
-              </p>
+          <div className="bg-default-50 rounded-lg p-3 mb-4 flex flex-col gap-2 items-center">
+            <div className="flex items-center gap-2">
+              {user?.rol === "admin" ? (
+                <Shield className="text-primary" size={20} />
+              ) : (
+                <GraduationCap className="text-primary" size={20} />
+              )}
+              <div className="text-left">
+                <p className="text-sm font-medium">{user?.nombre}</p>
+              </div>
             </div>
           </div>
           <div className="mb-4">

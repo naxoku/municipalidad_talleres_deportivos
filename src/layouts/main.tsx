@@ -6,18 +6,18 @@ import { Menu, ArrowLeft } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 
 const pageTitles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/profesor/talleres': 'Mis Talleres',
-  '/profesor/asistencia': 'Marcar Asistencia',
-  '/profesor/clases': 'Historial de Clases',
-  '/profesor/alumnos': 'Mis Alumnos',
-  '/profesor/horarios': 'Horarios',
-  '/profesor/planificacion': 'Planificación',
-  '/talleres': 'Talleres',
-  '/alumnos': 'Alumnos',
-  '/profesores': 'Profesores',
-  '/horarios': 'Horarios',
-  '/reportes': 'Reportes',
+  "/dashboard": "Dashboard",
+  "/panel-profesor/talleres": "Mis Talleres",
+  "/panel-profesor/marcar-asistencia": "Marcar Asistencia",
+  "/panel-profesor/clases": "Historial de Clases",
+  "/panel-profesor/alumnos": "Mis Alumnos",
+  "/panel-profesor/horarios": "Horarios",
+  "/panel-profesor/planificacion": "Planificación",
+  "/talleres": "Talleres",
+  "/alumnos": "Alumnos",
+  "/profesores": "Profesores",
+  "/horarios": "Horarios",
+  "/reportes": "Reportes",
 };
 
 export default function MainLayout({
@@ -32,10 +32,10 @@ export default function MainLayout({
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
 
-  const segments = location.pathname.split('/').filter(Boolean).length;
+  const segments = location.pathname.split("/").filter(Boolean).length;
   const canGoBack = segments > 1;
 
-  const title = pageTitles[location.pathname] || 'Talleres Municipales';
+  const title = pageTitles[location.pathname] || "Talleres Municipales";
 
   return (
     <div className="flex h-screen w-full bg-background">
@@ -56,10 +56,10 @@ export default function MainLayout({
           <Button
             isIconOnly
             aria-label="Toggle sidebar"
-            variant="light"
             className={`lg:hidden transition-opacity duration-300 ease-in-out ${
               sidebarOpen ? "opacity-0" : "opacity-100"
             }`}
+            variant="light"
             onPress={toggleSidebar}
           >
             <Menu size={20} />

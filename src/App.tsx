@@ -6,15 +6,16 @@ import ReportsPage from "@/pages/reportes";
 import TalleresPage from "@/pages/talleres/index";
 import TallerDetailPage from "@/pages/talleres/detail";
 import AlumnosPage from "@/pages/alumnos/index";
-import ProfesorTalleresPage from "@/pages/profesor/talleres";
-import ProfesorHorariosPage from "@/pages/profesor/horarios";
-import ClasesHorarioPage from "@/pages/profesor/clases-horario";
-import DetalleClasePage from "@/pages/profesor/detalle-clase";
-import ProfesorAlumnosPage from "@/pages/profesor/alumnos";
-import ProfesorPlanificacionPage from "@/pages/profesor/planificacion";
-import ProfesorAsistenciaPage from "@/pages/profesor/asistencia";
-import ClasesAsistenciaPage from "@/pages/profesor/clases-asistencia";
-import ProfesorClasesPage from "@/pages/profesor/clases";
+import ProfesorTalleresPage from "@/pages/panel-profesor/talleres";
+import ProfesorTallerDetailPage from "@/pages/panel-profesor/talleres/[id]";
+import ProfesorHorariosPage from "@/pages/panel-profesor/horarios";
+import ClasesHorarioPage from "@/pages/panel-profesor/clases/horario";
+import DetalleClasePage from "@/pages/panel-profesor/clases/[id]";
+import ProfesorAlumnosPage from "@/pages/panel-profesor/alumnos";
+import ProfesorPlanificacionPage from "@/pages/panel-profesor/planificacion";
+import ProfesorAsistenciaPage from "@/pages/panel-profesor/asistencia/marcar-asistencia";
+import ClasesAsistenciaPage from "@/pages/panel-profesor/clases/asistencia";
+import ProfesorClasesPage from "@/pages/panel-profesor/clases";
 import AlumnoViewPage from "@/pages/alumnos/[id]";
 import HorariosPage from "@/pages/horarios/index";
 import HorarioViewPage from "@/pages/horarios/[id]";
@@ -68,7 +69,15 @@ function App() {
             <ProfesorTalleresPage />
           </AppProtectedRoute>
         }
-        path="/profesor/talleres"
+        path="/panel-profesor/talleres"
+      />
+      <Route
+        element={
+          <AppProtectedRoute requiredRole="profesor">
+            <ProfesorTallerDetailPage />
+          </AppProtectedRoute>
+        }
+        path="/panel-profesor/talleres/:id"
       />
       <Route
         element={
@@ -76,7 +85,7 @@ function App() {
             <ProfesorHorariosPage />
           </AppProtectedRoute>
         }
-        path="/profesor/horarios"
+        path="/panel-profesor/horarios"
       />
       <Route
         element={
@@ -84,7 +93,7 @@ function App() {
             <ClasesHorarioPage />
           </AppProtectedRoute>
         }
-        path="/profesor/horarios/:horarioId/clases"
+        path="/panel-profesor/horarios/:horarioId/clases"
       />
       <Route
         element={
@@ -92,7 +101,7 @@ function App() {
             <DetalleClasePage />
           </AppProtectedRoute>
         }
-        path="/profesor/clases/:claseId"
+        path="/panel-profesor/clases/:id"
       />
       <Route
         element={
@@ -100,7 +109,7 @@ function App() {
             <ProfesorAlumnosPage />
           </AppProtectedRoute>
         }
-        path="/profesor/alumnos"
+        path="/panel-profesor/alumnos"
       />
       <Route
         element={
@@ -108,7 +117,7 @@ function App() {
             <ProfesorPlanificacionPage />
           </AppProtectedRoute>
         }
-        path="/profesor/planificacion"
+        path="/panel-profesor/planificacion"
       />
       <Route
         element={
@@ -116,7 +125,7 @@ function App() {
             <ProfesorAsistenciaPage />
           </AppProtectedRoute>
         }
-        path="/profesor/asistencia"
+        path="/panel-profesor/marcar-asistencia"
       />
       <Route
         element={
@@ -124,7 +133,7 @@ function App() {
             <ProfesorClasesPage />
           </AppProtectedRoute>
         }
-        path="/profesor/clases"
+        path="/panel-profesor/clases"
       />
       <Route
         element={
@@ -132,7 +141,7 @@ function App() {
             <ClasesAsistenciaPage />
           </AppProtectedRoute>
         }
-        path="/profesor/clases-asistencia"
+        path="/panel-profesor/clases-asistencia"
       />
 
       {/* Rutas para talleres y alumnos (admin y profesor comparten) */}

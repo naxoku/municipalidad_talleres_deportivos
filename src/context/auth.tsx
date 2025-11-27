@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem("user", JSON.stringify(userData));
 
         showToast({
-          title: `Bienvenido, ${userData.nombre}`,
+          title: `Sesión iniciada correctamente`,
           color: "success",
         });
         navigate("/dashboard");

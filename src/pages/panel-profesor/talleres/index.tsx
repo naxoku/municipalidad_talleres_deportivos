@@ -108,7 +108,7 @@ function TallerCard({ taller }: { taller: TallerProfesor }) {
     <Card
       isPressable
       className="hover:border-primary/20 hover:shadow-sm transition-all duration-200"
-      onPress={() => navigate(`/talleres/${taller.id}`)}
+      onPress={() => navigate(`/panel-profesor/talleres/${taller.id}`)}
     >
       <CardBody className="p-4">
         <div className="flex items-center gap-3">

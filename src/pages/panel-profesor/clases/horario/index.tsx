@@ -110,7 +110,7 @@ export default function ClasesHorarioPage() {
             </p>
             <Button
               color="primary"
-              onPress={() => navigate("/profesor/horarios")}
+              onPress={() => navigate("/panel-profesor/horarios")}
             >
               Volver a Horarios
             </Button>
@@ -143,144 +143,115 @@ export default function ClasesHorarioPage() {
         </div>
       </div>
 
-      {/* Info del horario */}
-      <Card className="border-l-4 border-l-primary">
-        <CardBody className="p-4">
-          <div className="flex flex-wrap gap-2">
-            <Chip
-              className="capitalize"
-              color="primary"
-              size="sm"
-              startContent={<Clock size={14} />}
-              variant="flat"
-            >
-              {horario.dia_semana} {formatTimeHHMM(horario.hora_inicio)} -{" "}
-              {formatTimeHHMM(horario.hora_fin)}
-            </Chip>
-            <Chip
-              color="default"
-              size="sm"
-              startContent={<MapPin size={14} />}
-              variant="flat"
-            >
-              {horario.ubicacion_nombre}
-            </Chip>
-          </div>
-        </CardBody>
-      </Card>
-
       {/* Tabs de clases */}
-      <Tabs
-        aria-label="Clases del horario"
-        color="primary"
-        selectedKey={selectedTab}
-        size="md"
-        variant="underlined"
-        onSelectionChange={(key) => setSelectedTab(key as string)}
-      >
-        <Tab
-          key="todos"
-          title={
-            <div className="flex items-center gap-2">
-              <Calendar size={18} />
-              <span>Todos</span>
-              {clasesTodas.length > 0 && (
-                <Chip color="default" size="sm" variant="flat">
-                  {clasesTodas.length}
-                </Chip>
+      <div className="w-full">
+        <Tabs
+          fullWidth
+          aria-label="Clases del horario"
+          classNames={{
+            base: "w-full",
+            tabList: "w-full gap-2 p-1 bg-default-100 rounded-lg",
+            cursor: "bg-primary",
+            tab: "h-12 px-4",
+            tabContent: "group-data-[selected=true]:text-primary-foreground",
+          }}
+          selectedKey={selectedTab}
+          size="lg"
+          variant="solid"
+          onSelectionChange={(key) => setSelectedTab(key as string)}
+        >
+          <Tab
+            key="todos"
+            title={
+              <div className="flex items-center gap-2">
+                <Calendar size={18} />
+                <span className="hidden sm:inline">Todos</span>
+                <span className="sm:hidden">Todos</span>
+              </div>
+            }
+          >
+            <div className="mt-4 space-y-3">
+              {clasesTodas.length > 0 ? (
+                clasesTodas.map((clase) => (
+                  <ClaseCard key={clase.id} clase={clase} />
+                ))
+              ) : (
+                <Card>
+                  <CardBody className="flex flex-col items-center justify-center p-12">
+                    <Calendar className="text-default-300 mb-4" size={48} />
+                    <p className="text-default-500 font-medium">
+                      No hay clases programadas
+                    </p>
+                    <p className="text-sm text-default-400 text-center mt-2">
+                      Las clases aparecerán aquí cuando se programen.
+                    </p>
+                  </CardBody>
+                </Card>
               )}
             </div>
-          }
-        >
-          <div className="mt-2 space-y-3">
-            {clasesTodas.length > 0 ? (
-              clasesTodas.map((clase) => (
-                <ClaseCard key={clase.id} clase={clase} />
-              ))
-            ) : (
-              <Card>
-                <CardBody className="flex flex-col items-center justify-center p-12">
-                  <Calendar className="text-default-300 mb-4" size={48} />
-                  <p className="text-default-500 font-medium">
-                    No hay clases programadas
-                  </p>
-                  <p className="text-sm text-default-400 text-center mt-2">
-                    Las clases aparecerán aquí cuando se programen.
-                  </p>
-                </CardBody>
-              </Card>
-            )}
-          </div>
-        </Tab>
-        <Tab
-          key="recientes"
-          title={
-            <div className="flex items-center gap-2">
-              <Calendar size={18} />
-              <span>Recientes</span>
-              {clasesRecientes.length > 0 && (
-                <Chip color="primary" size="sm" variant="flat">
-                  {clasesRecientes.length}
-                </Chip>
+          </Tab>
+          <Tab
+            key="recientes"
+            title={
+              <div className="flex items-center gap-2">
+                <Calendar size={18} />
+                <span className="hidden sm:inline">Pasadas</span>
+                <span className="sm:hidden">Pasadas</span>
+              </div>
+            }
+          >
+            <div className="mt-4 space-y-3">
+              {clasesRecientes.length > 0 ? (
+                clasesRecientes.map((clase) => (
+                  <ClaseCard key={clase.id} clase={clase} />
+                ))
+              ) : (
+                <Card>
+                  <CardBody className="flex flex-col items-center justify-center p-12">
+                    <Calendar className="text-default-300 mb-4" size={48} />
+                    <p className="text-default-500 font-medium">
+                      No hay clases recientes
+                    </p>
+                    <p className="text-sm text-default-400 text-center mt-2">
+                      Las clases aparecerán aquí una vez que se realicen.
+                    </p>
+                  </CardBody>
+                </Card>
               )}
             </div>
-          }
-        >
-          <div className="mt-2 space-y-3">
-            {clasesRecientes.length > 0 ? (
-              clasesRecientes.map((clase) => (
-                <ClaseCard key={clase.id} clase={clase} />
-              ))
-            ) : (
-              <Card>
-                <CardBody className="flex flex-col items-center justify-center p-12">
-                  <Calendar className="text-default-300 mb-4" size={48} />
-                  <p className="text-default-500 font-medium">
-                    No hay clases recientes
-                  </p>
-                  <p className="text-sm text-default-400 text-center mt-2">
-                    Las clases aparecerán aquí una vez que se realicen.
-                  </p>
-                </CardBody>
-              </Card>
-            )}
-          </div>
-        </Tab>
-        <Tab
-          key="proximas"
-          title={
-            <div className="flex items-center gap-2">
-              <Clock size={18} />
-              <span>Próximas</span>
-              {clasesProximas.length > 0 && (
-                <Chip color="secondary" size="sm" variant="flat">
-                  {clasesProximas.length}
-                </Chip>
+          </Tab>
+          <Tab
+            key="proximas"
+            title={
+              <div className="flex items-center gap-2">
+                <Clock size={18} />
+                <span className="hidden sm:inline">Próximas</span>
+                <span className="sm:hidden">Próximas</span>
+              </div>
+            }
+          >
+            <div className="mt-4 space-y-3">
+              {clasesProximas.length > 0 ? (
+                clasesProximas.map((clase) => (
+                  <ClaseCard key={clase.id} clase={clase} />
+                ))
+              ) : (
+                <Card>
+                  <CardBody className="flex flex-col items-center justify-center p-12">
+                    <Clock className="text-default-300 mb-4" size={48} />
+                    <p className="text-default-500 font-medium">
+                      No hay clases próximas
+                    </p>
+                    <p className="text-sm text-default-400 text-center mt-2">
+                      Las próximas clases aparecerán cuando se programen.
+                    </p>
+                  </CardBody>
+                </Card>
               )}
             </div>
-          }
-        >
-          <div className="mt-2 space-y-3">
-            {clasesProximas.length > 0 ? (
-              clasesProximas.map((clase) => (
-                <ClaseCard key={clase.id} clase={clase} />
-              ))
-            ) : (
-              <Card>
-                <CardBody className="flex flex-col items-center justify-center p-12">
-                  <Clock className="text-default-300 mb-4" size={48} />
-                  <p className="text-default-500 font-medium">
-                    No hay clases próximas
-                  </p>
-                  <p className="text-sm text-default-400 text-center mt-2">
-                    Las próximas clases aparecerán cuando se programen.
-                  </p>
-                </CardBody>
-              </Card>
-            )}
-          </div>
-        </Tab>
-      </Tabs>
+          </Tab>
+        </Tabs>
+      </div>
     </div>
   );
 }
@@ -313,7 +284,7 @@ function ClaseCard({ clase }: { clase: DetalleClase }) {
     <Card
       isPressable
       className={`w-full border-none shadow-md hover:shadow-lg transition-all ${borderColor} border-l-4`}
-      onPress={() => navigate(`/profesor/clases/${clase.id}`)}
+      onPress={() => navigate(`/panel-profesor/clases/${clase.id}`)}
     >
       <CardBody className="p-0 overflow-hidden">
         <div className="flex">

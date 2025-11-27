@@ -42,7 +42,6 @@ const formatDate = (dateString: string) => {
 };
 
 export default function ClasesAsistenciaPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const horarioIdParam = searchParams.get("horario");
@@ -149,8 +148,7 @@ export default function ClasesAsistenciaPage() {
             Pasar Asistencia
           </h1>
           <p className="text-default-500">
-            Selecciona un horario y haz clic en una clase para marcar
-            asistencia
+            Selecciona un horario y haz clic en una clase para marcar asistencia
           </p>
         </div>
       </div>
@@ -365,7 +363,7 @@ function ClaseCard({
       onPress={() => {
         if (clase.puede_pasar_asistencia) {
           navigate(
-            `/profesor/asistencia?horario=${clase.horario_id}&fecha=${clase.fecha_clase}`,
+            `/panel-profesor/marcar-asistencia?horario=${clase.horario_id}&fecha=${clase.fecha_clase}`,
           );
         }
       }}
@@ -455,7 +453,7 @@ function ClaseCard({
               startContent={<CheckCircle size={18} />}
               onPress={() =>
                 navigate(
-                  `/profesor/asistencia?horario=${clase.horario_id}&fecha=${clase.fecha_clase}`,
+                  `/panel-profesor/marcar-asistencia?horario=${clase.horario_id}&fecha=${clase.fecha_clase}`,
                 )
               }
             >

@@ -20,7 +20,7 @@ self.addEventListener("activate", (event) => {
         if (self.registration && (self.registration as any).navigationPreload) {
           await (self.registration as any).navigationPreload.enable();
         }
-      } catch (err) {
+      } catch {
         // ignore failures
       }
 
@@ -44,7 +44,7 @@ self.addEventListener("fetch", (event) => {
           const preloadResp = await (event as any).preloadResponse;
 
           if (preloadResp) return preloadResp;
-        } catch (e) {
+        } catch {
           // preloadResponse might be rejected/cancelled; continue to network
         }
 
@@ -53,7 +53,7 @@ self.addEventListener("fetch", (event) => {
           const response = await fetch(req);
 
           return response;
-        } catch (err) {
+        } catch {
           const cache = await caches.open("offline-fallback");
           const cached = await cache.match("/index.html");
 

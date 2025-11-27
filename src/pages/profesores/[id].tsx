@@ -145,10 +145,7 @@ export default function ProfesorDetailPage() {
         <p className="text-sm text-default-500">
           No se pudo encontrar el profesor solicitado.
         </p>
-        <Button
-          className="mt-4"
-          onPress={() => navigate("/profesores")}
-        >
+        <Button className="mt-4" onPress={() => navigate("/profesores")}>
           Volver a Profesores
         </Button>
       </div>
@@ -509,7 +506,11 @@ export default function ProfesorDetailPage() {
                         className="w-full"
                         id="estado-select"
                         isDisabled={!editMode}
-                        selectedKeys={formData.estado ? new Set([formData.estado]) : new Set()}
+                        selectedKeys={
+                          formData.estado
+                            ? new Set([formData.estado])
+                            : new Set()
+                        }
                         onSelectionChange={(keys) =>
                           setFormData({
                             ...formData,

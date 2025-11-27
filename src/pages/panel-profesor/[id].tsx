@@ -56,7 +56,7 @@ const formatDate = (dateString: string) => {
 
 export default function DetalleClasePage() {
   const navigate = useNavigate();
-  const { claseId } = useParams<{ claseId: string }>();
+  const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -69,9 +69,9 @@ export default function DetalleClasePage() {
 
   // Fetch detalle de la clase
   const { data: clase, isLoading } = useQuery({
-    queryKey: ["profesor", "detalle_clase", claseId],
-    queryFn: () => detalleClaseApi.getDetalleById(Number(claseId)),
-    enabled: !!claseId,
+    queryKey: ["profesor", "detalle_clase", id],
+    queryFn: () => detalleClaseApi.getDetalleById(Number(id)),
+    enabled: !!id,
   });
 
   // Fetch asistencia de la clase
@@ -129,7 +129,7 @@ export default function DetalleClasePage() {
         <Button
           color="primary"
           startContent={<ArrowLeft size={18} />}
-          onPress={() => navigate("/profesor/horarios")}
+          onPress={() => navigate("/panel-profesor/horarios")}
         >
           Volver a Horarios
         </Button>
@@ -395,8 +395,8 @@ function PlanificacionTab({
               </div>
               {esEditable && !isEditing && (
                 <Button
-                  color="primary"
                   isIconOnly
+                  color="primary"
                   size="sm"
                   variant="flat"
                   onPress={() => setIsEditing(true)}

@@ -59,8 +59,18 @@ export const talleresFeatureApi = {
       `/api/clases.php?action=por_taller&taller_id=${id}`,
     );
     const data = response.data.datos || response.data;
+    console.log("[getClases] raw data sample:", data[0]);
 
-    return Array.isArray(data) ? data : [];
+    // Mapear los datos para normalizar nombres de campos
+    if (Array.isArray(data)) {
+      return data.map((clase: any) => ({
+        ...clase,
+        fecha: clase.fecha || clase.fecha_clase, // normalizar fecha
+        asistentes: clase.asistentes_presentes || clase.asistentes || 0,
+        total: clase.asistentes_total || clase.total || 0,
+      }));
+    }
+    return [];
   },
 
   create: async (taller: Omit<Taller, "id">): Promise<Taller> => {

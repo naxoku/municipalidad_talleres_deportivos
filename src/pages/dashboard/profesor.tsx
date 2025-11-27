@@ -115,9 +115,9 @@ export default function ProfesorDashboard() {
     <div className="space-y-6 pb-10">
       {/* Header */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h2 className="text-3xl font-bold tracking-tight">
           ¡Hola, {user?.nombre}!
-        </h1>
+        </h2>
         <p className="text-default-500 capitalize">
           {new Date().toLocaleDateString("es-CL", {
             weekday: "long",
@@ -192,7 +192,7 @@ export default function ProfesorDashboard() {
               className="h-20"
               color="primary"
               variant="flat"
-              onPress={() => navigate("/profesor/talleres")}
+              onPress={() => navigate("/panel-profesor/talleres")}
             >
               <div className="flex flex-col items-center gap-2">
                 <BookOpen size={24} />
@@ -204,7 +204,7 @@ export default function ProfesorDashboard() {
               className="h-20"
               color="success"
               variant="flat"
-              onPress={() => navigate("/profesor/clases-asistencia")}
+              onPress={() => navigate("/panel-profesor/clases-asistencia")}
             >
               <div className="flex flex-col items-center gap-2">
                 <CheckCircle size={24} />
@@ -218,7 +218,7 @@ export default function ProfesorDashboard() {
               className="h-20"
               color="warning"
               variant="flat"
-              onPress={() => navigate("/profesor/planificacion")}
+              onPress={() => navigate("/panel-profesor/planificacion")}
             >
               <div className="flex flex-col items-center gap-2">
                 <FileText size={24} />
@@ -230,7 +230,7 @@ export default function ProfesorDashboard() {
               className="h-20"
               color="secondary"
               variant="flat"
-              onPress={() => navigate("/profesor/alumnos")}
+              onPress={() => navigate("/panel-profesor/alumnos")}
             >
               <div className="flex flex-col items-center gap-2">
                 <Users size={24} />
@@ -368,7 +368,7 @@ function ProfesorClassCard({
               size="sm"
               onPress={() =>
                 navigate(
-                  `/profesor/asistencia?horario=${clase.horario_id}&fecha=${new Date().toISOString().split("T")[0]}`,
+                  `/panel-profesor/marcar-asistencia?horario=${clase.horario_id}&fecha=${new Date().toISOString().split("T")[0]}`,
                 )
               }
             >
