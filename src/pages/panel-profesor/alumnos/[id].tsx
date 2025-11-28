@@ -1,12 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  Card,
-  CardBody,
-  Button,
-  Chip,
-  Spinner,
-  Divider,
-} from "@heroui/react";
+import { Card, CardBody, Button, Chip, Spinner, Divider } from "@heroui/react";
 import {
   User,
   BookOpen,
@@ -56,7 +49,9 @@ export default function ProfesorAlumnoDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const alumnoId = Number(id);
-  const [selectedTab, setSelectedTab] = useState<"talleres" | "clases">("talleres");
+  const [selectedTab, setSelectedTab] = useState<"talleres" | "clases">(
+    "talleres",
+  );
 
   // Obtener datos del alumno
   const { data: alumnos, isLoading: isLoadingAlumnos } = useQuery({
@@ -174,7 +169,7 @@ export default function ProfesorAlumnoDetailPage() {
           </h1>
           <p className="text-xs text-muted-foreground">Detalle del alumno</p>
         </div>
-        <Chip color="success" size="sm">
+        <Chip color="success" size="sm" variant="flat">
           Activo
         </Chip>
       </div>
@@ -367,8 +362,7 @@ export default function ProfesorAlumnoDetailPage() {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Inscrito el{" "}
-                          {formatLocalDate(insc.fecha_inscripcion)}
+                          Inscrito el {formatLocalDate(insc.fecha_inscripcion)}
                         </p>
                       </div>
                       <ChevronRight

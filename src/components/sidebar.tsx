@@ -95,11 +95,15 @@ export const Sidebar = ({
       >
         {/* Header */}
         <div className="h-16 flex items-center px-6 border-b border-divider">
-          <div className="flex items-center gap-2 font-bold text-xl text-inherit">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
-              M
-            </div>
-            MuniDeportes
+          <div className="flex items-center gap-3">
+            <img
+              alt="Logo Municipalidad de Deportes"
+              className="h-10 w-10 object-contain"
+              src="/assets/android-chrome-192x192.png"
+            />
+            <span className="font-bold text-sm leading-tight text-inherit max-w-[140px] whitespace-normal break-words">
+              Oficina Municipal de Deportes
+            </span>
           </div>
           <Button
             isIconOnly
