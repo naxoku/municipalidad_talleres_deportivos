@@ -204,13 +204,11 @@ export default function ProfesorDashboard() {
               className="h-20"
               color="success"
               variant="flat"
-              onPress={() => navigate("/panel-profesor/clases-asistencia")}
+              onPress={() => navigate("/panel-profesor/horarios")}
             >
               <div className="flex flex-col items-center gap-2">
-                <CheckCircle size={24} />
-                <span className="text-sm font-semibold">
-                  Registros de asistencia
-                </span>
+                <Calendar size={24} />
+                <span className="text-sm font-semibold">Mis horarios</span>
               </div>
             </Button>
 

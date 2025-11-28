@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { Spinner, Card, CardBody, Chip } from "@heroui/react";
 import {
   Calendar,
-  Clock,
   MapPin,
   ChevronRight,
   Users,
@@ -176,14 +175,13 @@ export default function ProfesorHorariosPage() {
                     {claseActual.taller_nombre}
                   </h4>
                 </div>
-                <Chip color="success" size="sm" variant="solid">
+                <Chip color="success" size="sm" variant="flat">
                   En curso
                 </Chip>
               </div>
 
               <div className="flex flex-wrap gap-3 text-sm text-default-500">
                 <div className="flex items-center gap-1">
-                  <Clock size={14} />
                   <span>
                     {claseActual.hora_inicio?.slice(0, 5)}
                     {" - "}
@@ -196,7 +194,7 @@ export default function ProfesorHorariosPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-3">
                 <Chip
                   color="success"
                   size="sm"
@@ -207,20 +205,20 @@ export default function ProfesorHorariosPage() {
                   {claseActual.asistentes_total || 0} presentes
                 </Chip>
                 {claseActual.puede_pasar_asistencia && (
-                  <div className="ml-auto">
-                    <Button
-                      color="success"
-                      size="md"
-                      startContent={<CheckCircle size={16} />}
-                      onPress={() =>
-                        navigate(
-                          `/panel-profesor/marcar-asistencia?horario=${claseActual.horario_id}&fecha=${claseActual.fecha_clase}`,
-                        )
-                      }
-                    >
-                      Pasar asistencia
-                    </Button>
-                  </div>
+                  <Button
+                    color="success"
+                    size="md"
+                    variant="flat"
+                    className="w-full"
+                    startContent={<CheckCircle size={16} />}
+                    onPress={() =>
+                      navigate(
+                        `/panel-profesor/marcar-asistencia?horario=${claseActual.horario_id}&fecha=${claseActual.fecha_clase}`,
+                      )
+                    }
+                  >
+                    Pasar asistencia
+                  </Button>
                 )}
               </div>
             </div>
@@ -270,12 +268,11 @@ export default function ProfesorHorariosPage() {
                         <div className="flex">
                           {/* Horario visual */}
                           <div className="bg-primary/10 px-4 py-4 flex flex-col items-center justify-center min-w-[80px]">
-                            <Clock className="text-primary mb-1" size={18} />
                             <span className="text-sm font-bold text-primary leading-none">
                               {h.hora_inicio?.slice(0, 5)}
                             </span>
-                            <span className="text-[10px] text-primary/60 my-0.5">
-                              a
+                            <span className="text-sm font-bold text-primary my-0.5">
+                              -
                             </span>
                             <span className="text-sm font-bold text-primary leading-none">
                               {h.hora_fin?.slice(0, 5)}

@@ -1,13 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Card,
-  CardBody,
-  Button,
-  Spinner,
-  Chip,
-  Tabs,
-  Tab,
-} from "@heroui/react";
+import { Card, CardBody, Button, Spinner, Chip } from "@heroui/react";
 import {
   Calendar,
   Clock,
@@ -15,7 +7,6 @@ import {
   Users,
   AlertCircle,
   FileText,
-  CheckSquare,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -143,114 +134,104 @@ export default function ClasesHorarioPage() {
         </div>
       </div>
 
-      {/* Tabs de clases */}
-      <div className="w-full">
-        <Tabs
-          fullWidth
-          aria-label="Clases del horario"
-          classNames={{
-            base: "w-full",
-            tabList: "w-full gap-2 p-1 bg-default-100 rounded-lg",
-            cursor: "bg-primary",
-            tab: "h-12 px-4",
-            tabContent: "group-data-[selected=true]:text-primary-foreground",
-          }}
-          selectedKey={selectedTab}
-          size="lg"
-          variant="solid"
-          onSelectionChange={(key) => setSelectedTab(key as string)}
+      {/* Botones de navegación */}
+      <div className="grid grid-cols-3 gap-2">
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<Calendar size={16} />}
+          variant={selectedTab === "todos" ? "solid" : "ghost"}
+          onPress={() => setSelectedTab("todos")}
         >
-          <Tab
-            key="todos"
-            title={
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span className="hidden sm:inline">Todos</span>
-                <span className="sm:hidden">Todos</span>
-              </div>
-            }
-          >
-            <div className="mt-4 space-y-3">
-              {clasesTodas.length > 0 ? (
-                clasesTodas.map((clase) => (
-                  <ClaseCard key={clase.id} clase={clase} />
-                ))
-              ) : (
-                <Card>
-                  <CardBody className="flex flex-col items-center justify-center p-12">
-                    <Calendar className="text-default-300 mb-4" size={48} />
-                    <p className="text-default-500 font-medium">
-                      No hay clases programadas
-                    </p>
-                    <p className="text-sm text-default-400 text-center mt-2">
-                      Las clases aparecerán aquí cuando se programen.
-                    </p>
-                  </CardBody>
-                </Card>
-              )}
-            </div>
-          </Tab>
-          <Tab
-            key="recientes"
-            title={
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span className="hidden sm:inline">Pasadas</span>
-                <span className="sm:hidden">Pasadas</span>
-              </div>
-            }
-          >
-            <div className="mt-4 space-y-3">
-              {clasesRecientes.length > 0 ? (
-                clasesRecientes.map((clase) => (
-                  <ClaseCard key={clase.id} clase={clase} />
-                ))
-              ) : (
-                <Card>
-                  <CardBody className="flex flex-col items-center justify-center p-12">
-                    <Calendar className="text-default-300 mb-4" size={48} />
-                    <p className="text-default-500 font-medium">
-                      No hay clases recientes
-                    </p>
-                    <p className="text-sm text-default-400 text-center mt-2">
-                      Las clases aparecerán aquí una vez que se realicen.
-                    </p>
-                  </CardBody>
-                </Card>
-              )}
-            </div>
-          </Tab>
-          <Tab
-            key="proximas"
-            title={
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span className="hidden sm:inline">Próximas</span>
-                <span className="sm:hidden">Próximas</span>
-              </div>
-            }
-          >
-            <div className="mt-4 space-y-3">
-              {clasesProximas.length > 0 ? (
-                clasesProximas.map((clase) => (
-                  <ClaseCard key={clase.id} clase={clase} />
-                ))
-              ) : (
-                <Card>
-                  <CardBody className="flex flex-col items-center justify-center p-12">
-                    <Clock className="text-default-300 mb-4" size={48} />
-                    <p className="text-default-500 font-medium">
-                      No hay clases próximas
-                    </p>
-                    <p className="text-sm text-default-400 text-center mt-2">
-                      Las próximas clases aparecerán cuando se programen.
-                    </p>
-                  </CardBody>
-                </Card>
-              )}
-            </div>
-          </Tab>
-        </Tabs>
+          Todos
+        </Button>
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<Clock size={16} />}
+          variant={selectedTab === "recientes" ? "solid" : "ghost"}
+          onPress={() => setSelectedTab("recientes")}
+        >
+          Pasadas
+        </Button>
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<Calendar size={16} />}
+          variant={selectedTab === "proximas" ? "solid" : "ghost"}
+          onPress={() => setSelectedTab("proximas")}
+        >
+          Próximas
+        </Button>
+      </div>
+
+      {/* Contenido según selección */}
+      <div className="mt-4">
+        {selectedTab === "todos" && (
+          <div className="space-y-3">
+            {clasesTodas.length > 0 ? (
+              clasesTodas.map((clase) => (
+                <ClaseCard key={clase.id} clase={clase} />
+              ))
+            ) : (
+              <Card>
+                <CardBody className="flex flex-col items-center justify-center p-12">
+                  <Calendar className="text-default-300 mb-4" size={48} />
+                  <p className="text-default-500 font-medium">
+                    No hay clases programadas
+                  </p>
+                  <p className="text-sm text-default-400 text-center mt-2">
+                    Las clases aparecerán aquí cuando se programen.
+                  </p>
+                </CardBody>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {selectedTab === "recientes" && (
+          <div className="space-y-3">
+            {clasesRecientes.length > 0 ? (
+              clasesRecientes.map((clase) => (
+                <ClaseCard key={clase.id} clase={clase} />
+              ))
+            ) : (
+              <Card>
+                <CardBody className="flex flex-col items-center justify-center p-12">
+                  <Calendar className="text-default-300 mb-4" size={48} />
+                  <p className="text-default-500 font-medium">
+                    No hay clases recientes
+                  </p>
+                  <p className="text-sm text-default-400 text-center mt-2">
+                    Las clases aparecerán aquí una vez que se realicen.
+                  </p>
+                </CardBody>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {selectedTab === "proximas" && (
+          <div className="space-y-3">
+            {clasesProximas.length > 0 ? (
+              clasesProximas.map((clase) => (
+                <ClaseCard key={clase.id} clase={clase} />
+              ))
+            ) : (
+              <Card>
+                <CardBody className="flex flex-col items-center justify-center p-12">
+                  <Clock className="text-default-300 mb-4" size={48} />
+                  <p className="text-default-500 font-medium">
+                    No hay clases próximas
+                  </p>
+                  <p className="text-sm text-default-400 text-center mt-2">
+                    Las próximas clases aparecerán cuando se programen.
+                  </p>
+                </CardBody>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -266,6 +247,20 @@ function ClaseCard({ clase }: { clase: DetalleClase }) {
   const esFutura = fechaClase > hoy;
   const esHoy = fechaClase.toDateString() === hoy.toDateString();
 
+  // Verificar si la clase está en curso
+  const ahora = new Date();
+  const horaActual = ahora.getHours() * 60 + ahora.getMinutes();
+  const horaInicio = clase.hora_inicio
+    ? parseInt(clase.hora_inicio.split(":")[0]) * 60 +
+      parseInt(clase.hora_inicio.split(":")[1])
+    : 0;
+  const horaFin = clase.hora_fin
+    ? parseInt(clase.hora_fin.split(":")[0]) * 60 +
+      parseInt(clase.hora_fin.split(":")[1])
+    : 0;
+  const estaEnCurso =
+    esHoy && horaActual >= horaInicio && horaActual <= horaFin;
+
   const tienePlanificacion = !!(clase.objetivo || clase.actividades);
   const tieneAsistencia = (clase.asistentes_presentes || 0) > 0;
   const porcentajeAsistencia = clase.asistentes_total
@@ -274,11 +269,13 @@ function ClaseCard({ clase }: { clase: DetalleClase }) {
       )
     : 0;
 
-  const borderColor = esHoy
-    ? "border-l-success"
-    : esFutura
-      ? "border-l-primary"
-      : "border-l-default-300";
+  const borderColor = estaEnCurso
+    ? "border-l-warning"
+    : esHoy
+      ? "border-l-success"
+      : esFutura
+        ? "border-l-primary"
+        : "border-l-default-300";
 
   return (
     <Card
@@ -291,41 +288,36 @@ function ClaseCard({ clase }: { clase: DetalleClase }) {
           {/* Fecha visual */}
           <div
             className={`px-4 py-4 flex flex-col items-center justify-center min-w-[80px] ${
-              esHoy
-                ? "bg-success/10"
-                : esFutura
-                  ? "bg-primary/10"
-                  : "bg-default-100"
+              estaEnCurso
+                ? "bg-warning/10"
+                : esHoy
+                  ? "bg-success/10"
+                  : esFutura
+                    ? "bg-primary/10"
+                    : "bg-default-100"
             }`}
           >
             <Calendar
               className={`mb-1 ${
-                esHoy
-                  ? "text-success"
-                  : esFutura
-                    ? "text-primary"
-                    : "text-default-400"
+                estaEnCurso
+                  ? "text-warning"
+                  : esHoy
+                    ? "text-success"
+                    : esFutura
+                      ? "text-primary"
+                      : "text-default-400"
               }`}
               size={18}
             />
             <span
               className={`text-sm font-bold leading-none ${
-                esHoy
-                  ? "text-success"
-                  : esFutura
-                    ? "text-primary"
-                    : "text-default-700"
-              }`}
-            >
-              {fechaClase.getDate()}
-            </span>
-            <span
-              className={`text-[10px] mt-0.5 ${
-                esHoy
-                  ? "text-success/60"
-                  : esFutura
-                    ? "text-primary/60"
-                    : "text-default-500"
+                estaEnCurso
+                  ? "text-warning"
+                  : esHoy
+                    ? "text-success"
+                    : esFutura
+                      ? "text-primary"
+                      : "text-default-700"
               }`}
             >
               {formatShortDate(clase.fecha_clase)}
@@ -339,7 +331,12 @@ function ClaseCard({ clase }: { clase: DetalleClase }) {
                 <h4 className="font-bold text-base line-clamp-1">
                   {clase.taller_nombre}
                 </h4>
-                {esHoy && (
+                {estaEnCurso && (
+                  <Chip color="warning" size="sm" variant="flat">
+                    En curso
+                  </Chip>
+                )}
+                {esHoy && !estaEnCurso && (
                   <Chip color="success" size="sm" variant="flat">
                     Hoy
                   </Chip>
@@ -384,16 +381,6 @@ function ClaseCard({ clase }: { clase: DetalleClase }) {
                 >
                   {clase.asistentes_presentes}/{clase.asistentes_total} (
                   {porcentajeAsistencia}%)
-                </Chip>
-              )}
-              {!tieneAsistencia && !esFutura && (
-                <Chip
-                  color="default"
-                  size="sm"
-                  startContent={<CheckSquare size={12} />}
-                  variant="flat"
-                >
-                  Sin asistencia
                 </Chip>
               )}
             </div>

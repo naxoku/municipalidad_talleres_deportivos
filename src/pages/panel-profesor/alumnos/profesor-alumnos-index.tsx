@@ -1,17 +1,16 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardBody, Button, Spinner, Chip, Input } from "@heroui/react";
-import { Users, Search, Download, Eye, BookOpen } from "lucide-react";
+import { Card, CardBody, Spinner, Chip, Input } from "@heroui/react";
+import { Users, Search, Eye, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/context/auth";
 import { profesorApi } from "@/api/profesor";
-import { localIsoDate } from "@/utils/localDate";
 
 export default function ProfesorAlumnosPage() {
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: alumnos, isLoading } = useQuery({
     queryKey: ["profesor", "alumnos", user?.profesor_id],
@@ -45,41 +44,6 @@ export default function ProfesorAlumnosPage() {
     );
   }, [alumnosList, searchQuery]);
 
-  const handleExport = () => {
-    if (!alumnosList) return;
-
-    const csv = [
-      [
-        "RUT",
-        "Nombre Completo",
-        "Edad",
-        "Género",
-        "Teléfono",
-        "Email",
-        "Talleres",
-      ],
-      ...alumnosList.map((a) => [
-        a.rut,
-        a.nombre_completo,
-        a.edad,
-        a.genero,
-        a.telefono || "",
-        a.email || "",
-        a.talleres,
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = `alumnos_${localIsoDate()}.csv`;
-    a.click();
-  };
-
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -89,7 +53,7 @@ export default function ProfesorAlumnosPage() {
   }
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-6 pb-10">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
@@ -123,22 +87,13 @@ export default function ProfesorAlumnosPage() {
           <Chip className="font-bold" color="primary" size="lg" variant="flat">
             {filteredAlumnos?.length || 0} Alumnos
           </Chip>
-          <Button
-            color="success"
-            size="sm"
-            startContent={<Download size={16} />}
-            variant="flat"
-            onPress={handleExport}
-          >
-            Exportar
-          </Button>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredAlumnos.length === 0 ? (
-          <Card className="w-full border-none shadow-sm">
-            <CardBody className="flex flex-col items-center justify-center py-16">
+          <Card className="w-full border-none shadow-sm md:col-span-2">
+            <CardBody className="flex flex-col items-center justify-center py-12">
               <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
                 <Users className="text-muted-foreground" size={32} />
               </div>
@@ -150,56 +105,52 @@ export default function ProfesorAlumnosPage() {
           </Card>
         ) : (
           filteredAlumnos.map((alumno) => (
-            <Card
-              key={alumno.id}
-              isPressable
-              className="w-full hover:border-primary/20 hover:shadow-sm transition-all duration-200"
-              onPress={() => navigate(`/panel-profesor/alumnos/${alumno.id}`)}
-            >
-              <CardBody className="p-4">
-                <div className="flex items-center gap-3">
-                  {/* Icono con colores */}
-                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-                    <Users className="text-success" size={18} />
-                  </div>
-
-                  {/* Contenido principal */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base mb-1 truncate">
-                          {alumno.nombre_completo}
-                        </h3>
-                        <p className="text-xs text-muted-foreground font-mono mb-2">
-                          {alumno.rut}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium text-foreground">
-                              {alumno.edad}
-                            </span>
-                            <span>años</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <BookOpen className="text-primary" size={14} />
-                            <span className="font-medium text-foreground">
-                              {alumno.total_inscripciones}
-                            </span>
-                            <span>talleres</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Flecha de navegación */}
-                  <Eye className="text-primary" size={16} />
-                </div>
-              </CardBody>
-            </Card>
+            <AlumnoCard key={alumno.id} alumno={alumno} />
           ))
         )}
       </div>
     </div>
+  );
+}
+
+function AlumnoCard({ alumno }: { alumno: any }) {
+  const navigate = useNavigate();
+
+  return (
+    <Card
+      isPressable
+      className="border-l-4 border-l-success hover:border-l-success-600 hover:shadow-lg transition-all duration-200 h-full"
+      onPress={() => navigate(`/panel-profesor/alumnos/${alumno.id}`)}
+    >
+      <CardBody className="flex flex-row items-center gap-4 p-5">
+        <div className="p-3 bg-success-100 rounded-lg">
+          <Users className="text-success" size={24} />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-base mb-1 truncate">
+            {alumno.nombre_completo}
+          </h3>
+          <p className="text-xs text-muted-foreground font-mono mb-2">
+            {alumno.rut}
+          </p>
+          <div className="flex items-center gap-4 text-sm text-default-500">
+            <div className="flex items-center gap-1">
+              <span className="font-medium text-foreground">
+                {alumno.edad}
+              </span>
+              <span>años</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <BookOpen className="text-primary" size={14} />
+              <span className="font-medium text-foreground">
+                {alumno.total_inscripciones}
+              </span>
+              <span>talleres</span>
+            </div>
+          </div>
+        </div>
+        <Eye className="text-success" size={16} />
+      </CardBody>
+    </Card>
   );
 }

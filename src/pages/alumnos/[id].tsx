@@ -910,11 +910,21 @@ export default function AlumnoViewPage() {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            color={registro.presente ? "success" : "danger"}
+                            color={
+                              registro.estado === "presente"
+                                ? "success"
+                                : registro.estado === "ausente"
+                                  ? "danger"
+                                  : "warning"
+                            }
                             size="sm"
                             variant="flat"
                           >
-                            {registro.presente ? "Presente" : "Ausente"}
+                            {registro.estado === "presente"
+                              ? "Presente"
+                              : registro.estado === "ausente"
+                                ? "Ausente"
+                                : "No registrada"}
                           </Chip>
                         </TableCell>
                       </TableRow>

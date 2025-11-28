@@ -68,27 +68,11 @@ export default function DetalleClasePage() {
   const [isEditing, setIsEditing] = useState(false);
 
   // Fetch detalle de la clase
-  const {
-    data: clase,
-    isLoading,
-    error: claseError,
-  } = useQuery({
+  const { data: clase, isLoading } = useQuery({
     queryKey: ["profesor", "detalle_clase", id],
     queryFn: () => detalleClaseApi.getDetalleById(Number(id)),
     enabled: !!id,
   });
-
-  // Debug
-  console.log(
-    "[DetalleClasePage] id:",
-    id,
-    "clase:",
-    clase,
-    "error:",
-    claseError,
-    "isLoading:",
-    isLoading,
-  );
 
   // Fetch asistencia de la clase
   const { data: asistenciaData, isLoading: asistenciaLoading } = useQuery({
@@ -111,12 +95,10 @@ export default function DetalleClasePage() {
 
   const esEditable = useMemo(() => {
     if (!clase) return false;
-    const hoy = new Date();
+    const ahora = new Date();
+    const fechaHoraFin = new Date(`${clase.fecha_clase}T${clase.hora_fin}`);
 
-    hoy.setHours(0, 0, 0, 0);
-    const fechaClase = new Date(clase.fecha_clase + "T00:00:00");
-
-    return fechaClase >= hoy;
+    return ahora <= fechaHoraFin;
   }, [clase]);
 
   // Sincronizar con query param si cambia
@@ -161,7 +143,7 @@ export default function DetalleClasePage() {
   const esHoy = fechaClase.toDateString() === hoy.toDateString();
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className={`space-y-5 pb-10 ${isEditing ? "pb-32" : ""}`}>
       {/* Header */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
@@ -239,7 +221,7 @@ export default function DetalleClasePage() {
       </Card>
 
       {/* Tabs móviles */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="grid grid-cols-3 gap-2">
         <Button
           color="primary"
           size="sm"
@@ -289,7 +271,8 @@ export default function DetalleClasePage() {
         <AsistenciaTab
           alumnos={alumnos}
           clase={clase}
-          esEditable={asistenciaData?.es_editable || false}
+          esEditable={esEditable}
+          esFutura={esFutura}
           isLoading={asistenciaLoading}
           queryClient={queryClient}
         />
@@ -319,6 +302,15 @@ function PlanificacionTab({
     actividades: clase.actividades || "",
     observaciones: clase.observaciones || "",
   });
+
+  // Detectar cambios en el formulario
+  const hasChanges = useMemo(() => {
+    return (
+      formData.objetivo !== (clase.objetivo || "") ||
+      formData.actividades !== (clase.actividades || "") ||
+      formData.observaciones !== (clase.observaciones || "")
+    );
+  }, [formData, clase]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<DetalleClaseForm> & { id: number }) =>
@@ -501,32 +493,35 @@ function PlanificacionTab({
 
       {/* Botones de edición */}
       {isEditing && (
-        <div className="flex flex-col gap-2 sticky bottom-4 z-10">
-          <Button
-            fullWidth
-            color="primary"
-            isLoading={updateMutation.isPending}
-            size="lg"
-            startContent={<Save size={18} />}
-            onPress={handleSave}
-          >
-            Guardar Planificación
-          </Button>
-          <Button
-            fullWidth
-            size="lg"
-            variant="flat"
-            onPress={() => {
-              setFormData({
-                objetivo: clase.objetivo || "",
-                actividades: clase.actividades || "",
-                observaciones: clase.observaciones || "",
-              });
-              setIsEditing(false);
-            }}
-          >
-            Cancelar
-          </Button>
+        <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-50 bg-background border-t border-default-200 p-4 shadow-lg">
+          <div className="flex flex-col gap-2 max-w-4xl mx-auto">
+            <Button
+              fullWidth
+              color="primary"
+              isDisabled={!hasChanges}
+              isLoading={updateMutation.isPending}
+              size="lg"
+              startContent={<Save size={18} />}
+              onPress={handleSave}
+            >
+              Guardar Planificación
+            </Button>
+            <Button
+              fullWidth
+              size="lg"
+              variant="flat"
+              onPress={() => {
+                setFormData({
+                  objetivo: clase.objetivo || "",
+                  actividades: clase.actividades || "",
+                  observaciones: clase.observaciones || "",
+                });
+                setIsEditing(false);
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -629,12 +624,14 @@ function AsistenciaTab({
   alumnos,
   clase,
   esEditable,
+  esFutura,
   isLoading,
   queryClient,
 }: {
   alumnos: AlumnoAsistencia[];
   clase: DetalleClase;
   esEditable: boolean;
+  esFutura: boolean;
   isLoading: boolean;
   queryClient: any;
 }) {
@@ -730,6 +727,23 @@ function AsistenciaTab({
     );
   }
 
+  // Si la clase es futura, mostrar mensaje especial
+  if (esFutura) {
+    return (
+      <Card>
+        <CardBody className="flex flex-col items-center justify-center p-8 text-center h-60">
+          <Calendar className="text-primary mb-4" size={64} />
+          <p className="text-default-500 font-medium mb-1">
+            Clase programada para el futuro
+          </p>
+          <p className="text-sm text-default-400">
+            La asistencia se podrá registrar una vez que la clase esté en curso
+          </p>
+        </CardBody>
+      </Card>
+    );
+  }
+
   if (alumnos.length === 0) {
     return (
       <Card>
@@ -750,7 +764,7 @@ function AsistenciaTab({
   const total = alumnos.length;
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${esEditable && hasChanges ? "pb-24" : ""}`}>
       {/* Mensaje de solo lectura */}
       {!esEditable && (
         <Card className="border-l-4 border-l-warning bg-warning-50/50">
@@ -860,17 +874,19 @@ function AsistenciaTab({
 
       {/* Botón guardar */}
       {esEditable && hasChanges && (
-        <div className="sticky bottom-4 z-10">
-          <Button
-            fullWidth
-            color="primary"
-            isLoading={guardarMutation.isPending}
-            size="lg"
-            startContent={<Save size={18} />}
-            onPress={handleGuardar}
-          >
-            Guardar Asistencia
-          </Button>
+        <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-50 bg-background border-t border-default-200 p-4 shadow-lg">
+          <div className="max-w-4xl mx-auto">
+            <Button
+              fullWidth
+              color="primary"
+              isLoading={guardarMutation.isPending}
+              size="lg"
+              startContent={<Save size={18} />}
+              onPress={handleGuardar}
+            >
+              Guardar Asistencia
+            </Button>
+          </div>
         </div>
       )}
     </div>

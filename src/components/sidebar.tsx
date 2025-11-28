@@ -12,7 +12,6 @@ import {
   Sun,
   Moon,
   Shield,
-  CheckCircle,
   ClipboardCheck,
   GraduationCap,
 } from "lucide-react";
@@ -56,19 +55,14 @@ export const Sidebar = ({
             icon: Calendar,
           },
           {
-            name: "Marcar asistencia",
-            path: "/panel-profesor/marcar-asistencia",
-            icon: CheckCircle,
+            name: "Planificación",
+            path: "/panel-profesor/planificacion",
+            icon: FileText,
           },
           {
             name: "Historial de clases",
             path: "/panel-profesor/clases",
             icon: ClipboardCheck,
-          },
-          {
-            name: "Crear planificación",
-            path: "/panel-profesor/planificacion",
-            icon: FileText,
           },
         ];
 

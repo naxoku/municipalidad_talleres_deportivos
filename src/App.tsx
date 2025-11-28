@@ -15,7 +15,6 @@ import ProfesorAlumnosPage from "@/pages/panel-profesor/alumnos/profesor-alumnos
 import ProfesorAlumnoDetailPage from "@/pages/panel-profesor/alumnos/[id]";
 import ProfesorPlanificacionPage from "@/pages/panel-profesor/planificacion";
 import ProfesorAsistenciaPage from "@/pages/panel-profesor/asistencia/marcar-asistencia";
-import ClasesAsistenciaPage from "@/pages/panel-profesor/clases/asistencia/clases-asistencia-index";
 import ProfesorClasesPage from "@/pages/panel-profesor/clases/profesor-clases-index";
 import AlumnoViewPage from "@/pages/alumnos/[id]";
 import HorariosPage from "@/pages/horarios/horarios-index";
@@ -143,14 +142,6 @@ function App() {
           </AppProtectedRoute>
         }
         path="/panel-profesor/clases"
-      />
-      <Route
-        element={
-          <AppProtectedRoute requiredRole="profesor">
-            <ClasesAsistenciaPage />
-          </AppProtectedRoute>
-        }
-        path="/panel-profesor/clases-asistencia"
       />
 
       {/* Rutas para talleres y alumnos (admin y profesor comparten) */}

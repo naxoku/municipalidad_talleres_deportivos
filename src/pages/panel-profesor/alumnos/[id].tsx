@@ -6,8 +6,6 @@ import {
   Chip,
   Spinner,
   Divider,
-  Tabs,
-  Tab,
 } from "@heroui/react";
 import {
   User,
@@ -23,6 +21,7 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { profesorApi } from "@/api/profesor";
 import { useAuth } from "@/context/auth";
@@ -57,6 +56,7 @@ export default function ProfesorAlumnoDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const alumnoId = Number(id);
+  const [selectedTab, setSelectedTab] = useState<"talleres" | "clases">("talleres");
 
   // Obtener datos del alumno
   const { data: alumnos, isLoading: isLoadingAlumnos } = useQuery({
@@ -310,137 +310,130 @@ export default function ProfesorAlumnoDetailPage() {
       </Card>
 
       {/* Tabs para Talleres y Clases */}
-      <Tabs
-        fullWidth
-        aria-label="Opciones del alumno"
-        classNames={{
-          base: "w-full",
-          tabList: "w-full gap-2 p-1 bg-default-100 rounded-lg",
-          cursor: "bg-primary",
-          tab: "h-12 px-4",
-          tabContent: "group-data-[selected=true]:text-primary-foreground",
-        }}
-        size="lg"
-        variant="solid"
-      >
-        <Tab
-          key="talleres"
-          title={
-            <div className="flex items-center gap-2">
-              <BookOpen size={16} />
-              <span>Talleres Inscritos</span>
-            </div>
-          }
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<BookOpen size={16} />}
+          variant={selectedTab === "talleres" ? "solid" : "ghost"}
+          onPress={() => setSelectedTab("talleres")}
         >
-          <div>
-            {isLoadingInscripciones ? (
-              <div className="flex justify-center py-4">
-                <Spinner size="sm" />
-              </div>
-            ) : !talleresUnicos || talleresUnicos.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">
-                <BookOpen className="mx-auto mb-2 opacity-50" size={32} />
-                <p className="text-sm">No hay talleres inscritos</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {talleresUnicos.map((insc: any) => (
-                  <Card
-                    key={insc.id}
-                    isPressable
-                    className="shadow-none border border-default-200 hover:border-primary/50 transition-colors w-full"
-                    onPress={() =>
-                      navigate(`/panel-profesor/talleres/${insc.taller_id}`)
-                    }
-                  >
-                    <CardBody className="p-3 w-full">
-                      <div className="flex items-center justify-between gap-2 w-full">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <BookOpen
-                              className="text-primary shrink-0"
-                              size={14}
-                            />
-                            <span className="font-bold text-sm">
-                              {insc.taller_nombre}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Inscrito el{" "}
-                            {formatLocalDate(insc.fecha_inscripcion)}
-                          </p>
-                        </div>
-                        <ChevronRight
-                          className="text-primary shrink-0"
-                          size={16}
-                        />
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </Tab>
+          Talleres Inscritos
+        </Button>
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<ClipboardCheck size={16} />}
+          variant={selectedTab === "clases" ? "solid" : "ghost"}
+          onPress={() => setSelectedTab("clases")}
+        >
+          Historial de Clases
+        </Button>
+      </div>
 
-        <Tab
-          key="clases"
-          title={
-            <div className="flex items-center gap-2">
-              <ClipboardCheck size={16} />
-              <span>Historial de Clases</span>
+      {/* Contenido de talleres */}
+      {selectedTab === "talleres" && (
+        <div>
+          {isLoadingInscripciones ? (
+            <div className="flex justify-center py-4">
+              <Spinner size="sm" />
             </div>
-          }
-        >
-          <div>
-            {isLoadingClases ? (
-              <div className="flex justify-center py-4">
-                <Spinner size="sm" />
-              </div>
-            ) : !clases || clases.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">
-                <ClipboardCheck className="mx-auto mb-2 opacity-50" size={32} />
-                <p className="text-sm">No hay clases registradas</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {clases.map((clase: any, index: number) => (
-                  <Card
-                    key={`clase-${clase.id}-${index}`}
-                    className="shadow-none border border-default-200"
-                  >
-                    <CardBody className="p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Calendar
-                              className="text-secondary shrink-0"
-                              size={14}
-                            />
-                            <span className="font-medium text-sm">
-                              {formatLocalDate(clase.fecha)}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            {clase.taller_nombre}
-                          </p>
-                          <Chip
-                            color={clase.presente ? "success" : "danger"}
-                            size="sm"
-                            variant="flat"
-                          >
-                            {clase.presente ? "Presente" : "Ausente"}
-                          </Chip>
+          ) : !talleresUnicos || talleresUnicos.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <BookOpen className="mx-auto mb-2 opacity-50" size={32} />
+              <p className="text-sm">No hay talleres inscritos</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {talleresUnicos.map((insc: any) => (
+                <Card
+                  key={insc.id}
+                  isPressable
+                  className="shadow-none border border-default-200 hover:border-primary/50 transition-colors w-full"
+                  onPress={() =>
+                    navigate(`/panel-profesor/talleres/${insc.taller_id}`)
+                  }
+                >
+                  <CardBody className="p-3 w-full">
+                    <div className="flex items-center justify-between gap-2 w-full">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <BookOpen
+                            className="text-primary shrink-0"
+                            size={14}
+                          />
+                          <span className="font-bold text-sm">
+                            {insc.taller_nombre}
+                          </span>
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          Inscrito el{" "}
+                          {formatLocalDate(insc.fecha_inscripcion)}
+                        </p>
                       </div>
-                    </CardBody>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </Tab>
-      </Tabs>
+                      <ChevronRight
+                        className="text-primary shrink-0"
+                        size={16}
+                      />
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Contenido de clases */}
+      {selectedTab === "clases" && (
+        <div>
+          {isLoadingClases ? (
+            <div className="flex justify-center py-4">
+              <Spinner size="sm" />
+            </div>
+          ) : !clases || clases.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <ClipboardCheck className="mx-auto mb-2 opacity-50" size={32} />
+              <p className="text-sm">No hay clases registradas</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {clases.map((clase: any, index: number) => (
+                <Card
+                  key={`clase-${clase.id}-${index}`}
+                  className="shadow-none border border-default-200"
+                >
+                  <CardBody className="p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar
+                            className="text-secondary shrink-0"
+                            size={14}
+                          />
+                          <span className="font-medium text-sm">
+                            {formatLocalDate(clase.fecha)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {clase.taller_nombre}
+                        </p>
+                        <Chip
+                          color={clase.presente ? "success" : "danger"}
+                          size="sm"
+                          variant="flat"
+                        >
+                          {clase.presente ? "Presente" : "Ausente"}
+                        </Chip>
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

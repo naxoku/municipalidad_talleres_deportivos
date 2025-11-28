@@ -7,8 +7,6 @@ import {
   Spinner,
   Divider,
   Avatar,
-  Tabs,
-  Tab,
 } from "@heroui/react";
 import {
   BookOpen,
@@ -22,6 +20,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { talleresFeatureApi } from "@/features/talleres/api";
 import { inscripcionesFeatureApi } from "@/features/inscripciones/api";
@@ -45,6 +44,7 @@ export default function ProfesorTallerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const tallerId = Number(id);
+  const [selectedTab, setSelectedTab] = useState("horarios");
 
   // Queries
   const { data: taller, isLoading: isLoadingTaller } = useQuery({
@@ -76,6 +76,12 @@ export default function ProfesorTallerDetailPage() {
       edad: insc.edad,
     })) || [];
 
+  // Filtrar alumnos únicos por ID
+  const alumnosUnicos = alumnos.filter(
+    (alumno: { id: any }, index: any, self: any[]) =>
+      index === self.findIndex((a) => a.id === alumno.id),
+  );
+
   const { data: clasesData, isLoading: isLoadingClases } = useQuery({
     queryKey: ["taller_clases", tallerId],
     queryFn: () => talleresFeatureApi.getClases(tallerId),
@@ -92,7 +98,7 @@ export default function ProfesorTallerDetailPage() {
           : "Pendiente",
     })) || [];
 
-  const totalAlumnos = alumnos.length;
+  const totalAlumnos = alumnosUnicos.length;
   const totalHorarios = horarios?.length || 0;
   const totalClases = clases.length;
 
@@ -205,29 +211,40 @@ export default function ProfesorTallerDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Tabs para Horarios, Clases y Alumnos */}
-      <Tabs
-        fullWidth
-        aria-label="Opciones del taller"
-        classNames={{
-          base: "w-full",
-          tabList: "w-full gap-2 p-1 bg-default-100 rounded-lg",
-          cursor: "bg-primary",
-          tab: "h-12 px-4",
-          tabContent: "group-data-[selected=true]:text-primary-foreground",
-        }}
-        size="lg"
-        variant="solid"
-      >
-        <Tab
-          key="horarios"
-          title={
-            <div className="flex items-center gap-2">
-              <CalendarDays size={16} />
-              <span>Horarios</span>
-            </div>
-          }
+      {/* Botones de navegación */}
+      <div className="grid grid-cols-3 gap-2">
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<CalendarDays size={16} />}
+          variant={selectedTab === "horarios" ? "solid" : "ghost"}
+          onPress={() => setSelectedTab("horarios")}
         >
+          Horarios
+        </Button>
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<ClipboardCheck size={16} />}
+          variant={selectedTab === "clases" ? "solid" : "ghost"}
+          onPress={() => setSelectedTab("clases")}
+        >
+          Clases Pasadas
+        </Button>
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<Users size={16} />}
+          variant={selectedTab === "alumnos" ? "solid" : "ghost"}
+          onPress={() => setSelectedTab("alumnos")}
+        >
+          Alumnos
+        </Button>
+      </div>
+
+      {/* Contenido según selección */}
+      <div className="mt-4">
+        {selectedTab === "horarios" && (
           <div>
             {isLoadingHorarios ? (
               <div className="flex justify-center py-4">
@@ -290,17 +307,9 @@ export default function ProfesorTallerDetailPage() {
               </div>
             )}
           </div>
-        </Tab>
+        )}
 
-        <Tab
-          key="clases"
-          title={
-            <div className="flex items-center gap-2">
-              <ClipboardCheck size={16} />
-              <span>Clases Pasadas</span>
-            </div>
-          }
-        >
+        {selectedTab === "clases" && (
           <div>
             {isLoadingClases ? (
               <div className="flex justify-center py-4">
@@ -313,51 +322,76 @@ export default function ProfesorTallerDetailPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {clasesRecientes.map((clase: any, index: number) => (
-                  <Card
-                    key={`clase-${clase.id}-${index}`}
-                    isPressable
-                    className="shadow-none border border-default-200 hover:border-secondary/50 transition-colors w-full"
-                    onPress={() =>
-                      navigate(`/panel-profesor/clases/${clase.id}`)
-                    }
-                  >
-                    <CardBody className="p-3 w-full">
-                      <div className="flex items-center justify-between gap-2 w-full">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Calendar
-                              className="text-secondary shrink-0"
-                              size={14}
-                            />
-                            <span className="font-medium text-sm">
-                              {formatLocalDate(
-                                clase.fecha_clase || clase.fecha,
+                {clasesRecientes.map((clase: any, index: number) => {
+                  // Encontrar el horario correspondiente
+                  const horarioCorrespondiente = horarios?.find(
+                    (h: any) => h.id === clase.horario_id,
+                  );
+
+                  return (
+                    <Card
+                      key={`clase-${clase.id}-${index}`}
+                      isPressable
+                      className="shadow-none border border-default-200 hover:border-secondary/50 transition-colors w-full"
+                      onPress={() =>
+                        navigate(`/panel-profesor/clases/${clase.id}`)
+                      }
+                    >
+                      <CardBody className="p-3 w-full">
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar
+                                className="text-secondary shrink-0"
+                                size={14}
+                              />
+                              <span className="font-medium text-sm">
+                                {formatLocalDate(
+                                  clase.fecha_clase || clase.fecha,
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              {horarioCorrespondiente && (
+                                <div className="flex items-center gap-1">
+                                  <Clock size={12} />
+                                  <span className="capitalize">
+                                    {horarioCorrespondiente.dia_semana ||
+                                      horarioCorrespondiente.dia}{" "}
+                                    {horarioCorrespondiente.hora_inicio?.slice(
+                                      0,
+                                      5,
+                                    )}{" "}
+                                    -{" "}
+                                    {horarioCorrespondiente.hora_fin?.slice(
+                                      0,
+                                      5,
+                                    )}
+                                  </span>
+                                </div>
                               )}
-                            </span>
+                              <Chip
+                                color={
+                                  clase.estado === "Realizada"
+                                    ? "success"
+                                    : "warning"
+                                }
+                                size="sm"
+                                variant="dot"
+                              >
+                                {clase.estado || "Pendiente"}
+                              </Chip>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <Chip
-                              color={
-                                clase.estado === "Realizada"
-                                  ? "success"
-                                  : "warning"
-                              }
-                              size="sm"
-                              variant="dot"
-                            >
-                              {clase.estado || "Pendiente"}
-                            </Chip>
-                          </div>
+                          <ChevronRight
+                            className="text-secondary shrink-0"
+                            size={16}
+                          />
                         </div>
-                        <ChevronRight
-                          className="text-secondary shrink-0"
-                          size={16}
-                        />
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))}
+                      </CardBody>
+                    </Card>
+                  );
+                })}
               </div>
             )}
             {clasesPasadas.length > 5 && (
@@ -374,32 +408,24 @@ export default function ProfesorTallerDetailPage() {
               </Button>
             )}
           </div>
-        </Tab>
+        )}
 
-        <Tab
-          key="alumnos"
-          title={
-            <div className="flex items-center gap-2">
-              <Users size={16} />
-              <span>Alumnos</span>
-            </div>
-          }
-        >
+        {selectedTab === "alumnos" && (
           <div>
             {isLoadingAlumnos ? (
               <div className="flex justify-center py-4">
                 <Spinner size="sm" />
               </div>
-            ) : !alumnos || alumnos.length === 0 ? (
+            ) : !alumnosUnicos || alumnosUnicos.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground">
                 <Users className="mx-auto mb-2 opacity-50" size={32} />
                 <p className="text-sm">No hay alumnos inscritos</p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {alumnos.map((alumno: any, index: number) => (
+              <div className="space-y-2">
+                {alumnosUnicos.map((alumno: any) => (
                   <Card
-                    key={`alumno-${index}`}
+                    key={`alumno-${alumno.id}`}
                     className="shadow-none border border-default-200"
                   >
                     <CardBody className="p-3">
@@ -428,22 +454,9 @@ export default function ProfesorTallerDetailPage() {
                 ))}
               </div>
             )}
-            {totalAlumnos > 5 && (
-              <Button
-                fullWidth
-                color="primary"
-                size="sm"
-                variant="flat"
-                onPress={() =>
-                  navigate(`/panel-profesor/alumnos?taller=${tallerId}`)
-                }
-              >
-                Ver todos los alumnos
-              </Button>
-            )}
           </div>
-        </Tab>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 }

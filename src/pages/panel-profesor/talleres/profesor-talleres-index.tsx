@@ -43,7 +43,7 @@ export default function ProfesorTalleresPage() {
   }
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-6 pb-10">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -88,8 +88,8 @@ export default function ProfesorTalleresPage() {
 
       {filteredTalleres?.length === 0 && (
         <div className="text-center py-12">
-          <BookOpen className="text-muted-foreground mx-auto mb-3" size={48} />
-          <p className="font-medium text-lg mb-1">No se encontraron talleres</p>
+          <BookOpen className="text-muted-foreground mx-auto mb-4" size={48} />
+          <p className="font-medium text-lg mb-2">No se encontraron talleres</p>
           <p className="text-sm text-muted-foreground">
             {searchQuery
               ? "Intenta con otro término de búsqueda"
@@ -107,46 +107,33 @@ function TallerCard({ taller }: { taller: TallerProfesor }) {
   return (
     <Card
       isPressable
-      className="hover:border-primary/20 hover:shadow-sm transition-all duration-200"
+      className="border-l-4 border-l-primary hover:border-l-primary-600 hover:shadow-lg transition-all duration-200 w-full"
       onPress={() => navigate(`/panel-profesor/talleres/${taller.id}`)}
     >
-      <CardBody className="p-4">
-        <div className="flex items-center gap-3">
-          {/* Icono con colores */}
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <BookOpen className="text-primary" size={18} />
-          </div>
-
-          {/* Contenido principal */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base mb-1 truncate">
-                  {taller.nombre}
-                </h3>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Users className="text-success" size={14} />
-                    <span className="font-medium text-foreground">
-                      {taller.total_alumnos}
-                    </span>
-                    <span>alumnos</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="text-secondary" size={14} />
-                    <span className="font-medium text-foreground">
-                      {taller.total_horarios}
-                    </span>
-                    <span>horarios</span>
-                  </div>
-                </div>
-              </div>
+      <CardBody className="flex flex-row items-center gap-4 p-6">
+        <div className="p-3 bg-primary-100 rounded-lg flex-shrink-0">
+          <BookOpen className="text-primary" size={24} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-lg mb-2 truncate">{taller.nombre}</h3>
+          <div className="flex items-center gap-6 text-sm text-default-500">
+            <div className="flex items-center gap-1">
+              <Users className="text-success" size={16} />
+              <span className="font-medium text-foreground">
+                {taller.total_alumnos}
+              </span>
+              <span>alumnos</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="text-secondary" size={16} />
+              <span className="font-medium text-foreground">
+                {taller.total_horarios}
+              </span>
+              <span>horarios</span>
             </div>
           </div>
-
-          {/* Flecha de navegación */}
-          <ChevronRight className="text-primary" size={16} />
         </div>
+        <ChevronRight className="text-primary flex-shrink-0" size={20} />
       </CardBody>
     </Card>
   );
